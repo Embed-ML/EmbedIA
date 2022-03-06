@@ -17,7 +17,7 @@ EmbedIA is a compact and lightweight framework capable of providing the necessar
 
 
 ## Workflow 🔨 <A NAME="workflow"></A>
-For the conversion and use of Neural Network models in microcontrollers using embedia, the following workflow must be followed:
+For the conversion and use of Neural Network models in microcontrollers using EmbedIA, the following workflow must be followed:
 
 1. <strong>Generation of the model:</strong> Architecture selection, network hyperparameters and training data.
 2. <strong>Training:</strong> Neural Network Training Using Tensorflow/Keras in Python.
