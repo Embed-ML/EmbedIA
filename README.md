@@ -94,7 +94,7 @@ If the process was successful, a message will be displayed indicating where the 
 To use the EmbedIA features in the microcontroller, you need to include model initialization and inference execution in your code, using the provided functions: 
 
 * ```void model_init(void)```: function in charge of executing the initialization of the model in C language from the load of the weights obtained in Python of the model trained through Tensorflow/Keras
-* ```int model_predict(input, * results);```: method that will finally execute the inference using the input data passed by parameter (input). It builds the architecture of the network, that is, it is responsible for concatenating the outputs of the layers in the correct order. In this way, a vector of probabilities is obtained for each class (received by parameter, * results) and the value of the class with greater confidence (integer value returned), given a certain input passed by parameter to the function.
+* ```int model_predict(input, * results)```: method that will finally execute the inference using the input data passed by parameter (input). It builds the architecture of the network, that is, it is responsible for concatenating the outputs of the layers in the correct order. In this way, a vector of probabilities is obtained for each class (received by parameter, * results) and the value of the class with greater confidence (integer value returned), given a certain input passed by parameter to the function.
 
 <strong>Example:</strong> 
 ```c
