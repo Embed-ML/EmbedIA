@@ -23,7 +23,7 @@ comment= "number %d example for test" % digits.target[example_number]
 options = ProjectOptions()
 
 # options.project_type = ProjectType.ARDUINO
-# options.project_type = ProjectType.C
+options.project_type = ProjectType.C
 # options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
 
