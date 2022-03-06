@@ -12,6 +12,7 @@ EmbedIA is a compact and lightweight framework capable of providing the necessar
 ## Table of Contents <A NAME="tabla-de-contenidos"></A>
 * [Workflow](#workflow)
 * [Layers](#layers)
+* [Getting started](#started)
 
 
 ## Workflow 🔨 <A NAME="workflow"></A>
@@ -41,3 +42,19 @@ Activation functions are listed below:
 * <a href="https://keras.io/api/layers/activations/#relu-function">ReLU</a>
 * <a href="https://keras.io/api/layers/activations/#tanh-function">Tanh</a>
 * <a href="https://keras.io/api/layers/activations/#softmax-function">Softmax</a>
+
+## Getting started 🚀 <A NAME="started"></A>
+In order to use the EmbedIA Python converter, the first step is to clone the repository
+
+```bash
+git clone https://github.com/Embed-ML/EmbedIA.git
+cd EmbedIA
+```
+
+Open the create_embedia_project.py script and configure the converter parameters
+
+...
+
+
+In the following Colab there is an example of the use of the EmbedIA converter to create a project in C language for the classification of the images of the <a href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html">digits dataset</a>: 
+<p align=center><a href="https://colab.research.google.com/github/Embed-ML/EmbedIA/blob/main/Using_EmbedIA.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg"/></a></p>

@@ -5,15 +5,13 @@ from embedia.project_options import *
 from embedia.project_generator import ProjectGenerator
 
 
-############# Configuracion para crear el proyecto #############
+############# Settings to create the project #############
 
 OUTPUT_FOLDER = 'outputs/'
 PROJECT_NAME  = 'C_mnist_min_tanh_float'
 MODEL_FILE    = 'models/mnist_model_min_tanh.h5'
 
 model = load_model(MODEL_FILE)
-
-model._name = 'MNIST_Digits'
 
 digits = load_digits()
 example_number = 33
@@ -45,8 +43,11 @@ options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}
 
+
+############# Generate project #############
+
 generator = ProjectGenerator()
 generator.create_project(OUTPUT_FOLDER, PROJECT_NAME, model, options)
 
-print("\nProyecto", PROJECT_NAME, "exportado en", OUTPUT_FOLDER)
-
+print("Project", PROJECT_NAME, "exported in", OUTPUT_FOLDER)
+print("\n"+comment)
