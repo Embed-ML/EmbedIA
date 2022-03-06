@@ -23,6 +23,7 @@ class ProjectOptions:
     data_type = ModelDataType.FLOAT 
     example_data = None
     example_name = ''
+    example_comment = ''
     files = ProjectFiles.ALL
     debug_mode = DebugMode.DISABLED
     
