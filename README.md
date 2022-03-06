@@ -13,6 +13,7 @@ EmbedIA is a compact and lightweight framework capable of providing the necessar
 * [Workflow](#workflow)
 * [Layers](#layers)
 * [Getting started](#started)
+* [EmbedIA in C](#inC)
 
 
 ## Workflow 🔨 <A NAME="workflow"></A>
@@ -51,10 +52,55 @@ git clone https://github.com/Embed-ML/EmbedIA.git
 cd EmbedIA
 ```
 
-Open the create_embedia_project.py script and configure the converter parameters
+Open the <a href="https://github.com/Embed-ML/EmbedIA/blob/main/create_embedia_project.py">create_embedia_project.py</a> script and configure the converter parameters: 
+* _OUTPUT_FOLDER_: output folder path
+* _PROJECT_NAME_: generated project name
+* _MODEL_FILE_: model path in .h5 format to use
+* _options.project_type_: type of project among those available:
+  * ```ProjectType.ARDUINO```
+  * ```ProjectType.C```
+  * ```ProjectType.CODEBLOCK```
+  * ```ProjectType.CPP```
+* _options.data_type_: selection of data type among those available:
+  * ```ModelDataType.FLOAT```
+  * ```ModelDataType.FIXED32```
+  * ```ModelDataType.FIXED16```
+  * ```ModelDataType.FIXED8```
+* _options.debug_mode_: options for inclusion and use of debug functions:
+  * ```DebugMode.DISCARD```
+  * ```DebugMode.DISABLED```
+  * ```DebugMode.HEADERS```
+  * ```DebugMode.DATA```
+* _options.files_: Selection of files to be executed:
+  * ```ProjectFiles.ALL```
+  * ```{ProjectFiles.MAIN}```
+  * ```{ProjectFiles.MODEL}```
+  * ```{ProjectFiles.LIBRARY}```
 
-...
+Run the script as follows:
+```bash
+python create_embedia_project.py
+```
 
+If the process was successful, a message will be displayed indicating where the project has been generated
 
-In the following Colab there is an example of the use of the EmbedIA converter to create a project in C language for the classification of the images of the <a href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html">digits dataset</a>: 
+<br>
+
+<strong>Example:</strong> In the following Colab there is an example of the use of the EmbedIA converter to create a project in C language for the classification of the images of the <a href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html">digits dataset</a>: 
 <p align=center><a href="https://colab.research.google.com/github/Embed-ML/EmbedIA/blob/main/Using_EmbedIA.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg"/></a></p>
+
+
+## EmbedIA in C 👍 <A NAME="inC"></A>
+To use the EmbedIA features in the microcontroller, you need to include model initialization and inference execution in your code, using the provided functions: 
+
+* ```void model_init(void)```: function in charge of executing the initialization of the model in C language from the load of the weights obtained in Python of the model trained through Tensorflow/Keras
+* ```int model_predict(input, * results);```: method that will finally execute the inference using the input data passed by parameter (input). It builds the architecture of the network, that is, it is responsible for concatenating the outputs of the layers in the correct order. In this way, a vector of probabilities is obtained for each class (received by parameter, * results) and the value of the class with greater confidence (integer value returned), given a certain input passed by parameter to the function.
+
+<strong>Example:</strong> 
+```c
+// model initialization
+model_init();
+
+// model inference
+int prediction = model_predict(input, &results);
+```
