@@ -11,15 +11,33 @@ EmbedIA is a compact and lightweight framework capable of providing the necessar
 
 ## Table of Contents <A NAME="tabla-de-contenidos"></A>
 * [Workflow](#workflow)
-* [Getting Started](#started)
+* [Layers](#layers)
+
 
 ## Workflow 🔨 <A NAME="workflow"></A>
+For the conversion and use of Neural Network models in microcontrollers using embedia, the following workflow must be followed:
+
+1. <strong>Generation of the model:</strong> Architecture selection, network hyperparameters and training data.
+2. <strong>Training:</strong> Neural Network Training Using Tensorflow/Keras in Python.
+3. <strong>EmbedIA Export:</strong> Export of C/C++ application with model and necessary libraries using the EmbedIA converter.
+4. <strong>Solution Deployment:</strong> Project Compilation on the Microcontroller Platform.
+5. <strong>Running Inferences:</strong>Running Inferences on the device.
 
 <p align="center"> <img src="images/workflow.png" width=90%/> </p>
 
 
-## Getting Started 🚀 <A NAME="started"></A>
-Si bien el programa puede ser ejecutado desde una computadora de uso personal, como si de una simulación se tratase, 
-el código de la aplicación se encuentra diseñado para la administración de un robot Crawler controlado por una Raspberry Pi.
+## Layers 🧅 <A NAME="layers"></A>
+Currently it is possible to incorporate certain layers to the neural network model for execution on microcontrollers. The layers supported by EmbedIA, implemented in the C library, are the following:
 
-Ver [**Ejecución**](#ejecucion) para conocer cómo desplegar el proyecto.
+* <a href="https://keras.io/api/layers/convolution_layers/convolution2d/">Conv2D</a>
+* <a href="https://keras.io/api/layers/convolution_layers/separable_convolution2d/">SeparableConv2D</a>
+* <a href="https://keras.io/api/layers/core_layers/dense/">Dense</a>
+* <a href="https://keras.io/api/layers/pooling_layers/max_pooling2d/">MaxPooling2D</a>
+* <a href="https://keras.io/api/layers/pooling_layers/max_pooling2d/">AveragePooling</a>
+* <a href="https://keras.io/api/layers/reshaping_layers/flatten/">Flatten</a>
+
+Activation functions are listed below:
+
+* <a href="https://keras.io/api/layers/activations/#relu-function">ReLU</a>
+* <a href="https://keras.io/api/layers/activations/#tanh-function">Tanh</a>
+* <a href="https://keras.io/api/layers/activations/#softmax-function">Softmax</a>
