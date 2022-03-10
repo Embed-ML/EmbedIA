@@ -167,13 +167,15 @@ def create_main_template_c(model, example=None, example_comment='', options=None
       fill_input = ''
   else:
       example = ''
-      example = ''
-      fill_input = f'''// fill input data structure
-    fill_input(&input);'''
+      example = '={0}'
+      fill_input = f'''//TODO: fill input data structure function
+  //fill_input(&input);
+  
+  '''
       
 
   if example_comment == '':
-      example_comment = '// Buffer with data example'
+      example_comment = '// Buffer with data example TODO fill it with input'
   else:
       example_comment = f'''// Buffer with {example_comment}'''
 
@@ -212,7 +214,7 @@ void loop(){{
 #define INPUT_SIZE ({model_name_h}_CHANNELS*{model_name_h}_WIDTH*{model_name_h}_HEIGHT)
 
 {example_comment}
-{data_type} input_data[INPUT_SIZE]{example}; 
+{data_type} input_data[INPUT_SIZE]{example};
 
 // Structure with input data for the inference function
 data_t input = {{ {model_name_h}_CHANNELS, {model_name_h}_WIDTH, {model_name_h}_HEIGHT, input_data }};
@@ -221,7 +223,7 @@ data_t input = {{ {model_name_h}_CHANNELS, {model_name_h}_WIDTH, {model_name_h}_
 flatten_data_t results;
 
 {main_block}
-    {fill_input}
+  {fill_input}
   // model inference
   int prediction = model_predict(input, &results);    
     

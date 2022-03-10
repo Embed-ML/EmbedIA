@@ -1,4 +1,5 @@
-from tensorflow.keras.models import load_model
+from xml.etree.ElementTree import Comment
+
 from sklearn.datasets import load_digits
 
 from embedia.project_options import *
@@ -7,16 +8,13 @@ from embedia.project_generator import ProjectGenerator
 
 ############# Settings to create the project #############
 
-OUTPUT_FOLDER = 'outputs/'
+OUTPUT_FOLDER = 'outputs'
 PROJECT_NAME  = 'C_mnist_min_tanh_float'
 MODEL_FILE    = 'models/mnist_model_min_tanh.h5'
 
 model = load_model(MODEL_FILE)
 
-digits = load_digits()
-example_number = 33
-sample = digits.images[example_number]
-comment= "number %d example for test" % digits.target[example_number]
+
 
 options = ProjectOptions()
 
@@ -35,8 +33,20 @@ options.debug_mode = DebugMode.DISCARD
 # options.debug_mode = DebugMode.HEADERS
 # options.debug_mode = DebugMode.DATA
 
+'''
+In case you want to use a specific example data, you can use the following code for example for MNIST dataset:
+from tensorflow.keras.models import load_model
+digits = load_digits()
+example_number = 33
+sample = digits.images[example_number] #this should be set to a sample of the data
+comment= "number %d example for test" % digits.target[example_number] #this should be set to a comment about the data
 options.example_data = sample
 options.example_comment = comment
+'''
+
+
+options.example_data = None
+options.example_comment = ''
 
 options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MAIN}
@@ -50,4 +60,4 @@ generator = ProjectGenerator()
 generator.create_project(OUTPUT_FOLDER, PROJECT_NAME, model, options)
 
 print("Project", PROJECT_NAME, "exported in", OUTPUT_FOLDER)
-print("\n"+comment)
+#print("\n"+comment)

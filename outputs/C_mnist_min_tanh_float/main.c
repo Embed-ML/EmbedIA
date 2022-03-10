@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include "embedia.h"
-#include "mnist_digits_model.h"
+#include "embedia_model.h"
 
-#define INPUT_SIZE (MNIST_DIGITS_MODEL_CHANNELS*MNIST_DIGITS_MODEL_WIDTH*MNIST_DIGITS_MODEL_HEIGHT)
+#define INPUT_SIZE (EMBEDIA_MODEL_CHANNELS*EMBEDIA_MODEL_WIDTH*EMBEDIA_MODEL_HEIGHT)
 
 // Buffer with number 5 example for test
 float input_data[INPUT_SIZE]= {
@@ -11,7 +11,7 @@ float input_data[INPUT_SIZE]= {
   0.0, 0.0, 0.0, 1.0, 8.0, 13.0, 15.0, 3.0, 0.0, 0.0, 0.0, 4.0, 16.0, 15.0, 3.0, 0.0, 0.0, 0.0}; 
 
 // Structure with input data for the inference function
-data_t input = { MNIST_DIGITS_MODEL_CHANNELS, MNIST_DIGITS_MODEL_WIDTH, MNIST_DIGITS_MODEL_HEIGHT, input_data };
+data_t input = { EMBEDIA_MODEL_CHANNELS, EMBEDIA_MODEL_WIDTH, EMBEDIA_MODEL_HEIGHT, input_data };
 
 // Structure with inference output results
 flatten_data_t results;
