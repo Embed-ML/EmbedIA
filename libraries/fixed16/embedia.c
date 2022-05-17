@@ -444,3 +444,72 @@ uint16_t argmax(flatten_data_t data){
 	
 	return pos;
 }
+
+
+/*
+ * batch_normalization()
+ * Normaliza la salida de una capa anterior
+ * Parámetros:
+ *      batchnorm_layer_t layer =>  capa BatchNormalization con sus respectivos parámetros
+ *      data_t *input           =>  datos de entrada de tipo data_t
+ * 		data_t *output			=>	puntero a la estructura data_t donde se guardará el resultado
+ */
+
+void batch_normalization(batchnorm_layer_t layer, data_t input, data_t *output) {
+	uint16_t i, j, ilen;
+	uint16_t length = (input.height)*(input.width);
+	dfixed data;
+
+	output->height = input.height;
+	output->width  = input.width;
+	output->channels = input.channels;
+	output->data = (fixed*) swap_alloc(sizeof(fixed)*(output->channels)*(output->height)*(output->width));
+
+	for (i = 0; i < input.channels; i++) {
+		ilen = i*length;
+		for (j = 0; j < length; j++) {
+			data = DFIXED_MUL(input.data[ilen+j] - layer.moving_mean[i], layer.gamma_variance[i]);
+			data += FIXED_TO_DFIXED(layer.beta[i]);
+
+			if (data > DFIX_MAX)
+				data = FIX_MAX;
+			else if (data < DFIX_MIN)
+				data = FIX_MIN;
+			else 
+				data = DFIXED_TO_FIXED(data);
+
+			output->data[ilen+j] = data;
+		}
+	}
+}
+
+/*
+ * batch_normalization_flatten()
+ * Normaliza la salida proveniente de una capa densa
+ * Parámetros:
+ *      batchnorm_layer_t layer =>  capa BatchNormalization con sus respectivos parámetros
+ *      flatten_data_t *input   =>  datos de entrada de tipo flatten_data_t
+ * 		flatten_data_t *output	=>	puntero a la estructura flatten_data_t donde se guardará el resultado
+ */
+
+void batch_normalization_flatten(batchnorm_layer_t layer, flatten_data_t input, flatten_data_t *output) {
+	uint16_t i;
+	dfixed data;
+
+	output->length = input.length;
+	output->data = (fixed*) swap_alloc(sizeof(fixed)*output->length);
+
+	for (i = 0; i < output->length; i++) {
+		data = DFIXED_MUL(input.data[i] - layer.moving_mean[i], layer.gamma_variance[i]);
+		data += FIXED_TO_DFIXED(layer.beta[i]);
+
+		if (data > DFIX_MAX)
+			data = FIX_MAX;
+		else if (data < DFIX_MIN)
+			data = FIX_MIN;
+		else 
+			data = DFIXED_TO_FIXED(data);
+
+		output->data[i] = data;
+	}
+}

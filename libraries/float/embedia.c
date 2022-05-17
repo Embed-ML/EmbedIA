@@ -115,6 +115,7 @@ void pointwise(filter_t filter, data_t input, data_t * output, uint16_t delta){
 	}
 }
 
+
 /* 
  * separable_conv2d_layer()
  * Función que se encarga de aplicar la convolución de una capa de filtros (conv_layer_t)
@@ -414,5 +415,52 @@ uint16_t argmax(flatten_data_t data){
 	}
 	
 	return pos;
+}
+
+/*
+ * batch_normalization()
+ * Normaliza la salida de una capa anterior
+ * Parámetros:
+ *      batchnorm_layer_t layer =>  capa BatchNormalization con sus respectivos parámetros
+ *      data_t *input           =>  datos de entrada de tipo data_t
+ * 		data_t *output			=>	puntero a la estructura data_t donde se guardará el resultado
+ */
+
+void batch_normalization(batchnorm_layer_t layer, data_t input, data_t *output) {
+	uint32_t i, j;
+	uint16_t length = (input.height)*(input.width);
+	uint32_t ilen;
+
+	output->height = input.height;
+	output->width  = input.width;
+	output->channels = input.channels;
+	output->data = (float*) swap_alloc(sizeof(float)*(output->channels)*(output->height)*(output->width));
+
+	for (i = 0; i < output->channels; i++) {
+		ilen = i*length;
+		for (j = 0; j < length; j++) {
+			output->data[ilen+j] = (input.data[ilen+j] - layer.moving_mean[i]) * layer.gamma_variance[i] + layer.beta[i];
+		}
+	}
+}
+
+/*
+ * batch_normalization_flatten()
+ * Normaliza la salida proveniente de una capa densa
+ * Parámetros:
+ *      batchnorm_layer_t layer =>  capa BatchNormalization con sus respectivos parámetros
+ *      flatten_data_t *input   =>  datos de entrada de tipo flatten_data_t
+ * 		flatten_data_t *output	=>	puntero a la estructura flatten_data_t donde se guardará el resultado
+ */
+
+void batch_normalization_flatten(batchnorm_layer_t layer, flatten_data_t input, flatten_data_t *output) {
+	uint32_t i;
+
+	output->length = input.length;
+	output->data = (float*) swap_alloc(sizeof(float)*output->length);
+
+	for (i = 0; i < output->length; i++) {
+		output->data[i] = (input.data[i] - layer.moving_mean[i]) * layer.gamma_variance[i] + layer.beta[i];
+	}
 }
 

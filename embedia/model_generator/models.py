@@ -11,7 +11,7 @@ from tensorflow.keras import layers
 import numpy as np
 
 from embedia.project_options import ProjectType, ModelDataType, DebugMode
-from embedia.model_generator.utils.generator_utils import exportar_separable_a_c,exportar_cnn_a_c,exportar_densa_a_c,create_model_predict,create_model_init
+from embedia.model_generator.utils.generator_utils import exportar_separable_a_c,exportar_cnn_a_c,exportar_densa_a_c,exportar_batchnorm_a_c,create_model_predict,create_model_init
 
 def format_model_name(model):
     model_name = model.name.lower()
@@ -85,9 +85,11 @@ int model_predict(data_t input, flatten_data_t * results);
   cantSeparable=0
   cantConv=0
   cantDensas=0
+  cantBatchNorm=0
   func_separable=""
   func_conv=""
   func_dens=""
+  func_batchnorm=""
   #Adding functions with model weights inicialization
   #(TO-DO use another method to iterate through layer types)
   for layer in model.layers:
@@ -109,6 +111,9 @@ int model_predict(data_t input, flatten_data_t * results);
     elif 'flatten' in layer.name:
       #do nothing here
       continue
+    elif 'batch_normalization' in layer.name:
+      func_batchnorm+=exportar_batchnorm_a_c(layer, cantBatchNorm, macro_converter, data_type)
+      cantBatchNorm += 1
     else:
       print(f"Error: No support for layer {layer} which is of type {layer.activation} (dont change it's name)")
       raise f"Error: No support for layer {layer} which is of type {layer.activation}"
@@ -122,15 +127,18 @@ int model_predict(data_t input, flatten_data_t * results);
     var_decl+=f'''conv_layer_t conv_layer{i}; // Capa convolucional {i+1}\n'''
   for i in range(cantDensas):
     var_decl+=f'''dense_layer_t dense_layer{i}; // Capa densa {i+1}\n'''
+  for i in range(cantBatchNorm):
+    var_decl+=f'''batchnorm_layer_t batchnorm_layer{i}; // Capa BatchNormalization {i+1}\n'''
 
   c_code+= var_decl #Adds local (.c) variables (layers)
 
   c_code+= func_separable #Adds function to initialize conv layers
   c_code+= func_conv #Adds function to initialize conv layers
   c_code+= func_dens #Adds function to initialize dense layers
+  c_code+= func_batchnorm #Adds function to initialize batch normalization layers
 
   #Adds function which calls layers initializators
-  c_code+= create_model_init(cantConv,cantDensas,cantSeparable)
+  c_code+= create_model_init(cantConv,cantDensas,cantSeparable,cantBatchNorm)
   
   #Adds model_predict function
   c_code+= '\n\n'+create_model_predict(model,options)

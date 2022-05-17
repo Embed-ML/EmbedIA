@@ -1,5 +1,6 @@
 import numpy as np
 from tensorflow import keras
+from math import sqrt
 
 from embedia.project_options import ModelDataType, ProjectType, ProjectFiles, DebugMode
 
@@ -257,10 +258,104 @@ dense_layer_t init_dense_layer{nro}(){{
   return init_dense_layer
 
 
+def get_parameters_batchnorm(layer):
+  '''
+    Function to return model parameters from BatchNormalization layer in a way our model can work with
+    Params:
+    layer -> BatchNormalization layer
+    
+    Returns:
+    Tuple with values: gamma, beta, moving_mean, moving_variance
+    
+  '''
+  assert 'batch_normalization' in layer.name #Get sure it is a batchnorm layer
+  gamma = layer.get_weights()[0]
+  beta = layer.get_weights()[1]
+  moving_mean = layer.get_weights()[2]
+  moving_variance = layer.get_weights()[3]
+  epsilon = layer.epsilon
+
+  '''Calculate a new parameter (we'll call it gamma_variance)
+    This way we don't need to do division and calculate square root in the microcontroller
+    epsilon = 0.001 (to avoid division by zero)'''
+  gamma_variance = np.array([(gamma[i] / sqrt(moving_variance[i] + epsilon)) for i in range(gamma.size)])
+
+  return gamma,beta,moving_mean,moving_variance,gamma_variance
+
+
+def exportar_batchnorm_a_c(layer, nro, macro_converter, data_type):
+  '''
+    Builds embedia's init_batchnorm_layer function
+    Receives
+    layer          --> instance of a layer from a model (model.layers[i])
+    nro            --> from input to output, the number corresponding to the position of this layer
+    macro_converter--> a macro used if working with embedia fixed. Adds macro to numbers in c code
+    data_type      --> 'float' or 'fixed' depending embedia optinons
+
+    Returns:
+    String with c code representing the function 
+  '''
+  gamma,beta,mean,variance,gamma_variance=get_parameters_batchnorm(layer)
+  ret=""
+
+  init_batchnorm_layer=f'''
+batchnorm_layer_t init_batchnorm_layer{nro}(void){{
+  '''
+  o_gamma = ""
+  for i in range(gamma.size):
+    o_gamma += f'''{macro_converter(gamma[i])}, '''
+
+  o_beta = ""
+  for i in range(beta.size):
+    o_beta += f'''{macro_converter(beta[i])}, '''
+
+  o_mean = ""
+  for i in range(mean.size):
+    o_mean += f'''{macro_converter(mean[i])}, '''
+
+  o_variance = ""
+  for i in range(variance.size):
+    o_variance += f'''{macro_converter(variance[i])}, '''
+
+  o_gamma_variance = ""
+  for i in range(gamma_variance.size):
+    o_gamma_variance += f'''{macro_converter(gamma_variance[i])}, '''
+
+  init_batchnorm_layer += f'''
+
+  static const {data_type} beta[] = {{ {o_beta} 
+  }};
+
+  static const {data_type} moving_mean[] = {{ {o_mean} 
+  }};
+
+  static const {data_type} gamma_variance[] = {{ {o_gamma_variance} 
+  }};
+
+  /* gamma and moving_variance parameters from keras layer:
+  static const {data_type} gamma[] = {{ {o_gamma} 
+  }};
+
+  static const {data_type} moving_variance[] = {{ {o_variance} 
+  }};
+  */
+
+  batchnorm_layer_t layer;
+  layer.moving_mean = moving_mean;
+  layer.beta = beta;
+  layer.gamma_variance = gamma_variance; 
+
+  return layer;
+}}
+  '''
+  ret += init_batchnorm_layer
+  return ret
+
+
 #=================================
 
 #CREATE MODEL INIT FUNCTION
-def create_model_init(cantConv,cantDensas,cantSeparable):
+def create_model_init(cantConv,cantDensas,cantSeparable,cantBatchNorm):
   #Begin model_init function string
   model_init = f'''
 void model_init(){{
@@ -273,6 +368,9 @@ void model_init(){{
 
   for i in range(cantDensas):
     model_init+=f'''    dense_layer{i} = init_dense_layer{i}(); //Capa densa {i+1}\n'''
+
+  for i in range(cantBatchNorm):
+    model_init+=f'''    batchnorm_layer{i} = init_batchnorm_layer{i}(); // Capa BatchNormalization {i+1}\n'''
   
   model_init+=f'''}}\n'''
   #End of model_init function string
@@ -460,7 +558,37 @@ def model_predict_dense(layer,index,layerNumber,options,isLastLayer=False):
     '''
   return ret
 
-
+def model_predict_batchnorm(layer, index, layerNumber, options, flatten):
+  ret = f'''
+  // Capa {layerNumber}: BatchNormalization'''
+  if (not flatten):
+    # Estamos trabajando con data_t
+    ret += f'''
+  batch_normalization(batchnorm_layer{index}, input, &output);  
+    '''
+    if options.debug_mode != DebugMode.DISCARD:
+      ret+=f'''
+        #if EMBEDIA_DEBUG > 0
+        print_data_t("Output matrix layer {layerNumber} (BatchNormalization): ", output);
+        #endif // EMBEDIA_DEBUG
+        '''
+    ret+='''input = output;
+  '''
+  else:
+    # Estamos trabajando con flatten_data_t
+    ret += f'''
+  batch_normalization_flatten(batchnorm_layer{index}, f_input, &f_output);
+    '''
+    if options.debug_mode != DebugMode.DISCARD:
+      ret+=f'''
+      #if EMBEDIA_DEBUG > 0
+      print_flatten_data_t("Output Vector Layer {layerNumber} (BatchNormalization): ", f_output);
+      #endif // EMBEDIA_DEBUG
+      '''
+    ret+='''f_input = f_output;
+  '''
+  
+  return ret
 
 #CREATE MODEL PREDICT FUNCTION
 def create_model_predict(model,options):
@@ -480,6 +608,9 @@ int model_predict(data_t input, flatten_data_t * results){
   cantSeparable=0
   cantConv=0
   cantDensas=0
+  cantBatchNorm=0
+
+  flatten_data = False
 
   for i,layer in enumerate(model.layers):
     if 'separable_conv2d' in layer.name:
@@ -491,6 +622,7 @@ int model_predict(data_t input, flatten_data_t * results){
     elif 'dense' in layer.name:
       ret+=model_predict_dense(layer,cantDensas,i+1,options,i+1==len(model.layers))
       cantDensas+=1
+      flatten_data = True
     elif 'max_pooling2d' in layer.name:
       pool_size,_=layer.pool_size
       stride,_=layer.strides
@@ -501,6 +633,11 @@ int model_predict(data_t input, flatten_data_t * results){
       ret+=model_predict_avgPool(pool_size,stride,i+1,options)
     elif 'flatten' in layer.name:
       ret+=model_predict_flatten(i+1,options)
+      flatten_data = True
+    elif 'batch_normalization' in layer.name:
+      ret+=model_predict_batchnorm(layer, cantBatchNorm, i+1, options, flatten_data)
+      cantBatchNorm += 1
+      flatten_data = False
     else:
       return f"Error: No support for layer {layer} which is of type {layer.activation}"
 
