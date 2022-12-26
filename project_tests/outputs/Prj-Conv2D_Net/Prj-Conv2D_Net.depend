@@ -1,0 +1,35 @@
+# depslib dependency file v1.0
+1662669511 source:c:\users\cesar\documents\gitlab\exporter_embedia\project_tests\outputs\prj-conv2d_net\embedia.c
+	"embedia.h"
+
+1662669511 c:\users\cesar\documents\gitlab\exporter_embedia\project_tests\outputs\prj-conv2d_net\embedia.h
+	<stdint.h>
+	<math.h>
+	<stdlib.h>
+
+1662669511 source:c:\users\cesar\documents\gitlab\exporter_embedia\project_tests\outputs\prj-conv2d_net\embedia_debug.c
+	"embedia_debug.h"
+	"embedia_debug_def.h"
+
+1662669511 c:\users\cesar\documents\gitlab\exporter_embedia\project_tests\outputs\prj-conv2d_net\embedia_debug.h
+	"embedia.h"
+
+1662669511 c:\users\cesar\documents\gitlab\exporter_embedia\project_tests\outputs\prj-conv2d_net\embedia_debug_def.h
+	<stdio.h>
+
+1662669645 source:c:\users\cesar\documents\gitlab\exporter_embedia\project_tests\outputs\prj-conv2d_net\main.c
+	<stdio.h>
+	"embedia.h"
+	"mnist_model.h"
+	"example_file.h"
+
+1662669511 c:\users\cesar\documents\gitlab\exporter_embedia\project_tests\outputs\prj-conv2d_net\mnist_model.h
+	"embedia.h"
+
+1662669511 c:\users\cesar\documents\gitlab\exporter_embedia\project_tests\outputs\prj-conv2d_net\example_file.h
+	"embedia.h"
+
+1662669645 source:c:\users\cesar\documents\gitlab\exporter_embedia\project_tests\outputs\prj-conv2d_net\mnist_model.c
+	"mnist_model.h"
+	"embedia_debug.h"
+
