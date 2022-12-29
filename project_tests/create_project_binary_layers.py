@@ -41,10 +41,10 @@ options.project_type = ProjectType.CODEBLOCK
 # options.data_type = ModelDataType.FIXED8
 options.data_type = ModelDataType.BINARY
 
-#options.tamano_bloque = BinaryBlockSize.Bits8
-#options.tamano_bloque = BinaryBlockSize.Bits16
-#options.tamano_bloque = BinaryBlockSize.Bits32
-options.tamano_bloque = BinaryBlockSize.Bits64
+#options.binary_block = BinaryBlockSize.Bits8
+#options.binary_block = BinaryBlockSize.Bits16
+#options.binary_block = BinaryBlockSize.Bits32
+options.binary_block = BinaryBlockSize.Bits64
 
 options.debug_mode = DebugMode.DISCARD
 # options.debug_mode = DebugMode.DISABLED

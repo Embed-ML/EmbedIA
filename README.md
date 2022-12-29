@@ -1,6 +1,6 @@
 <div align="center">
   <hr>
-  <img src="images/logo3.png" width=20%/>
+  <img src="docs/assets/images/logo3.png" width=20%/>
   <h4><strong>EmbedIA is a machine learning framework for developing applications on microcontrollers.</strong></h4>
   <a href="https://github.com/Embed-ML/EmbedIA"><img src="https://img.shields.io/badge/version-0.8.0-blue"/></a>  
   <a href="https://colab.research.google.com/github/Embed-ML/EmbedIA/blob/main/Using_EmbedIA.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg"/></a>
@@ -25,24 +25,39 @@ For the conversion and use of Neural Network models in microcontrollers using Em
 4. <strong>Solution Deployment:</strong> Project Compilation on the Microcontroller Platform.
 5. <strong>Running Inferences:</strong>Running Inferences on the device.
 
-<p align="center"> <img src="images/workflow.png" width=90%/> </p>
+<p align="center"> <img src="docs/assets/images/workflow.png" width=90%/> </p>
 
 
 ## Layers 🧅 <A NAME="layers"></A>
 Currently it is possible to incorporate certain layers to the neural network model for execution on microcontrollers. The layers supported by EmbedIA, implemented in the C library, are the following:
 
+Layers based from Keras:
 * <a href="https://keras.io/api/layers/convolution_layers/convolution2d/">Conv2D</a>
 * <a href="https://keras.io/api/layers/convolution_layers/separable_convolution2d/">SeparableConv2D</a>
 * <a href="https://keras.io/api/layers/core_layers/dense/">Dense</a>
 * <a href="https://keras.io/api/layers/pooling_layers/max_pooling2d/">MaxPooling2D</a>
-* <a href="https://keras.io/api/layers/pooling_layers/max_pooling2d/">AveragePooling</a>
+* <a href="https://keras.io/api/layers/pooling_layers/average_pooling2d/">AveragePooling2D</a>
 * <a href="https://keras.io/api/layers/reshaping_layers/flatten/">Flatten</a>
+* <a href="https://keras.io/api/layers/normalization_layers/batch_normalization/">BatchNormalization</a>
 
-Activation functions are listed below:
-
+Activation functions from Keras:
 * <a href="https://keras.io/api/layers/activations/#relu-function">ReLU</a>
-* <a href="https://keras.io/api/layers/activations/#tanh-function">Tanh</a>
+* <a href="https://keras.io/api/layers/activations/#sigmoid-function">Sigmoid</a>
 * <a href="https://keras.io/api/layers/activations/#softmax-function">Softmax</a>
+* <a href="https://keras.io/api/layers/activations/#softsign-function">Softsign</a>
+* <a href="https://keras.io/api/layers/activations/#tanh-function">Tanh</a>
+
+Layers from Larq:
+* <a href="https://docs.larq.dev/larq/api/layers/#quantconv2d">QuantConv2D</a>
+* <a href="https://docs.larq.dev/larq/api/layers/#quantdense">QuantDense</a>
+
+Layers from Scikit-Learn (integrated for preprocessing):
+* <a href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MaxAbsScaler.html">MaxAbsScaler</a>
+* <a href="hhttps://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MinMaxScaler.html">MinMaxScaler</a>
+* <a href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html">StandardScaler</a>
+* <a href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.RobustScaler.html">RobustScaler</a>
+
+
 
 ## Getting started 🚀 <A NAME="started"></A>
 In order to use the EmbedIA Python converter, the first step is to clone the repository
@@ -56,6 +71,9 @@ Open the <a href="https://github.com/Embed-ML/EmbedIA/blob/main/create_embedia_p
 * _OUTPUT_FOLDER_: output folder path
 * _PROJECT_NAME_: generated project name
 * _MODEL_FILE_: model path in .h5 format to use
+
+* _options.embedia_folder_: folder of EmbedIA files:
+  * ```options.embedia_folder = ...```
 * _options.project_type_: type of project among those available:
   * ```ProjectType.ARDUINO```
   * ```ProjectType.C```
@@ -66,6 +84,12 @@ Open the <a href="https://github.com/Embed-ML/EmbedIA/blob/main/create_embedia_p
   * ```ModelDataType.FIXED32```
   * ```ModelDataType.FIXED16```
   * ```ModelDataType.FIXED8```
+  * ```ModelDataType.BINARY```
+* _options.binary_block_: options for block size of binary layers:
+  * ```ModelDataType.BinaryBlockSize.Bits8```
+  * ```ModelDataType.BinaryBlockSize.Bits16```
+  * ```ModelDataType.BinaryBlockSize.Bits32```
+  * ```ModelDataType.BinaryBlockSize.Bits64```
 * _options.debug_mode_: options for inclusion and use of debug functions:
   * ```DebugMode.DISCARD```
   * ```DebugMode.DISABLED```
@@ -76,6 +100,13 @@ Open the <a href="https://github.com/Embed-ML/EmbedIA/blob/main/create_embedia_p
   * ```{ProjectFiles.MAIN}```
   * ```{ProjectFiles.MODEL}```
   * ```{ProjectFiles.LIBRARY}```
+* _options.example_data_: array of data to include as examples:
+  * ```options.example_data = samples```
+* _options.example_ids_: array of id of data in example_data property:
+  * ```options.example_ids = ids```
+* _options.clean_output_: if True, remove output folder and start a clean export:
+  * ```options.clean_output = True```
+
 
 Run the script as follows:
 ```bash
