@@ -85,6 +85,7 @@ Open the <a href="https://github.com/Embed-ML/EmbedIA/blob/main/create_embedia_p
   * ```ModelDataType.FIXED16```
   * ```ModelDataType.FIXED8```
   * ```ModelDataType.BINARY```
+  * ```ModelDataType.BINARY-FIXED32```
 * _options.binary_block_: options for block size of binary layers:
   * ```ModelDataType.BinaryBlockSize.Bits8```
   * ```ModelDataType.BinaryBlockSize.Bits16```
