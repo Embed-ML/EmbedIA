@@ -1,12 +1,12 @@
 class ModelDataType:
-    (FLOAT, FIXED32, FIXED16, FIXED8, BINARY) = (0, 1, 2, 3, 4)
-    LAST = BINARY
-    SIZES = [32, 32, 16, 8, 1]
+    (FLOAT, FIXED32, FIXED16, FIXED8, BINARY, BINARY_FIXED32) = (0, 1, 2, 3, 4, 5)
+
+    SIZES = [32, 32, 16, 8, 32, 32]
 
     def get_size(dt):
-        if dt <= ModelDataType.LAST:
-            return ModelDataType.SIZES[dt]
-        return None
+
+        return ModelDataType.SIZES[dt]
+
 
 
 class ProjectType:

@@ -11,7 +11,7 @@
 #include "fixed.h"
 {includes}
 
-#define PRINT_RESULTS 0
+
 
 /* DEFINICIÓN DE ESTRUCTURAS */
 

@@ -132,6 +132,9 @@ class ProjectGenerator:
             return 'fixed32/'
         elif data_type == ModelDataType.BINARY:
             return 'binary/'
+        elif data_type == ModelDataType.BINARY_FIXED32:
+            return 'binary&fixed32/'
+        
         return 'float/'
 
     def _prepare_folders(self, output_folder, project_name, options):

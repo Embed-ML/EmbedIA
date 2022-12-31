@@ -32,7 +32,7 @@ def generate_embedia_library(layers_embedia, src_folder, options):
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
     # Prepare includes
     
-    if options.data_type == ModelDataType.BINARY:
+    if options.data_type == ModelDataType.BINARY or options.data_type == ModelDataType.BINARY_FIXED32:
     
         if options.tamano_bloque == BinaryBlockSize.Bits8:
             tam_block = 8

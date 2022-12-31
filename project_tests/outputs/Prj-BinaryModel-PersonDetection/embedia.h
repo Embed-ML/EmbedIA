@@ -9,7 +9,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define tamano_del_bloque 64
+#define tamano_del_bloque 32
 
 
 

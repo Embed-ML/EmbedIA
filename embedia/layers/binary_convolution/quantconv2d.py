@@ -123,21 +123,18 @@ class QuantConv2D(DataLayer):
         # EmbedIA filter structure size
         if(self.tipo_conv==0): #conv2d float
             sz_filter_t = types_dict['filter_t']
-            dt_size = dt_size*32
+            
+            mem_size = (n_channels * n_rows * n_cols * dt_size / 8 + sz_filter_t) * n_filters
         else:    #semi-cuantizada o full binary
             sz_filter_t = types_dict['quant_filter_t']
             if self.options.tamano_bloque == BinaryBlockSize.Bits8:
-                dt_size = dt_size*8
+                dt_size = 8
             elif self.options.tamano_bloque == BinaryBlockSize.Bits16:
-                dt_size = dt_size*16
+                dt_size = 16
             elif self.options.tamano_bloque == BinaryBlockSize.Bits32:
-                dt_size = dt_size*32
+                dt_size = 32
             else:
-                dt_size = dt_size*64
-
-        if(self.tipo_conv==0):
-            mem_size = (n_channels * n_rows * n_cols * dt_size / 8 + sz_filter_t) * n_filters
-        else:
+                dt_size = 64
             mem_size = (math.ceil((n_channels * n_rows * n_cols)/dt_size) * dt_size / 8 + sz_filter_t) * n_filters
 
         # estimate amount multiplication and addition operations
@@ -263,7 +260,7 @@ class QuantConv2D(DataLayer):
                       
                       if cont == xBits-1 or ((ch+1)*(f+1)*(c+1) == largo_total):
                           
-                          o_weights+=f'''{macro_converter(suma)},'''
+                          o_weights+=f'''{(suma)},'''
                           cont = 0
                           suma = 0
                           

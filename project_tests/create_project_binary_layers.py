@@ -15,7 +15,7 @@ from embedia.model_generator.project_options import (
 )
 
 OUTPUT_FOLDER = 'outputs/'
-PROJECT_NAME = 'Prj-BinaryModel-PersonDetection'
+PROJECT_NAME = 'Prj-BinaryModel-PersonDetection-Fixed32'
 MODEL_FILE = 'models/person_detection_binary_72acc.h5'
 #SAMPLES_FILE = 'samples/catorce.sav'
 
@@ -39,12 +39,13 @@ options.project_type = ProjectType.CODEBLOCK
 # options.data_type = ModelDataType.FIXED32
 # options.data_type = ModelDataType.FIXED16
 # options.data_type = ModelDataType.FIXED8
-options.data_type = ModelDataType.BINARY
+#options.data_type = ModelDataType.BINARY
+options.data_type = ModelDataType.BINARY_FIXED32
 
-#options.binary_block = BinaryBlockSize.Bits8
-#options.binary_block = BinaryBlockSize.Bits16
-#options.binary_block = BinaryBlockSize.Bits32
-options.binary_block = BinaryBlockSize.Bits64
+#options.tamano_bloque = BinaryBlockSize.Bits8
+#options.tamano_bloque = BinaryBlockSize.Bits16
+options.tamano_bloque = BinaryBlockSize.Bits32
+#options.tamano_bloque = BinaryBlockSize.Bits64
 
 options.debug_mode = DebugMode.DISCARD
 # options.debug_mode = DebugMode.DISABLED
@@ -977,11 +978,10 @@ options.files = ProjectFiles.ALL
 # if True, remove output folder and start a clean export
 options.clean_output = True
 
-if options.data_type == ModelDataType.BINARY:
-    import larq as lq
-    lq.models.summary(model)
-else:
-    model.summary()
+
+import larq as lq
+lq.models.summary(model)
+
 
 
 ############# Generate project #############

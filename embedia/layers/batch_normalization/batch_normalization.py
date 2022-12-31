@@ -78,8 +78,7 @@ class BatchNormalization(DataLayer):
 
         # base data type: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)
-        if(self.options.data_type==ModelDataType.BINARY):
-            dt_size = 32
+        
         mem_size = n_arrays * n_features * dt_size/8 + sz_batch_norm_t
 
         MACs = 0

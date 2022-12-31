@@ -95,7 +95,7 @@ class Model(object):
         # prepare to extract declaration of structures
 
         # get code to first function definition in order to includes structures
-        if (self.options.data_type == ModelDataType.BINARY):
+        if (self.options.data_type == ModelDataType.BINARY or self.options.data_type == ModelDataType.BINARY_FIXED32):
             start = embedia_decl.find('endif')
             start = start + 5
         else:
@@ -134,13 +134,16 @@ typedef char dfixed;
             bytes_size = 4
         else:
             bytes_size = 8
+        
+        bytes_size2 = 0
+        bytes_size3 = 0
         if(self.options.data_type == ModelDataType.FIXED8):
             bytes_size2 = 1
             bytes_size3 = 2
         elif(self.options.data_type == ModelDataType.FIXED16):
             bytes_size2 = 2
             bytes_size3 = 4
-        else:
+        elif(self.options.data_type == ModelDataType.FIXED32 or self.options.data_type == ModelDataType.BINARY_FIXED32):
             bytes_size2 = 4
             bytes_size3 = 8
         # base types sizes in bytes
