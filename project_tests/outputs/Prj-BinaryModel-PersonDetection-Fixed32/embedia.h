@@ -10,7 +10,7 @@
 #include "fixed.h"
 #include <stdlib.h>
 
-#define tamano_del_bloque 32
+#define binary_block_size 32
 
 
 
@@ -22,22 +22,22 @@
 
 
 
-#if tamano_del_bloque == 8
+#if binary_block_size == 8
 typedef uint8_t xBITS;
 static const uint8_t mascara_global_bits[8] = { 128 , 64 , 32 , 16 , 8 , 4 , 2 , 1};
-#elif tamano_del_bloque == 16
+#elif binary_block_size == 16
 typedef uint16_t xBITS;
 static const uint16_t mascara_global_bits[16] = { 32768 , 16384 , 8192 , 4096 , 2048 , 1024 , 512 , 256 , 128 , 64 , 32 , 16 , 8 , 4 , 2 , 1};
-#elif tamano_del_bloque == 32
+#elif binary_block_size == 32
 typedef uint32_t xBITS;
 static const uint32_t mascara_global_bits[32] = { 2147483648 , 1073741824 , 536870912 , 268435456 , 134217728 , 67108864 , 33554432 , 16777216 , 8388608 , 4194304 , 2097152 , 1048576 , 524288 , 262144 , 131072 , 65536 , 32768 , 16384 , 8192 , 4096 , 2048 , 1024 , 512 , 256 , 128 , 64 , 32 , 16 , 8 , 4 , 2 , 1};
-#elif tamano_del_bloque == 64
+#elif binary_block_size == 64
 typedef uint64_t xBITS;
 static const uint64_t mascara_global_bits[64] = { 9223372036854775808 , 4611686018427387904 , 2305843009213693952 , 1152921504606846976 , 576460752303423488 , 288230376151711744 , 144115188075855872 , 72057594037927936 , 36028797018963968 , 18014398509481984 , 9007199254740992 , 4503599627370496 , 2251799813685248 , 1125899906842624 , 562949953421312 , 281474976710656 , 140737488355328 , 70368744177664 , 35184372088832 , 17592186044416 , 8796093022208 , 4398046511104 , 2199023255552 , 1099511627776 , 549755813888 , 274877906944 , 137438953472 , 68719476736 , 34359738368 , 17179869184 , 8589934592 , 4294967296 , 2147483648 , 1073741824 , 536870912 , 268435456 , 134217728 , 67108864 , 33554432 , 16777216 , 8388608 , 4194304 , 2097152 , 1048576 , 524288 , 262144 , 131072 , 65536 , 32768 , 16384 , 8192 , 4096 , 2048 , 1024 , 512 , 256 , 128 , 64 , 32 , 16 , 8 , 4 , 2 , 1};
 #else
 typedef uint8_t xBITS;
 static const uint8_t mascara_global_bits[8] = { 128 , 64 , 32 , 16 , 8 , 4 , 2 , 1};
-#endif // tamano_del_bloque
+#endif // binary_block_size
 
 
 /* STRUCTURE DEFINITION */

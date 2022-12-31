@@ -45,11 +45,11 @@ def generate_embedia_library(layers_embedia, src_folder, options):
             
         if options.project_type == ProjectType.ARDUINO:
             includes_h = '#include "Arduino.h"\n'
-            includes_h += f'\n#define tamano_del_bloque {tam_block}\n'
+            includes_h += f'\n#define binary_block_size {tam_block}\n'
             
         else:
             includes_h = '#include <stdlib.h>\n'
-            includes_h += f'\n#define tamano_del_bloque {tam_block}\n'
+            includes_h += f'\n#define binary_block_size {tam_block}\n'
     
         embedia_files['embedia.h'] = multi_replace({'{includes}': includes_h}, embedia_files['embedia.h'])
 

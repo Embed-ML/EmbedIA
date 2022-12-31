@@ -54,7 +54,7 @@ int count_set_bits_Brian_Kernighan_algorithm(xBITS n) {
 
 float POPCOUNT(xBITS n){
 
-    return 2*count_set_bits_Brian_Kernighan_algorithm(n) - tamano_del_bloque;
+    return 2*count_set_bits_Brian_Kernighan_algorithm(n) - binary_block_size;
 
 }
 
@@ -91,7 +91,7 @@ static void quant_conv2d_input_not_binary(quant_filter_t filter, data3d_t input,
 				for (k=0; k<filter.kernel_size; k++){
 					for (l=0; l<filter.kernel_size; l++){
                         offset_absoluto = (c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l;
-                        if((filter.bitarray[offset_absoluto / tamano_del_bloque] & mascara_global_bits[offset_absoluto % tamano_del_bloque])>>(tamano_del_bloque-(offset_absoluto % tamano_del_bloque)-1)){
+                        if((filter.bitarray[offset_absoluto / binary_block_size] & mascara_global_bits[offset_absoluto % binary_block_size])>>(binary_block_size-(offset_absoluto % binary_block_size)-1)){
                             suma += (input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
                         }else{
                             suma += ((-1) * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
@@ -163,7 +163,7 @@ void quantconv2d_layer(quantconv2d_layer_t layer, data3d_t input, data3d_t *outp
     xBITS suma;
     size_t output_hw = output->height*output->width;
     size_t iterador;
-    uint8_t long_ult_bloque = (layer.filters[0].kernel_size*layer.filters[0].channels*layer.filters[0].kernel_size) % tamano_del_bloque;
+    uint8_t long_ult_bloque = (layer.filters[0].kernel_size*layer.filters[0].channels*layer.filters[0].kernel_size) % binary_block_size;
 
     for(iterador=0;iterador<output->channels*output_hw;iterador++){ //valores a cero
         output->data[iterador] = 0;
@@ -178,12 +178,12 @@ void quantconv2d_layer(quantconv2d_layer_t layer, data3d_t input, data3d_t *outp
 					for (l=0; l<layer.filters[0].kernel_size; l++){
 
 						if(sign(input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)])){
-                            suma+= mascara_global_bits[cont%tamano_del_bloque];
+                            suma+= mascara_global_bits[cont%binary_block_size];
 						}
-						if(((++cont)%tamano_del_bloque)==0){
+						if(((++cont)%binary_block_size)==0){
                             //ya tengo el num
                             for(f=0;f<layer.n_filters;f++){
-                                output->data[(f*output_hw) + i*output->width + j] += POPCOUNT(XNOR(suma,layer.filters[f].bitarray[(cont/tamano_del_bloque)-1]));
+                                output->data[(f*output_hw) + i*output->width + j] += POPCOUNT(XNOR(suma,layer.filters[f].bitarray[(cont/binary_block_size)-1]));
                             }
                             suma = 0;
 						}
@@ -194,7 +194,7 @@ void quantconv2d_layer(quantconv2d_layer_t layer, data3d_t input, data3d_t *outp
 			//ya tenemos una fila de la matriz de salida
             if(long_ult_bloque!=0){ //bloque extra
                 for(f=0;f<layer.n_filters;f++){
-                    output->data[(f*output_hw) + i*output->width + j] += POPCOUNT(XNOR(suma,layer.filters[f].bitarray[cont/tamano_del_bloque])) - (tamano_del_bloque-long_ult_bloque) + layer.filters[f].bias;
+                    output->data[(f*output_hw) + i*output->width + j] += POPCOUNT(XNOR(suma,layer.filters[f].bitarray[cont/binary_block_size])) - (binary_block_size-long_ult_bloque) + layer.filters[f].bias;
                 }
             }else{  //solo bias
                 for(f=0;f<layer.n_filters;f++){
@@ -219,8 +219,8 @@ void quantconv2d_layer(quantconv2d_layer_t layer, data3d_t input, data3d_t *outp
  */
 void quantdense_layer(quantdense_layer_t dense_layer, data1d_t input, data1d_t * output){
 
-    uint16_t bloques_enteros = input.length / tamano_del_bloque;
-    uint8_t long_ult = input.length % tamano_del_bloque;
+    uint16_t bloques_enteros = input.length / binary_block_size;
+    uint8_t long_ult = input.length % binary_block_size;
     output->length = dense_layer.n_neurons;
 	output->data = (float*)swap_alloc(sizeof(float)*dense_layer.n_neurons);
 
@@ -235,8 +235,8 @@ void quantdense_layer(quantdense_layer_t dense_layer, data1d_t input, data1d_t *
     }
 
     for(i=0;i<bloques_enteros;i++){
-        for(j=0;j<tamano_del_bloque;j++){
-            if(sign(input.data[j+(tamano_del_bloque*i)])){
+        for(j=0;j<binary_block_size;j++){
+            if(sign(input.data[j+(binary_block_size*i)])){
 
                 tot += mascara_global_bits[j];
             }
@@ -253,7 +253,7 @@ void quantdense_layer(quantdense_layer_t dense_layer, data1d_t input, data1d_t *
             }
         }
         for(cont = 0;cont<dense_layer.n_neurons;cont++){
-            output->data[cont] += POPCOUNT(XNOR(dense_layer.neurons[cont].weights[bloques_enteros],tot)) - (tamano_del_bloque-long_ult) + dense_layer.neurons[cont].bias;
+            output->data[cont] += POPCOUNT(XNOR(dense_layer.neurons[cont].weights[bloques_enteros],tot)) - (binary_block_size-long_ult) + dense_layer.neurons[cont].bias;
         }
     }else{  //solo bias
         for(cont=0;cont<dense_layer.n_neurons;cont++){
