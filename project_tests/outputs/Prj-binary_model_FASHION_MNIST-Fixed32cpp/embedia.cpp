@@ -4,7 +4,7 @@
  */
 
 #include "embedia.h"
-
+#include <stdio.h>
 
 typedef struct{
 	size_t size;
@@ -23,7 +23,7 @@ void * swap_alloc(size_t s){
 		last_buff->data = realloc(last_buff->data, s);
 		last_buff->size = s;
 	}
-
+	printf("buffer1 : %d \n",buffer1.size);printf("buffer2 : %d \n",buffer2.size); printf("\n");
 	return last_buff->data;
 }
 

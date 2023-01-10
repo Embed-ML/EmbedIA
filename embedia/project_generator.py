@@ -38,6 +38,10 @@ class ProjectGenerator:
             self.set_embedia_folder('embedia/')
         else:
             self.set_embedia_folder(options.embedia_folder)
+        if options.project_type==ProjectType.C and options.data_type == ModelDataType.BINARY_FLOAT16:
+            raise ValueError("FLOAT16 is not compatible with C, only with C++ and Arduino!!")
+        if options.project_type==ProjectType.CODEBLOCK and options.data_type == ModelDataType.BINARY_FLOAT16:
+            raise ValueError("FLOAT16 is not compatible with CodeBlocks, only with C++ and Arduino!!")
 
     def set_embedia_folder(self, folder):
         if folder[-1] != '/':
@@ -134,7 +138,8 @@ class ProjectGenerator:
             return 'binary/'
         elif data_type == ModelDataType.BINARY_FIXED32:
             return 'binary&fixed32/'
-        
+        elif data_type == ModelDataType.BINARY_FLOAT16:
+            return 'binary&float16/'
         return 'float/'
 
     def _prepare_folders(self, output_folder, project_name, options):
@@ -157,7 +162,7 @@ class ProjectGenerator:
     def _get_project_files(self, model_filename, options):
 
         project_files = list()
-
+        hpp_ext = '.hpp'
         # main file and files extensions
         if options.project_type in [ProjectType.C, ProjectType.CODEBLOCK]:
             (h_ext, c_ext) = ('.h', '.c')
@@ -177,7 +182,10 @@ class ProjectGenerator:
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
         # fixed point files
-        if options.data_type != ModelDataType.FLOAT and options.data_type != ModelDataType.BINARY:
+        if options.data_type != ModelDataType.BINARY_FLOAT16:
+            project_files.append('half'+hpp_ext)
+
+        if options.data_type != ModelDataType.FLOAT and options.data_type != ModelDataType.BINARY and options.data_type != ModelDataType.BINARY_FLOAT16:
             project_files.append('fixed'+c_ext)
             project_files.append('fixed'+h_ext)
 

@@ -120,7 +120,7 @@ class BatchNormalization(DataLayer):
     {o_beta};
     {o_mov_mean};
     {o_inv_mov_std};
-    
+   
     static const {struct_type} norm = {{ {length}, {beta_name}, {mov_mean_name}, {inv_gamma_dev_name} }};
     return norm;
 }}

@@ -32,7 +32,7 @@ def generate_embedia_library(layers_embedia, src_folder, options):
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
     # Prepare includes
     
-    if options.data_type == ModelDataType.BINARY or options.data_type == ModelDataType.BINARY_FIXED32:
+    if options.data_type == ModelDataType.BINARY or options.data_type == ModelDataType.BINARY_FIXED32 or options.data_type == ModelDataType.BINARY_FLOAT16:
     
         if options.tamano_bloque == BinaryBlockSize.Bits8:
             tam_block = 8
@@ -330,6 +330,10 @@ def generate_examples(src_folder, var_name, options):
         def conv(s):
             return s
         data_type = 'float'
+    elif options.data_type == ModelDataType.BINARY_FLOAT16:
+        def conv(s):
+            return f"half({s})"
+        data_type = 'half'
     else:
         def conv(s):
             return f"FL2FX({s})"
