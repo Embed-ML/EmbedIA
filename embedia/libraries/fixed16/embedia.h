@@ -1,7 +1,6 @@
 /* 
  * EmbedIA 
- * LIBRERÍA ARDUINO QUE DEFINE FUNCIONES PARA LA IMPLEMENTACIÓN DE REDES NEURNOALES CONVOLUCIONALES
- * EN MICROCONTROLADORES Y LAS ESTRUCTURAS DE DATOS NECESARIAS PARA SU USO
+ * C LIBRARY FOR THE IMPLEMENTATION OF NEURAL NETWORKS ON MICROCONTROLLERS
  */
 #ifndef _EMBEDIA_H
 #define _EMBEDIA_H
@@ -9,20 +8,22 @@
 #include <stdint.h>
 #include <math.h>
 #include "fixed.h"
+
 {includes}
 
 #define PRINT_RESULTS 0
 
-/* DEFINICIÓN DE ESTRUCTURAS */
+/* STRUCTURE DEFINITION */
 
 /*
- * Estructura que almacena una matriz de datos de tipo fixed  (fixed  * data) en forma de vector
- * Especifica la cantidad de canales (uint32_t channels), el ancho (uint32_t width) y el alto (uint32_t height) de la misma
+ * Structure that stores an array of fixed data (fixed * data) in vector form.
+ * Specifies the number of channels, the width and the height of the array.
  */
+
 typedef struct{
-    uint32_t channels;
-    uint32_t width;
-    uint32_t height;
+    uint16_t channels;
+    uint16_t width;
+    uint16_t height;
     fixed  * data;
 }data3d_t;
 
@@ -37,46 +38,43 @@ typedef struct{
     fixed  * data;
 }data1d_t;
 
+
 /*
- * typedef struct filter_t
- * Estructura que almacena los pesos de un filtro.
- * Especifica la cantidad de canales (uint32_t channels), su tamaño (uint32_t kernel_size),
- * los pesos (fixed  * weights) y el bias (fixed  bias).
+ * Structure that stores the weights of a filter.
+ Specifies the number of channels (uint16_t channels), their size (uint16_t kernel_size), the weights (fixed * weights) and the bias (fixed bias),
+ * the weights (fixed * weights) and the bias (fixed bias).
  */
 typedef struct{
-    uint32_t channels;
-    uint32_t kernel_size;
+    uint16_t channels;
+    uint16_t kernel_size;
     const fixed  * weights;
     fixed  bias; 
 }filter_t;
 
 /*
- * typedef struct conv_layer_t
- * Estructura que modela una capa convolucional.
- * Especifica la cantidad de filtros (uint32_t n_filters) y un vector de filtros (filter_t * filters) 
+ * Structure that models a convolutional layer.
+ * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters). 
  */
 typedef struct{
-    uint32_t n_filters;
+    uint16_t n_filters;
     filter_t * filters; 
 }conv2d_layer_t;
 
 /*
- * typedef struct conv_layer_t
- * Estructura que modela una capa separable..
- * Especifica la cantidad de filtros (uint32_t n_filters,
- * un filtro del tamaño indicado (filter_t depth_filter) 
- * un vector de filtros 1x1 (filter_t * point_filters) 
+ * Structure that models a separable layer...
+ * Specifies the number of filters (uint16_t n_filters,
+ * a filter of the specified size (filter_t depth_filter) 
+ * a vector of 1x1 filters (filter_t * point_filters) 
  */
 typedef struct{
-    uint32_t n_filters;
+    uint16_t n_filters;
     filter_t depth_filter;
     filter_t * point_filters; 
 }separable_conv2d_layer_t;
 
 /*
- * typdef struct neuron_t
- * Estructura que modela una neurona.
- * Especifica los pesos de la misma en forma de vector (fixed  * weights) y el bias (fixed  bias)
+ * Structure that models a neuron.
+ * Specifies the weights of the neuron as a vector (fixed * weights) and the bias (fixed bias).
  */
 typedef struct{
     const fixed  * weights;
@@ -84,12 +82,11 @@ typedef struct{
 }neuron_t;
 
 /*
- * typdef struct dense_layer_t
- * Estructura que modela una capa densa.
- * Especifica la cantidad de neuronas (uint32_t n_neurons) y un vector de neuronas (neuron_t * neurons) 
+ * Structure that models a dense layer.
+ * Specifies the number of neurons (uint16_t n_neurons) and a vector of neurons (neuron_t * neurons). 
  */
 typedef struct{
-    uint32_t n_neurons;
+    uint16_t n_neurons;
     neuron_t * neurons;
 }dense_layer_t;
 
@@ -106,10 +103,10 @@ typedef struct{
 /*********************************************************************************************************************************/
 
 /* structure for normalization type (x_i-s_i)/d_i and (x_i)/d_i
- *  - standard normalization  : (x_i-mean_i)/std_dev_i
- *  - min_max normalization   : (x_i-min_i) / (max_i-min_i)
- *  - robust normalization    : (x_i-q1_i)  / (q3_i-q1_i)
- *  - abs_max_normalization   : (x_i)/(abs_max_xi)
+ *  standard normalization  : (x_i-mean_i)/std_dev_i
+ *  min_max normalization   : (x_i-min_i) / (max_i-min_i)
+ *  robust normalization    : (x_i-q2_i)  / (q3_i-q1_i)
+ *  abs_max_normalization   : (x_i)/(abs_max_xi)
  */
 
 typedef struct{
@@ -126,7 +123,7 @@ typedef struct{
 typedef struct {
     uint32_t length;
     const fixed *beta;
-    // const float *gamma; //  removed due to optimization included in moving_inv_std_dev
+    // const fixed *gamma; //  removed due to optimization included in moving_inv_std_dev
     const fixed *moving_mean;
     const fixed *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
 } batch_normalization_layer_t;
@@ -135,14 +132,13 @@ typedef struct {
 
 /* LIBRARY FUNCTIONS PROTOTYPES */
 
-/* 
+/*
  * conv2d_layer()
- * Función que se encarga de aplicar la convolución de una capa de filtros (conv_layer_t)
- * sobre un determinado conjunto de datos de entrada.
- * Parámetros:
- *          conv_layer_t layer  =>  capa convolucional con filtros cargados
- *         	      data3d_t input  =>  datos de entrada de tipo data3d_t
- *             data3d_t * output  =>  puntero a la estructura data3d_t donde se guardará el resultado
+ *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
+ * Parameters:
+ *  layer => convolutional layer with loaded filters.
+ *  input => input data of type data3d_t
+ *  *output => pointer to the data3d_t structure where the result will be saved.
  */
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
@@ -151,9 +147,9 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
  * 
  * Parameters:
- *  layer => convolutional layer with loaded filters.
- *  input => input data of type data3d_t
- *  *output => pointer to the data3d_t structure where the result will be saved.
+ *   layer => convolutional layer with loaded filters.
+ *   input => input data of type data3d_t
+ *   *output => pointer to the data3d_t structure where the result will be saved.
  */
 void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
@@ -162,9 +158,9 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
  * dense_layer()
  * Performs feed forward of a dense layer (dense_layer_t) on a given input data set.
  * Parameters:
- *   - dense_layer => structure with the weights of the neurons of the dense layer.  
- *   - input       => structure data1d_t with the input data to process. 
- *   - *output     => structure data1d_t to store the output result.
+ *   dense_layer => structure with the weights of the neurons of the dense layer.  
+ *   input       => structure data1d_t with the input data to process. 
+ *   *output     => structure data1d_t to store the output result.
  */
 void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output);
 
@@ -172,21 +168,21 @@ void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output);
  * max_pooling2d_layer()
  * Maxpooling layer, for now supports square size and stride. No support for padding 
  * Parameters:
- *   - pool_size => size for pooling
- *   - stride    => stride for pooling
- *   - input     => input data 
- *   - output    => output data
+ *   pool_size => size for pooling
+ *   stride    => stride for pooling
+ *   input     => input data 
+ *   output    => output data
  */
 void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
 /* 
  * avg_pooling_2d()
- *  Function that applies an average pooling to an input with a window size of received 
- *  by parameter (uint16_t strides)
+ * Function that applies an average pooling to an input with a window size of received 
+ * by parameter (uint16_t strides)
  *
  * Parameters:
- *  input => input data of type data3d_t.
- *  *output => pointer to the data3d_t structure where the result will be stored.
+ *   input => input data of type data3d_t.
+ *   *output => pointer to the data3d_t structure where the result will be stored.
  */
 void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
@@ -197,17 +193,16 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  * Converts the data format from data3d_t array format to data1d_t vector.
  * (prepares data for input into a layer of type dense_layer_t).
  * Parameters:
- *   input => input data of type data3d_t.
- *   *output => pointer to the data1d_t structure where the result will be stored.
+ *    input => input data of type data3d_t.
+ *    *output => pointer to the data1d_t structure where the result will be stored.
  */
  void flatten3d_layer(data3d_t input, data1d_t * output);
      
 /* 
  * argmax()
- *  Finds the index of the largest value within a vector of data (data1d_t)
- * 
+ * Finds the index of the largest value within a vector of data (data1d_t)
  * Parameters:
- *  data => data of type data1d_t to search for max.
+ *   data => data of type data1d_t to search for max.
  *
  * Returns:
  *  search result - index of the maximum value
@@ -222,6 +217,8 @@ void softmax_activation(fixed *data, uint32_t length);
 
 void relu_activation(fixed *data, uint32_t length);
 
+void leakyrelu_activation(fixed *data, uint32_t length, fixed alpha);
+
 void tanh_activation(fixed *data, uint32_t length);
 
 void sigmoid_activation(fixed *data, uint32_t length);
@@ -234,9 +231,9 @@ void softsign_activation(fixed *data, uint32_t length);
 /* Normalization layers */
 
 /* Normalization function for:
- *  - standard normalization  : (x_i-mean_i)/std_dev_i
- *  - min_max normalization   : (x_i-min_i) / (max_i-min_i)
- *  - robust normalization    : (x_i-q1_i)  / (q3_i-q1_i)
+ *  standard normalization  : (x_i-mean_i)/std_dev_i
+ *  min_max normalization   : (x_i-min_i) / (max_i-min_i)
+ *  robust normalization    : (x_i-q2_i)  / (q3_i-q1_i)
  */
 void normalization1(normalization_layer_t s, data1d_t input, data1d_t * output);
 
@@ -248,14 +245,14 @@ void normalization1(normalization_layer_t s, data1d_t input, data1d_t * output);
 
 
 /* Normalization function for:
- *  - abs_max_normalization   : (x_i)/(abs_max_xi)
+ *  abs_max_normalization   : (x_i)/(abs_max_xi)
  */
 void normalization2(normalization_layer_t s, data1d_t input, data1d_t * output);
 
 #define max_abs_norm_layer(norm, input, output) normalization2(norm, input, output)
 
 
-void batch_normalization_layer(batch_normalization_layer_t norm, uint32_t length, float *data);
+void batch_normalization_layer(batch_normalization_layer_t norm, uint32_t length, fixed *data);
 
 
 void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *data);

@@ -7,7 +7,7 @@
 
 
 typedef struct{
-    size_t size;
+    size_t  size;
     void  * data;
 } raw_buffer;
 
@@ -18,7 +18,7 @@ raw_buffer buffer2 = {0, NULL};
 void * swap_alloc(size_t s){
     static raw_buffer * last_buff = &buffer2;
     last_buff = (last_buff==&buffer1) ? &buffer2 : &buffer1;
-
+    
     if (last_buff->size < s){
         last_buff->data = realloc(last_buff->data, s);
         last_buff->size = s;
@@ -30,7 +30,6 @@ void * swap_alloc(size_t s){
 /*
  * conv2d()
  *  Function that performs convolution between a filter and a data set.
- *
  * Parameters:
  *  filter => filter structure with weights loaded.
  *  input => input data of type data3d_t
@@ -61,14 +60,13 @@ static void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t 
 /*
  * conv2d_layer()
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
- *
  * Parameters:
  *  layer => convolutional layer with loaded filters.
  *  input => input data of type data3d_t
  *  *output => pointer to the data3d_t structure where the result will be saved.
  */
 
- void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
+void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     uint32_t delta;
 
     output->channels = layer.n_filters; //cantidad de filtros
@@ -117,16 +115,16 @@ static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32
     }
 }
 
-/*
+/* 
  * separable_conv2d_layer()
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
- *
  * Parameters:
  *  layer => convolutional layer with loaded filters.
  *  input => input data of type data3d_t
  *  *output => pointer to the data3d_t structure where the result will be saved.
  */
- void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output){
+
+void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output){
     uint32_t delta;
     data3d_t depth_output;
 
@@ -150,15 +148,15 @@ static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32
 
 /*
  * neuron_forward()
- *  Function that performs the forward of a neuron before a given set of input data.
+ *  Function that performs the forward of a neuron in front of a given set of input data.
  * Parameters:
- *  - neuron_t neuron => neuron with its weights and bias loaded.
- *  - data1d_t input => input data in vector form (data1d_t).
+ *  neuron_t neuron => neuron with its weights and bias loaded.
+ *  flatten_data_t input => input data in vector form (flatten_data_t).
  * Returns:
- *  - float => result of the operation.
+ *  float => result of the operation         
  */
 
- static float neuron_forward(neuron_t neuron, data1d_t input){
+static float neuron_forward(neuron_t neuron, data1d_t input){
     uint32_t i;
     float result = 0;
 
@@ -171,14 +169,14 @@ static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32
 
 /*
  * dense_layer()
- * Performs feed forward of a dense layer (dense_layer_t) on a given input data set.
+ *  Performs feed forward of a dense layer (dense_layer_t) on a given input data set.
  * Parameters:
- *   - dense_layer => structure with the weights of the neurons of the dense layer.
- *   - input       => structure data1d_t with the input data to process.
- *   - *output     => structure data1d_t to store the output result.
+ *  dense_layer => structure with the weights of the neurons of the dense layer.
+ *  input       => structure data1d_t with the input data to process.
+ *  *output     => structure data1d_t to store the output result.
  */
 void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output){
-    uint16_t i;
+    uint32_t i;
 
     output->length = dense_layer.n_neurons;
     output->data = (float*)swap_alloc(sizeof(float)*dense_layer.n_neurons);
@@ -188,14 +186,15 @@ void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output){
     }
 }
 
+
 /*
  * max_pooling2d_layer()
- * Maxpooling layer, for now supports square size and stride. No support for padding
+ *  Maxpooling layer, for now supports square size and stride. No support for padding
  * Parameters:
- *   - pool_size => size for pooling
- *   - stride    => stride for pooling
- *   - input     => input data
- *   - output    => output data
+ *  pool_size => size for pooling
+ *  stride    => stride for pooling
+ *  input     => input data
+ *  output    => output data
  */
 
 void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output){
@@ -217,10 +216,10 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
                 max = -INFINITY;
 
                 for(aux1=0; aux1<pool.size; aux1++){
-                    for(aux2=0; aux2<pool.size; aux2++){
-
+                        for(aux2=0; aux2<pool.size; aux2++){
+                        
                         num = input.data[c*input.width*input.height + (i*pool.strides + aux1)*input.width + j*pool.strides + aux2];
-
+                        
                         if(num>max){
                             max = num;
                         }
@@ -229,30 +228,30 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
 
                 output->data[c*output->width*output->height + i*output->width + j] = max;
             }
-        }
+        }    
     }
 }
+
 
 /*
  * avg_pooling_2d()
  *  Function that applies an average pooling to an input with a window size of received
  *  by parameter (uint16_t strides)
- *
  * Parameters:
  *  input => input data of type data3d_t.
  *  *output => pointer to the data3d_t structure where the result will be stored.
  */
 
 void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output){
-    uint16_t c,i,j,aux1,aux2;
-    uint16_t cant = pool.size*pool.size;
+    uint32_t c,i,j,aux1,aux2;
+    uint32_t cant = pool.size*pool.size;
     float avg = 0;
     float num;
 
     // output->height = (input.height)/strides ;
     // output->width =  (input.width )/strides ;
-    output->height = ((uint16_t) ((input.height - pool.size)/pool.strides)) + 1;
-    output->width  = ((uint16_t) ((input.width - pool.size)/pool.strides)) + 1;
+    output->height = ((uint32_t) ((input.height - pool.size)/pool.strides)) + 1;
+    output->width  = ((uint32_t) ((input.width - pool.size)/pool.strides)) + 1;
     output->channels = input.channels;
     output->data = (float*)swap_alloc(sizeof(float)*(output->channels)*(output->height)*(output->width));
 
@@ -266,20 +265,20 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
                     for(aux2=0; aux2<pool.size; aux2++){
                         num = input.data[c*input.width*input.height + (i*pool.strides + aux1)*input.width + j*pool.strides + aux2];
                         avg += num;
-                    }
+                    }                  
                 }
 
                 output->data[c*output->width*output->height + i*output->width + j] = avg/cant;
             }
-        }
+        }    
     }
 }
 
 /*
  * softmax activation function
- * Parámeters:
- *          *data  => array of values to update
- *          length => numbers of values to update
+ * Parameters:
+ *  *data  => array of values to update
+ *  length => numbers of values to update
  */
 void softmax_activation(float *data, uint32_t length){
     float m = -INFINITY;
@@ -304,8 +303,8 @@ void softmax_activation(float *data, uint32_t length){
 /*
  * relu activation function
  * Parameters:
- *          *data  => array of values to update
- *          length => numbers of values to update
+ *  *data  => array of values to update
+ *  length => numbers of values to update
  */
 void relu_activation(float *data, uint32_t length){
     uint32_t i;
@@ -315,12 +314,27 @@ void relu_activation(float *data, uint32_t length){
     }
 }
 
+/*
+ * leaky relu activation function
+ * Parameters:
+ *  alfa   => coeficient to multiply negative values
+ *  *data  => array of values to update
+ *  length => numbers of values to update
+ */
+void leakyrelu_activation(float *data, uint32_t length, float alpha){
+    uint32_t i;
+
+    for (i=0;i<(length);i++){
+        data[i] = data[i] < 0 ? alpha*data[i] : data[i];
+    }
+}
+
 
 /*
  * tanh activation function: (2 / (1+e^(-2x)) -1
- * Parámeters:
- *          *data  => array of values to update
- *          length => numbers of values to update
+ * Parameters:
+ *  *data  => array of values to update
+ *  length => numbers of values to update
  */
 void tanh_activation(float *data, uint32_t length){
     uint32_t i;
@@ -334,8 +348,8 @@ void tanh_activation(float *data, uint32_t length){
 /*
  * sigmoid activation function: 1 / (1 + exp(-x))
  * Parameters:
- *          *data  => array of values to update
- *          length => numbers of values to update
+ *  *data  => array of values to update
+ *  length => numbers of values to update
  */
 void sigmoid_activation(float *data, uint32_t length){
     uint32_t i;
@@ -347,9 +361,9 @@ void sigmoid_activation(float *data, uint32_t length){
 
 /*
  * softsign activation function: x / (|x| + 1)
- * Parámeters:
- *          *data  => array of values to update
- *          length => numbers of values to update
+ * Parameters:
+ *  *data  => array of values to update
+ *  length => numbers of values to update
  */
 void softsign_activation(float *data, uint32_t length){
     uint32_t i;
@@ -361,9 +375,9 @@ void softsign_activation(float *data, uint32_t length){
 
 /*
  * softplus activation function: log(e^x + 1)
- * Parámeters:
- *          *data  => array of values to update
- *          length => numbers of values to update
+ * Parameters:
+ *  *data  => array of values to update
+ *  length => numbers of values to update
  */
 void softplus_activation(float *data, uint32_t length){
     uint32_t i;
@@ -376,12 +390,12 @@ void softplus_activation(float *data, uint32_t length){
 
 /*
  * flatten3d_layer()
- * Performs a variable shape change.
- * Converts the data format from data3d_t array format to data1d_t vector.
- * (prepares data for input into a layer of type dense_layer_t).
+ *  Performs a variable shape change.
+ *  Converts the data format from data3d_t array format to data1d_t vector.
+ *  (prepares data for input into a layer of type dense_layer_t).
  * Parameters:
- *   input => input data of type data3d_t.
- *   *output => pointer to the data1d_t structure where the result will be stored.
+ *  input => input data of type data3d_t.
+ *  *output => pointer to the data1d_t structure where the result will be stored.
  */
  void flatten3d_layer(data3d_t input, data1d_t * output){
     uint16_t c,i,j;
@@ -403,18 +417,17 @@ void softplus_activation(float *data, uint32_t length){
 /*
  * argmax()
  *  Finds the index of the largest value within a vector of data (data1d_t)
- *
  * Parameters:
  *  data => data of type data1d_t to search for max.
- *
  * Returns:
  *  search result - index of the maximum value
  */
- uint16_t argmax(data1d_t data){
+
+uint32_t argmax(data1d_t data){
     float max = data.data[0];
     uint32_t pos = 0;
 
-    for(uint16_t i=1;i<data.length;i++){
+    for(uint32_t i=1;i<data.length;i++){
         if(data.data[i]>max){
             max = data.data[i];
             pos = i;
@@ -455,11 +468,10 @@ void normalization2(normalization_layer_t n, data1d_t input, data1d_t * output){
 /*
  * batch_normalization{X}d_layer()
  * Keras Batch Normalization
- * Parámeters:
+ * Parameters:
  *      batch_normlization_t norm =>  structure with batch normalization layer parameters
  *      *data  =>   pointer to data{X}d_t
  */
-
 
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data) {
     uint32_t i;
@@ -482,10 +494,13 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
 }
 
 
-
-/* Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
-   Usually required for first convolutional layer
-*/
+/* image_adapt_layer()
+ *  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
+ *  Usually required for first convolutional layer
+ * Parameters:
+ *  input   => input data of type data3d_t.
+ *  *output => pointer to the data3d_t structure where the result will be stored.
+ */
 void image_adapt_layer(data3d_t input, data3d_t * output){
 
     int i, j, c, l;
@@ -503,4 +518,3 @@ void image_adapt_layer(data3d_t input, data3d_t * output){
         }
     }
  }
-

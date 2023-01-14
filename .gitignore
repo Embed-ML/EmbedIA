@@ -1,3 +1,4 @@
 .ipynb_checkpoints/
 *.pyc
 outputs/prueba_definitiva/
+*.bak

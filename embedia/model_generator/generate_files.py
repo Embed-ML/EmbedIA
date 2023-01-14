@@ -28,12 +28,12 @@ def generate_embedia_library(layers_embedia, src_folder, options):
     filenames = os.listdir(src_folder)
     for filename in filenames:
         embedia_files[filename] = file_management.read_from_file(src_folder+filename)
-        
+
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
     # Prepare includes
-    
+
     if options.data_type == ModelDataType.BINARY:
-    
+
         if options.tamano_bloque == BinaryBlockSize.Bits8:
             tam_block = 8
         elif options.tamano_bloque == BinaryBlockSize.Bits16:
@@ -42,24 +42,24 @@ def generate_embedia_library(layers_embedia, src_folder, options):
             tam_block = 32
         else:
             tam_block = 64
-            
+
         if options.project_type == ProjectType.ARDUINO:
             includes_h = '#include "Arduino.h"\n'
             includes_h += f'\n#define tamano_del_bloque {tam_block}\n'
-            
+
         else:
             includes_h = '#include <stdlib.h>\n'
             includes_h += f'\n#define tamano_del_bloque {tam_block}\n'
-    
+
         embedia_files['embedia.h'] = multi_replace({'{includes}': includes_h}, embedia_files['embedia.h'])
 
     else:
-        
+
         if options.project_type == ProjectType.ARDUINO:
             includes_h = '#include "Arduino.h"\n'
         else:
             includes_h = '#include <stdlib.h>\n'
-    
+
         embedia_files['embedia.h'] = multi_replace({'{includes}': includes_h}, embedia_files['embedia.h'])
 
 
@@ -231,7 +231,7 @@ def generate_embedia_main(layers_embedia, src_folder, filename, options):
     # prepare data for model input and output
     input_data_type = layers_embedia[0].get_input_data_type()
     output_data_type = layers_embedia[-1].get_output_data_type()
-    
+
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado no se usa igual por ahora
 
     # (FLOAT, FIXED32, FIXED16, FIXED8, BINARY) = (0,1,2,3,4)
@@ -253,7 +253,7 @@ def generate_embedia_main(layers_embedia, src_folder, filename, options):
 
     // make model prediction
     // uncomment corresponding code
-    /*
+
     int prediction = model_predict_class(input, &results);
 
     // print predicted class id'''
@@ -263,16 +263,26 @@ def generate_embedia_main(layers_embedia, src_folder, filename, options):
     Serial.print("Prediction class id: ");
     Serial.println(prediction);
 '''
+        if options.example_data is not None:
+            main_code += '''
+    Serial.print("   Example class id: ");
+    Serial.println(sample_data_id);
+'''
     else:
         main_code += '''
     printf("Prediction class id: %d\\n", prediction);
 '''
+        if options.example_data is not None:
+            main_code += '''
+    printf(("   Example class id: %d\\n", sample_data_id);
+'''
 
     main_code += '''
-    */
+    /*
 
     model_predict(input, &results);
     printf("prediccion: %5f", results.data[0]);
+    */
 
 '''
 

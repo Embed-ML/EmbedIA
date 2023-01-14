@@ -5,10 +5,10 @@
 #include "embedia.h"
 
 #define INPUT_CHANNELS 1
-#define INPUT_WIDTH 14
-#define INPUT_HEIGHT 14
+#define INPUT_WIDTH 12
+#define INPUT_HEIGHT 12
 
-#define INPUT_SIZE 196
+#define INPUT_SIZE 144
 
 
 void model_init();

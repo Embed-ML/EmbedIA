@@ -28,6 +28,9 @@ dict_layers = {
     keras.layers.Flatten: Flatten,
     keras.layers.BatchNormalization: BatchNormalization,
     keras.layers.Activation: Activation,
+    keras.layers.ReLU: Activation,
+    keras.layers.LeakyReLU: Activation,
+    keras.layers.Softmax: Activation,
     # pooling layers
     keras.layers.AveragePooling1D: Pooling,  # not yet implemented in C
     keras.layers.AveragePooling2D: Pooling,

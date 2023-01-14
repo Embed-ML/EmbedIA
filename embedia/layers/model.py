@@ -5,6 +5,7 @@ import regex as re
 import pycparser as pcp
 from embedia.model_generator.project_options import BinaryBlockSize
 
+
 class UnsupportedLayerError(Exception):
     types_dict = {}
 
@@ -14,7 +15,8 @@ class UnsupportedLayerError(Exception):
 
 
 class Model(object):
-    types_dict ={}
+    types_dict = {}
+
     def __init__(self, options):
         self.options = options
         self.clear_names()
@@ -51,7 +53,7 @@ class Model(object):
         elif hasattr(obj, "__name__"):
             name = obj.__name__
         else:
-             name = obj.__class__.__name__
+            name = obj.__class__.__name__
 
         name = re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
         num = self.names[name]
@@ -80,15 +82,15 @@ class Model(object):
         """
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
-        if self.options.data_type == ModelDataType.FLOAT or self.options.data_type == ModelDataType.BINARY: 
-            def macro_converter(v): 
+        if self.options.data_type == ModelDataType.FLOAT or self.options.data_type == ModelDataType.BINARY:
+            def macro_converter(v):
                 return v
             data_type = 'float'       #binary layers dont use data_type, use block_type
         else:
             def macro_converter(v):
                 return f'''FL2FX({v})'''
             data_type = 'fixed'
-                                    
+
         return (data_type, macro_converter)
 
     def _build_types_size_dict(self, embedia_decl):
@@ -102,14 +104,14 @@ class Model(object):
             start = embedia_decl.find('typedef')
         end = embedia_decl.find('void')
         embedia_decl = embedia_decl[start:end]
-        
+
          # remove comments, pycparser doesnt support them
         pattern = re.compile(
                 r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
                 re.DOTALL | re.MULTILINE
             )
         embedia_decl = re.sub(pattern, '', embedia_decl)
-        
+
         # add dummy base data type declaration into EmbedIA code
         embedia_decl = """
 typedef char uint8_t;
@@ -175,22 +177,20 @@ typedef char dfixed;
             return self.types_dict[node.type.type.names[0]]
 
         raise Exception(node.type)
-    
+
     def get_layers_info(self, embedia_decl):
         if len(self.types_dict) == 0:
             self._build_types_size_dict(embedia_decl)
-            
+
         layers_info = []
         for layer in self.embedia_layers:
-            (size, shape, MACs) =  layer.get_layer_info(self.types_dict)
+            (size, shape, MACs) = layer.get_layer_info(self.types_dict)
             layers_info.append((layer.name, shape, MACs, size))
-            
+
         return layers_info
-    
-    
+
     def firstLayerOfItsclass(self, embedia_layer):
         for layer in self.embedia_layers:
             if type(embedia_layer) is type(layer):
                 return embedia_layer == layer
         return False
-    

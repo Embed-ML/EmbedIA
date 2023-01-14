@@ -15,6 +15,7 @@ const char* STR_FBS = " - F.bias: ";
 
 void print_datad2_t(const char *head_text, data2d_t data){
 
+    #if EMBEDIA_DEBUG > 0
 
     PRINT_TXT_LN(head_text);
 
@@ -32,14 +33,19 @@ void print_datad2_t(const char *head_text, data2d_t data){
         }
         PRINT_TXT_LN("");
     }
-    #endif // EMBEDIA_DEBUG
+    #endif // EMBEDIA_DEBUG 1
 
     PRINT_TXT_LN(SEP_LINE);
+    
+    #endif // EMBEDIA_DEBUG 0
+
 
 }
 
 void print_data3d_t(const char *head_text, data3d_t data){
 
+
+    #if EMBEDIA_DEBUG > 0
 
     PRINT_TXT_LN(head_text);
 
@@ -61,9 +67,11 @@ void print_data3d_t(const char *head_text, data3d_t data){
             }
         PRINT_TXT_LN("");
     }
-    #endif // EMBEDIA_DEBUG
+    #endif // EMBEDIA_DEBUG 1
 
     PRINT_TXT_LN(SEP_LINE);
+    
+    #endif // EMBEDIA_DEBUG 0
 
 }
 
@@ -75,6 +83,8 @@ void print_data3d_t(const char *head_text, data3d_t data){
  */
 void print_data1d_t(const char *head_text, data1d_t data){
 
+
+    #if EMBEDIA_DEBUG > 0
 
     PRINT_TXT_LN(head_text);
 
@@ -90,9 +100,12 @@ void print_data1d_t(const char *head_text, data1d_t data){
     }
     PRINT_TXT_LN("");
 
-    #endif // EMBEDIA_DEBUG
+    #endif // EMBEDIA_DEBUG 1
 
     PRINT_TXT_LN(SEP_LINE);
+
+    #endif // EMBEDIA_DEBUG 0
+
 }
 
 
@@ -104,29 +117,32 @@ void print_data1d_t(const char *head_text, data1d_t data){
  */
 void print_filter_t(const char *head_text, filter_t filter){
 
-
+    #if EMBEDIA_DEBUG > 0
+    
     PRINT_TXT_LN(head_text);
 
-	PRINT_INT_LN(STR_CHN, filter.channels);
+    PRINT_INT_LN(STR_CHN, filter.channels);
     PRINT_INT_LN(STR_FSZ, filter.kernel_size);
     PRINT_FL_LN(STR_FBS, filter.bias);
 
-	#if EMBEDIA_DEBUG > 1
+    #if EMBEDIA_DEBUG > 1
 
-	printf(STR_CONTENT);
+    printf(STR_CONTENT);
 
-	uint16_t c,h,w;
-	for(c=0;c<filter.channels;c++){
-		for(h=0;h<filter.kernel_size;h++){
-			for(w=0;w<filter.kernel_size;w++){
-				PRINT_FL("", DBG_FL(filter.weights[h*filter.kernel_size+w]));
-			}
-			PRINT_TXT_LN("");
-		}
-		PRINT_TXT_LN("");
-	}
-	#endif // EMBEDIA_DEBUG
+    uint16_t c,h,w;
+    for(c=0;c<filter.channels;c++){
+        for(h=0;h<filter.kernel_size;h++){
+            for(w=0;w<filter.kernel_size;w++){
+                PRINT_FL("", DBG_FL(filter.weights[h*filter.kernel_size+w]));
+            }
+            PRINT_TXT_LN("");
+        }
+        PRINT_TXT_LN("");
+    }
+    #endif // EMBEDIA_DEBUG 1
 
-	PRINT_TXT_LN(SEP_LINE);
+    PRINT_TXT_LN(SEP_LINE);
+    
+    #endif // EMBEDIA_DEBUG 0
 }
 

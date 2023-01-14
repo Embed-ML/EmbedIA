@@ -11,14 +11,6 @@
 
 
 
-/*
- * print_flatten_data_t()
- * Imprime los valores presentes en un vector de datos y su largo
- * Parámetros:
- *            flatten_data_t data => vector de datos a imprimir
- */
-
-
 void print_data1d_t(const char *head_text, data1d_t data);
 /*
  * print_filter_t()

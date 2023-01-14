@@ -1,9 +1,12 @@
 import regex as re
+from embedia.layers.activation.activation_functions import ActivationFunctions
 
 
 class UnsupportedFeatureError(Exception):
     def __init__(self, obj, feature):
-        super().__init__(f"EmbedIA feature ({feature}) not implemented for {str(type(obj))}")
+        super().__init__(
+            f"EmbedIA feature ({feature}) not implemented for {str(type(obj))}"
+            )
         self.object = obj
 
 
@@ -226,12 +229,11 @@ class Layer(object):
         """
         if not hasattr(self.layer, 'activation') or self.layer.activation is None:
             return ''
-        func_name = self.layer.activation.__name__
-        size = self.get_output_size()
-        if func_name == 'linear':
-            return ''
 
-        return f'''    {func_name}_activation({param}.data, {size});'''
+        act_fncs = ActivationFunctions(self.model, self.layer.activation)
+
+        return '    '+act_fncs.predict(f'{param}.data', self.get_output_size())
+
 
     def debug_function(self, param):
         """

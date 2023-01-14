@@ -256,9 +256,9 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
  * 
  * Parameters:
- *  layer => convolutional layer with loaded filters.
- *  input => input data of type data3d_t
- *  *output => pointer to the data3d_t structure where the result will be saved.
+ *   layer => convolutional layer with loaded filters.
+ *   input => input data of type data3d_t
+ *   *output => pointer to the data3d_t structure where the result will be saved.
  */
 void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
@@ -267,9 +267,9 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
  * dense_layer()
  * Performs feed forward of a dense layer (dense_layer_t) on a given input data set.
  * Parameters:
- *   - dense_layer => structure with the weights of the neurons of the dense layer.  
- *   - input       => structure data1d_t with the input data to process. 
- *   - *output     => structure data1d_t to store the output result.
+ *   dense_layer => structure with the weights of the neurons of the dense layer.  
+ *   input       => structure data1d_t with the input data to process. 
+ *   *output     => structure data1d_t to store the output result.
  */
 void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output);
 
@@ -277,21 +277,21 @@ void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output);
  * max_pooling2d_layer()
  * Maxpooling layer, for now supports square size and stride. No support for padding 
  * Parameters:
- *   - pool_size => size for pooling
- *   - stride    => stride for pooling
- *   - input     => input data 
- *   - output    => output data
+ *   pool_size => size for pooling
+ *   stride    => stride for pooling
+ *   input     => input data 
+ *   output    => output data
  */
 void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
 /* 
  * avg_pooling_2d()
- *  Function that applies an average pooling to an input with a window size of received 
- *  by parameter (uint16_t strides)
+ * Function that applies an average pooling to an input with a window size of received 
+ * by parameter (uint16_t strides)
  *
  * Parameters:
- *  input => input data of type data3d_t.
- *  *output => pointer to the data3d_t structure where the result will be stored.
+ *   input => input data of type data3d_t.
+ *   *output => pointer to the data3d_t structure where the result will be stored.
  */
 void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
@@ -302,17 +302,16 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  * Converts the data format from data3d_t array format to data1d_t vector.
  * (prepares data for input into a layer of type dense_layer_t).
  * Parameters:
- *   input => input data of type data3d_t.
- *   *output => pointer to the data1d_t structure where the result will be stored.
+ *    input => input data of type data3d_t.
+ *    *output => pointer to the data1d_t structure where the result will be stored.
  */
  void flatten3d_layer(data3d_t input, data1d_t * output);
      
 /* 
  * argmax()
- *  Finds the index of the largest value within a vector of data (data1d_t)
- * 
+ * Finds the index of the largest value within a vector of data (data1d_t)
  * Parameters:
- *  data => data of type data1d_t to search for max.
+ *   data => data of type data1d_t to search for max.
  *
  * Returns:
  *  search result - index of the maximum value
@@ -327,6 +326,8 @@ void softmax_activation(float *data, uint32_t length);
 
 void relu_activation(float *data, uint32_t length);
 
+void leakyrelu_activation(float *data, uint32_t length, float alpha);
+
 void tanh_activation(float *data, uint32_t length);
 
 void sigmoid_activation(float *data, uint32_t length);
@@ -339,9 +340,9 @@ void softsign_activation(float *data, uint32_t length);
 /* Normalization layers */
 
 /* Normalization function for:
- *  - standard normalization  : (x_i-mean_i)/std_dev_i
- *  - min_max normalization   : (x_i-min_i) / (max_i-min_i)
- *  - robust normalization    : (x_i-q1_i)  / (q3_i-q1_i)
+ *  standard normalization  : (x_i-mean_i)/std_dev_i
+ *  min_max normalization   : (x_i-min_i) / (max_i-min_i)
+ *  robust normalization    : (x_i-q2_i)  / (q3_i-q1_i)
  */
 void normalization1(normalization_layer_t s, data1d_t input, data1d_t * output);
 
@@ -353,7 +354,7 @@ void normalization1(normalization_layer_t s, data1d_t input, data1d_t * output);
 
 
 /* Normalization function for:
- *  - abs_max_normalization   : (x_i)/(abs_max_xi)
+ *  abs_max_normalization   : (x_i)/(abs_max_xi)
  */
 void normalization2(normalization_layer_t s, data1d_t input, data1d_t * output);
 
@@ -397,10 +398,14 @@ static inline xBITS XNOR(register xBITS a,register xBITS b);
  *
  */
 
-/* Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
-   Usually required for first convolutional layer
-*/
+/* image_adapt_layer()
+ *  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
+ *  Usually required for first convolutional layer
+ * Parameters:
+ *  input   => input data of type data3d_t.
+ *  *output => pointer to the data3d_t structure where the result will be stored.
+ */
 void image_adapt_layer(data3d_t input, data3d_t * output);
 
-#endif
 
+#endif

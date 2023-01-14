@@ -15,12 +15,12 @@ static char temp_str[DBG_FLOAT_SIZE+1];
 
 #if defined (__AVR__) || (__avr__) || (ARDUINO_ARCH_AVR)
     // sprintf of many AVR doesn't support float numbers
-    #define PRINT_FL(txt, fl)                                     \   
+    #define PRINT_FL(txt, fl)                                     \
         Serial.print(txt);                                        \
         dtostrf(DBG_FL(fl),DBG_FLOAT_SIZE,DBG_FRC_PART,temp_str); \
         Serial.print(temp_str)
 
-    #define PRINT_FL_LN(txt, fl)                                  \   
+    #define PRINT_FL_LN(txt, fl)                                  \
         Serial.print(txt);                                        \
         dtostrf(DBG_FL(fl),DBG_FLOAT_SIZE,DBG_FRC_PART,temp_str); \
         Serial.println(temp_str)
