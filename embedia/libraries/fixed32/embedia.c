@@ -503,7 +503,7 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
  */
 void image_adapt_layer(data3d_t input, data3d_t * output){
 
-    int i, j, c, l;
+    uint32_t i, j, c, l;
 
     output->channels = input.channels;
     output->height   = input.height;

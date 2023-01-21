@@ -21,6 +21,9 @@ class ActivationFunctions:
     def _softsign_params(self, output_name, output_size):
         return self._base_params(output_name, output_size)
 
+    def _relu_params(self, output_name, output_size):
+        return self._base_params(output_name, output_size)
+
     def _leakyrelu_params(self, output_name, output_size):
         (data_type, macro_converter) = self.model.get_type_converter()
         extra_param = f', {macro_converter(self.activation.alpha)}'

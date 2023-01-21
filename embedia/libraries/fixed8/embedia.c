@@ -122,7 +122,7 @@ static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32
         for (j=0; j<output->width; j++){
             suma = 0;
             for (c=0; c<filter.channels; c++){
-                suma += FIXED_MUL(filter.weights[c], input.data[(c*input.height*input.width)+i*input.width+j]);
+                suma += DFIXED_MUL(filter.weights[c], input.data[(c*input.height*input.width)+i*input.width+j]);
             }
 
 			suma = suma + FIXED_TO_DFIXED(filter.bias);
@@ -183,7 +183,7 @@ static fixed neuron_forward(neuron_t neuron, data1d_t input){
     dfixed result = 0;
 
     for(i=0;i<input.length;i++){
-        result += FIXED_MUL(input.data[i],neuron.weights[i]);
+        result += DFIXED_MUL(input.data[i],neuron.weights[i]);
     }
 
 	result =  result + FIXED_TO_DFIXED(neuron.bias);
@@ -551,7 +551,7 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
  */
 void image_adapt_layer(data3d_t input, data3d_t * output){
 
-    int i, j, c, l;
+    uint32_t i, j, c, l;
 
     output->channels = input.channels;
     output->height   = input.height;

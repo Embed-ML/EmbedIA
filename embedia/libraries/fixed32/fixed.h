@@ -1,4 +1,4 @@
-#ifndef FIXED_H 
+#ifndef FIXED_H
 #define FIXED_H
 
 #include <stdint.h>
@@ -45,7 +45,7 @@ typedef int64_t dfixed;
 
 #define FIXED_MUL(A,B)            \
   ((fixed)(((dfixed)(A) * (dfixed)(B)) >> FIX_FRC_SZ))
-  
+
 #define FIXED_DIV(A,B)           \
   ((fixed)(((dfixed)(A) << FIX_FRC_SZ) / (dfixed)(B)))
 
@@ -57,73 +57,73 @@ typedef int64_t dfixed;
 #define FIXED_FLOOR(A) ( FIXED_INT(A) )
 
 //////////////////////////////////// funciones de conversion de tipos ////////////////////////////////////
-	
-	// Devuelve un numero en punto fijo a partir de uno en punto flotante
-	fixed float_to_fixed(float f);
-   
-	// Devuelve un numero en punto fijo a partir de un entero
-	fixed int_to_fixed(int32_t i);
-   
-	// Devuelve la representacion en punto flotante de doble precision de un numero en punto fijo
-	double fixed_to_double(fixed f);
-	
-	// Devuelve la representacion en punto flotante de un numero en punto fijo
-	float fixed_to_float(fixed f);
-	
-	// Devuelve el entero a partir de un numero en punto fijo
-	int32_t fixed_to_int(fixed f);
 
-	
+    // Devuelve un numero en punto fijo a partir de uno en punto flotante
+    fixed float_to_fixed(float f);
+
+    // Devuelve un numero en punto fijo a partir de un entero
+    fixed int_to_fixed(int32_t i);
+
+    // Devuelve la representacion en punto flotante de doble precision de un numero en punto fijo
+    double fixed_to_double(fixed f);
+
+    // Devuelve la representacion en punto flotante de un numero en punto fijo
+    float fixed_to_float(fixed f);
+
+    // Devuelve el entero a partir de un numero en punto fijo
+    int32_t fixed_to_int(fixed f);
+
+
 //////////////////////////////////// funciones aritmeticas ////////////////////////////////////
-   
-	// Devuelve la suma en punto fijo entre a y b
-	fixed fixed_add(fixed a, fixed b);
-	
-	// Devuelve la resta en punto fijo entre a y b
-	fixed fixed_sub(fixed a, fixed b);
-	
-	// Devuelve la multiplicacion en punto fijo entre a y b
-	fixed fixed_mul(fixed a, fixed b);
-	
-	// Devuelve la division en punto fijo entre a y b
-	fixed fixed_div(fixed a, fixed b);
+
+    // Devuelve la suma en punto fijo entre a y b
+    fixed fixed_add(fixed a, fixed b);
+
+    // Devuelve la resta en punto fijo entre a y b
+    fixed fixed_sub(fixed a, fixed b);
+
+    // Devuelve la multiplicacion en punto fijo entre a y b
+    fixed fixed_mul(fixed a, fixed b);
+
+    // Devuelve la division en punto fijo entre a y b
+    fixed fixed_div(fixed a, fixed b);
 
 
 //////////////////////////////////// funciones especiales ////////////////////////////////////
-	
-	
-	// Devuelve la raiz cuadrada del numero a o -1 en caso de error
-	fixed fixed_sqrt(fixed a);
 
-	// Devuelve el valor de exp(a) 
-	fixed fixed_exp(fixed a);
 
-	// Devuelve x * 2^exp
-	fixed fixed_ldexp(fixed x, int exp);
- 
-	// Devuelve el logaritmo de x
-	fixed fixed_log(fixed x);
-	  	
-	// Devuelve el logaritmo de base b del valor x
-	fixed fixed_logn(fixed x, fixed b);
-	
-	// Devuelve n^exp
-	fixed fixed_pow(fixed n, fixed exp);
+    // Devuelve la raiz cuadrada del numero a o -1 en caso de error
+    fixed fixed_sqrt(fixed a);
 
-	// Devuelve tanh(x)
-	fixed fixed_tanh(fixed x);
-	
+    // Devuelve el valor de exp(a)
+    fixed fixed_exp(fixed a);
+
+    // Devuelve x * 2^exp
+    fixed fixed_ldexp(fixed x, int exp);
+
+    // Devuelve el logaritmo de x
+    fixed fixed_log(fixed x);
+
+    // Devuelve el logaritmo de base b del valor x
+    fixed fixed_logn(fixed x, fixed b);
+
+    // Devuelve n^exp
+    fixed fixed_pow(fixed n, fixed exp);
+
+    // Devuelve tanh(x)
+    fixed fixed_tanh(fixed x);
+
 
 //////////////////////////////////// funciones adicionales ////////////////////////////////////
-   
-	// Devuelve el valor absoluto de a
-	fixed fixed_abs(fixed a);
 
-	// Devuelve el entero menor x tal que  x >= a
-	fixed fixed_ceil(fixed a);
+    // Devuelve el valor absoluto de a
+    fixed fixed_abs(fixed a);
 
-	// Devuelve el entero mayor x tal que  x <= a
-	fixed fixed_floor(fixed a);
+    // Devuelve el entero menor x tal que  x >= a
+    fixed fixed_ceil(fixed a);
+
+    // Devuelve el entero mayor x tal que  x <= a
+    fixed fixed_floor(fixed a);
 
 
 #endif

@@ -26,29 +26,29 @@ static char temp_str[DBG_FLOAT_SIZE+1];
         dtostrf(DBG_FL(fl),DBG_FLOAT_SIZE,DBG_FRC_PART,temp_str); \
         Serial.println(temp_str)
 #else
-
+  
    #define DBG_FLOAT_FMT "%11.6f"
-
+  
    #define PRINT_FL(txt, fl)                        \
       Serial.print(txt);                            \
       sprintf(temp_str, DBG_FLOAT_FMT, DBG_FL(fl)); \
-      Serial.print(temp_str)
+      Serial.print(temp_str)     
 
    #define PRINT_FL_LN(txt, fl)                     \
       Serial.print(txt);                            \
       sprintf(temp_str, DBG_FLOAT_FMT, DBG_FL(fl)); \
-      Serial.println(temp_str)
+      Serial.println(temp_str)     
 
 #endif // AVR
 
 
 #define PRINT_INT(txt, n)           \
     Serial.print(txt);              \
-    Serial.print(n)
+    Serial.print(n)     
 
 #define PRINT_INT_LN(txt, n)        \
     Serial.print(txt);              \
-    Serial.println(n)
+    Serial.println(n)   
 
 #define PRINT_TXT_LN(txt)           \
-    Serial.println(txt)
+    Serial.println(txt)            

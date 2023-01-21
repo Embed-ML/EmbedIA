@@ -101,7 +101,7 @@ class Dense(DataLayer):
 
         for neuron_id in range(n_neurons):
 
-            o_weights = declare_array(f'static  {data_type}', f'weights{neuron_id}', macro_converter, weights[:, neuron_id])
+            o_weights = declare_array(f'static const {data_type}', f'weights{neuron_id}', macro_converter, weights[:, neuron_id])
 
             o_code += f'''
     {o_weights};

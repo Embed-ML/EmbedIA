@@ -18,4 +18,6 @@ void loop(){{
 
     {main_code}
 
+    sleep(5000);
+
 }}

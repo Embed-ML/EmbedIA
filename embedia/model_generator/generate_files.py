@@ -274,7 +274,7 @@ def generate_embedia_main(layers_embedia, src_folder, filename, options):
 '''
         if options.example_data is not None:
             main_code += '''
-    printf(("   Example class id: %d\\n", sample_data_id);
+    printf("   Example class id: %d\\n", sample_data_id);
 '''
 
     main_code += '''
