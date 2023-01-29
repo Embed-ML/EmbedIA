@@ -21,6 +21,17 @@ def multi_replace(adict, text):
     return regex.sub(lambda match: adict[match.group(0)], text)
 
 
+def indent(multi_ln_code, level=1, spaces=4):
+
+    # remove the whitespaces at the end of each line
+    code = re.sub(r'[ \t]+(?=\n)', '', multi_ln_code)
+
+    # check if the code has a trailing new line
+    has_nl = code.endswith("\n")
+
+    return re.sub("^", level*spaces*' ', code, flags=re.MULTILINE)
+
+
 def generate_embedia_library(layers_embedia, src_folder, options):
 
     embedia_files = dict()
@@ -131,42 +142,48 @@ def generate_embedia_model(layers_embedia, src_folder, model_name, options):
             functions_init += layer.functions_init()
 
         # layer section of predict function
-        input_layer_type = layer.get_input_data_type()
-        if data_layers_input[-1]['type'] != input_layer_type:
-            var_input = f'input{len(data_layers_input)}'
-            predict += f'    {input_layer_type} {var_input};\n'
-            data_layers_input.append({'type': input_layer_type, 'var_name': var_input})
 
-        if not layer.inplace_output and layer != layers_embedia[0]:
-            predict += '\n    ' + data_layers_input[-1]['var_name'] + ' = ' + data_layers_output[-1]['var_name'] + ';\n'
+        predict += f'\n//*************** LAYER {layer_id} **************//'
+        predict += f'\n// Layer name: {layer.name}\n'
 
-        output_layer_type = layer.get_output_data_type()
-        if data_layers_output == [] or data_layers_output[-1]['type'] != output_layer_type:
-            var_output = f'output{len(data_layers_output)}'
-            predict += f'    {output_layer_type} {var_output};\n'
-            data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
+        if not layer.inplace_output:
 
+            input_layer_type = layer.get_input_data_type()
+            if data_layers_input[-1]['type'] != input_layer_type:
+                var_input = f'input{len(data_layers_input)}'
+                predict += f'{input_layer_type} {var_input};\n'
+                data_layers_input.append({'type': input_layer_type, 'var_name': var_input})
 
-        predict += f'\n    //*************** LAYER {layer_id} ***************//'
-        predict += f'\n    // Layer name: {layer.name}\n'
+            if layer != layers_embedia[0]:
+                predict += f'{data_layers_input[-1]["var_name"]} = {data_layers_output[-1]["var_name"]};\n'
 
-        predict += layer.predict(data_layers_input[-1]['var_name'], data_layers_output[-1]['var_name'])
+            output_layer_type = layer.get_output_data_type()
+            if data_layers_output == [] or data_layers_output[-1]['type'] != output_layer_type:
+                var_output = f'output{len(data_layers_output)}'
+                predict += f'{output_layer_type} {var_output};\n'
+                data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
+
+        param_in = data_layers_input[-1]['var_name']
+        param_out = data_layers_output[-1]['var_name']
+        predict += f'{layer.predict(param_in, param_out)}\n'
 
         # Add activation function
         act_fn = layer.activation_function(var_output)
         if act_fn != '':
             if not isinstance(layer, Activation):
-                predict += f'    // Activation layer for {layer.name}\n'
+                predict += f'// Activation layer for {layer.name}\n'
             predict += f'{act_fn}\n'
 
         # Add debug function if is enabled
         if options.debug_mode != DebugMode.DISCARD:
             dbg_fn = layer.debug_function(var_output)
-            predict += f'    // Debug function for layer {layer.name}\n'
+            predict += f'// Debug function for layer {layer.name}\n'
             predict += f'{dbg_fn}\n'
 
+    # indent code
+    predict = indent(predict)
     if output_data_type == 'data1d_t':
-        predict_class = '''    return argmax(*results); '''
+        predict_class = 'return argmax(*results);'
     else:
         predict_class = '''//TO DO: argmax with data2d_t and data3d_t
     return -1; '''

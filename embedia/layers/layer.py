@@ -1,4 +1,6 @@
 import regex as re
+import numpy as np
+import tensorflow.keras.backend as K
 from embedia.layers.activation.activation_functions import ActivationFunctions
 
 
@@ -8,6 +10,43 @@ class UnsupportedFeatureError(Exception):
             f"EmbedIA feature ({feature}) not implemented for {str(type(obj))}"
             )
         self.object = obj
+
+
+class LayerInfo(object):
+    """
+    This class defines a container for layer information:
+        name, type name, activation function name, #params, MACs, output shape
+    """
+
+    def __init__(self, embedia_layer, types_dict):
+        self.set_layer(embedia_layer, types_dict)
+
+    def set_layer(self, layer, types_dict):
+        self.layer = layer
+        self.types_dict = types_dict
+
+        self._update_properties()
+
+    def _update_properties(self):
+        k_layer = self.layer.layer
+        self.class_name = k_layer.__class__.__name__
+        self.layer_name = k_layer.name
+        if hasattr(k_layer, 'activation') and k_layer.activation is not None:
+            activation = ActivationFunctions(None, k_layer.activation)
+            self.activation = activation.get_function_name()
+        else:
+            self.activation = None
+
+        self.output_shape = self.layer.get_output_shape()
+
+        trainable = int(np.sum([K.count_params(p) for p in k_layer.trainable_weights]))
+
+        non_trainable = int(np.sum([K.count_params(p) for p in k_layer.non_trainable_weights]))
+        self.params = (trainable, non_trainable)
+
+        self.macs_ops = self.layer.calculate_MAC()
+
+        self.memory = self.layer.calculate_memory(self.types_dict)
 
 
 class Layer(object):
@@ -128,6 +167,11 @@ class Layer(object):
         n-tuple
             returns the input shape of the layer/element.
         """
+        if self.inplace_output:
+            prev_layer = self.model.get_previous_layer(self)
+            if prev_layer is not None:
+                return prev_layer.get_output_shape()
+
         s = self.layer.input_shape
         if len(s) >= 1 and s[0] is None:
             return s[1:]
@@ -141,6 +185,10 @@ class Layer(object):
         n-tuple
             returns the output shape of the layer/element.
         """
+        if self.inplace_output:
+            prev_layer = self.model.get_previous_layer(self)
+            if prev_layer is not None:
+                return prev_layer.get_output_shape()
 
         s = self.layer.output_shape
         if len(s) >= 1 and s[0] is None:
@@ -177,17 +225,41 @@ class Layer(object):
             s *= d
         return s
 
-    def get_layer_info(self, types_size):
+    def calculate_MAC(self):
         """
-        Gets the amount of bytes of memory required by data of the Embedia
-        Layer, including structures.
+        calculates amount of multiplication and accumulation operations
         Returns
         -------
         int
-            size in bytes of the layer.
+            amount of multiplication and accumulation operations
 
         """
-        return (0, self.get_output_shape(), 0)
+        return 0
+
+    def calculate_memory(self, types_dict):
+        """
+        calculates amount of memory required to store the data of layer
+        Returns
+        -------
+        int
+            amount memory required
+
+        """
+
+        return 0
+
+    def get_info(self, types_dict):
+        """
+        Gets info of the layer/object
+        Returns
+        -------
+        LayerInfo object
+            information of layer: name, type name, #params, MACs, output shape,
+            activation function name
+
+        """
+
+        return LayerInfo(self, types_dict)
 
     def predict(self, input_name, output_name):
         """
@@ -232,7 +304,7 @@ class Layer(object):
 
         act_fncs = ActivationFunctions(self.model, self.layer.activation)
 
-        return '    '+act_fncs.predict(f'{param}.data', self.get_output_size())
+        return act_fncs.predict(f'{param}.data', self.get_output_size())
 
 
     def debug_function(self, param):
@@ -255,4 +327,4 @@ class Layer(object):
         """
         name = self.name
         dbg_fn = 'print_' + self.output_data_type
-        return f'''    {dbg_fn}("{name}", {param});'''
+        return f'''{dbg_fn}("{name}", {param});'''

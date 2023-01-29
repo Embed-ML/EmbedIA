@@ -2,3 +2,8 @@
 *.pyc
 outputs/prueba_definitiva/
 *.bak
+*.pyc
+*.o
+*.pyc
+*.pyc
+*.exe

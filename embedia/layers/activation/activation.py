@@ -11,8 +11,6 @@ class Activation(Layer):
 
     def __init__(self, model, layer, options=None, **kwargs):
         super().__init__(model, layer, options, **kwargs)
-        self.input_data_type = "data1d_t"
-        self.output_data_type = "data1d_t"
 
         # saves output into output of previous layer
         self.inplace_output = True
@@ -48,4 +46,4 @@ class Activation(Layer):
             activation = self.layer
         act_fncs = ActivationFunctions(self.model, activation)
 
-        return '    '+act_fncs.predict(f'{output_name}.data', output_size)
+        return act_fncs.predict(f'{output_name}.data', output_size)

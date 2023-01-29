@@ -1,6 +1,6 @@
 from embedia.layers.data_layer import DataLayer
 from embedia.utils.c_helper import declare_array
-
+from embedia.model_generator.project_options import ModelDataType
 
 class Normalization(DataLayer):
 
@@ -40,19 +40,19 @@ class Normalization(DataLayer):
     # these properties must be defined in the constructor of subclass
     sub_values = None
     div_values = None
-        
+
     # Constructor receives sklearn normalization object (Scaler) in layer
     def __init__(self, model, layer, options=None, **kwargs):
         super().__init__(model, layer, options, **kwargs)
 
         # As the name generated automatically depends on the class name and the
-        # same structure is used for all normalizations, the EmbedIA data type 
+        # same structure is used for all normalizations, the EmbedIA data type
         # name is forced in this class.
         self.struct_data_type = 'normalization_t'
-        
+
         # Name of EmbedIA normalization function declared in "embedia.h".
         # Subclass must assign the propertly name
-        #self.norm_function_name = '?'
+        # self.norm_function_name = '?'
 
     def get_input_shape(self):
         """
@@ -79,6 +79,44 @@ class Normalization(DataLayer):
             shape of the output data
         """
         return self.get_input_shape()
+
+    def calculate_MAC(self):
+        """
+        calculates amount of multiplication and accumulation operations
+        Returns
+        -------
+        int
+            amount of multiplication and accumulation operations
+
+        """
+        MACs = self.get_input_shape()[0]
+
+        return MACs
+
+    def calculate_memory(self, types_dict):
+        """
+        calculates amount of memory required to store the data of layer
+        Returns
+        -------
+        int
+            amount memory required
+
+        """
+
+        # layer dimensions
+        n_input = self.get_input_shape()[0]
+
+        # neuron structure size
+        sz_struct_t = types_dict[self.struct_data_type]
+
+        # base data type in bits: float, fixed (32/16/8)
+        dt_size = ModelDataType.get_size(self.options.data_type)
+        if self.options.data_type == ModelDataType.BINARY:
+            dt_size = 32
+
+        mem_size = n_input * dt_size/8 + sz_struct_t
+
+        return mem_size
 
     def functions_init(self):
 
@@ -114,5 +152,4 @@ class Normalization(DataLayer):
         return init_layer
 
     def predict(self, input_name, output_name):
-        return f'''    {self.norm_function_name}({self.name}_data, {input_name}, &{output_name});
-'''
+        return f'''{self.norm_function_name}({self.name}_data, {input_name}, &{output_name});'''

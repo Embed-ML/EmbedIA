@@ -73,7 +73,7 @@ class ProjectGenerator:
                     filename = filename.replace('.h', h_ext)
 
                 file_management.save_to_file(os.path.join(self._dst_folder, filename), content)
-                
+
             # print layers memory size
             self.print_layers_info(embedia_model, embedia_files['embedia.h'])
 
@@ -191,20 +191,37 @@ class ProjectGenerator:
         return project_files
 
     def print_layers_info(self, embedia_model, embedia_decl):
-        layers_size = embedia_model.get_layers_info(embedia_decl)
+        layers_info = embedia_model.get_layers_info(embedia_decl)
+        total_params = (0, 0)
         total_size = 0
         total_MACs = 0
-        for i, (layer, shape, MACs, size) in enumerate(layers_size):
+
+        for i, (l_name, l_type, l_act, params, shape, MACs, size) in enumerate(layers_info):
             total_size += size
             total_MACs += MACs
+            total_params = (total_params[0] + params[0], total_params[1] + params[1])
             size = '%8.3f' % (size/1024.0)
-            layers_size[i] = (layer, shape, MACs, size)
+            param_str= '%d' % (params[0] + params[1])
+            if params[1] > 0:
+                param_str += '(%d)' % params[1]
+            layer = l_type
+            if l_act is not None:
+                layer += f'({l_act})'
+            layers_info[i] = (layer, l_name, param_str, shape, MACs, size)
         # print table
         table = PrettyTable()
-        table.field_names = ['Layer', 'Shape', 'MACs', 'Size (KiB)']
-        table.align['Layer'] = 'l'
+        table.field_names = ['Layer(activation)', 'Name', '#Param(NT)', 'Shape', 'MACs', 'Size (KiB)']
+        table.align['Layer(activation)'] = 'l'
+        table.align['Name'] = 'l'
+        table.align['#Param(NT)'] = 'r'
+        table.align['MACs'] = 'r'
         table.align['Size (KB)'] = 'r'
-        table.add_rows(layers_size)
+        table.align['#Param'] = 'r'
+        table.add_rows(layers_info)
         print(table)
-        print('Total size: %8.3f KiB' % (total_size/1024.0))
-        print('Total MACs: %8.0f \n' % (total_MACs))
+        total_p = '%d' % (total_params[0] + total_params[1])
+        if total_params[1] > 0:
+            total_p += '(%d)' % total_params[1]
+        print('Total params (NT)....: ' + total_p)
+        print('Total size in KiB....: %.3f' % (total_size/1024.0))
+        print('Total MACs operations: %.0f \n' % (total_MACs))

@@ -48,25 +48,24 @@ class BatchNormalization(DataLayer):
         self.moving_variance = layer.get_weights()[3]
         self.epsilon = layer.epsilon
 
-        # # As the name generated automatically depends on the class name and the
-        # # same structure is used for all normalizations, the EmbedIA data type
-        # # name is forced in this class.
+        # As the name generated automatically depends on the class name and the
+        # same structure is used for all normalizations, the EmbedIA data type
+        # name is forced in this class.
         self.struct_data_type = 'batch_normalization_layer_t'
 
         # EmbedIA function saves output into input
         self.inplace_output = True
 
-    def get_layer_info(self, types_dict):
+    def calculate_memory(self, types_dict):
         """
-        Gets the amount of bytes of memory required by data of the Embedia
-        Layer, including structures.
-
+        calculates amount of memory required to store the data of layer
         Returns
         -------
         int
-            size in bytes of the layer.
+            amount memory required
 
         """
+
         # layer dimensions
         # batch norm has 4 data array: beta, gamma, moving mean and moving
         # variance
@@ -78,13 +77,11 @@ class BatchNormalization(DataLayer):
 
         # base data type: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)
-        if(self.options.data_type==ModelDataType.BINARY):
+        if self.options.data_type == ModelDataType.BINARY:
             dt_size = 32
         mem_size = n_arrays * n_features * dt_size/8 + sz_batch_norm_t
 
-        MACs = 0
-
-        return (mem_size, self.get_output_shape(), MACs)
+        return mem_size
 
     def functions_init(self):
 
@@ -121,7 +118,7 @@ class BatchNormalization(DataLayer):
     {o_beta};
     {o_mov_mean};
     {o_inv_mov_std};
-    
+
     static const {struct_type} norm = {{ {length}, {beta_name}, {mov_mean_name}, {inv_gamma_dev_name} }};
     return norm;
 }}
@@ -130,5 +127,4 @@ class BatchNormalization(DataLayer):
 
     def predict(self, input_name, output_name):
         dim = len(self.get_input_shape())
-        return f'''    batch_normalization{dim}d_layer({self.name}_data, &{output_name});
-'''
+        return f'''batch_normalization{dim}d_layer({self.name}_data, &{output_name});'''

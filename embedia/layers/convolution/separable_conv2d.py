@@ -58,7 +58,7 @@ class SeparableConv2D(DataLayer):
         static filter_t point_filters[{point_filters}];
         '''
         init_conv_layer += o_code
-        
+
         for i in range(point_filters):
             o_weights = ""
             for ch in range(point_channels):
@@ -79,7 +79,7 @@ class SeparableConv2D(DataLayer):
         '''
 
         return init_conv_layer
-    
+
     def predict(self, input_name, output_name):
         """
         Generates C code for the invocation of the EmbedIA function that
@@ -107,5 +107,4 @@ class SeparableConv2D(DataLayer):
 
         """
 
-        return f'''    separable_conv2d_layer({self.name}_data, {input_name}, &{output_name});
-'''
+        return f'''separable_conv2d_layer({self.name}_data, {input_name}, &{output_name});'''

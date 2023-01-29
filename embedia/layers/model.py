@@ -29,7 +29,7 @@ class Model(object):
 
         try:
             # external normalizar to the model? => add as first layer
-            if not (self.options.normalizer is None):
+            if self.options.normalizer is not None:
                 obj = self.options.normalizer
                 ly = dict_layers[type(obj)](self, obj, self.options)
                 embedia_layers.append(ly)
@@ -43,6 +43,16 @@ class Model(object):
 
         self.embedia_layers = embedia_layers
         return embedia_layers
+
+    def get_previous_layer(self, layer):
+        try:
+            idx = self.embedia_layers.index(layer)
+        except ValueError:
+            return None
+        if idx == 0:
+            return None
+        return self.embedia_layers[idx-1]
+
 
     def clear_names(self):
         self.names = defaultdict(lambda: 0)
@@ -77,7 +87,7 @@ class Model(object):
         Returns
         -------
         tuple (str, str)
-            tupla con el tipo y la macro de conversión en C.
+            tuple with type and macro convertion for C.
 
         """
 
@@ -184,8 +194,16 @@ typedef char dfixed;
 
         layers_info = []
         for layer in self.embedia_layers:
-            (size, shape, MACs) = layer.get_layer_info(self.types_dict)
-            layers_info.append((layer.name, shape, MACs, size))
+            info = layer.get_info(self.types_dict)
+            l_type = info.class_name
+            l_name = info.layer_name
+            l_act = info.activation
+            params = info.params
+            shape = info.output_shape
+            MACs = info.macs_ops
+            size = info.memory
+
+            layers_info.append((l_name, l_type, l_act, params, shape, MACs, size))
 
         return layers_info
 

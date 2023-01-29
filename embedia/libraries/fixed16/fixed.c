@@ -107,6 +107,8 @@
         }
 
         if (neg) result = FIXED_DIV(FIX_ONE, result);
+
+        return result;
     }
 
 
