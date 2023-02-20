@@ -1,6 +1,7 @@
 .ipynb_checkpoints/
 *.pyc
 outputs/prueba_definitiva/
+embedia tests/outputs
 *.bak
 *.pyc
 *.o

@@ -2,14 +2,9 @@ import regex as re
 import numpy as np
 import tensorflow.keras.backend as K
 from embedia.layers.activation.activation_functions import ActivationFunctions
+from embedia.layers.exceptions import UnsupportedFeatureError
 
 
-class UnsupportedFeatureError(Exception):
-    def __init__(self, obj, feature):
-        super().__init__(
-            f"EmbedIA feature ({feature}) not implemented for {str(type(obj))}"
-            )
-        self.object = obj
 
 
 class LayerInfo(object):

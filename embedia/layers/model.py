@@ -4,14 +4,7 @@ from embedia.model_generator.project_options import ModelDataType
 import regex as re
 import pycparser as pcp
 from embedia.model_generator.project_options import BinaryBlockSize
-
-
-class UnsupportedLayerError(Exception):
-    types_dict = {}
-
-    def __init__(self, obj):
-        super().__init__(f"EmbedIA layer/element not implemented for {str(type(obj))}")
-        self.object = obj
+from embedia.layers.unimplemented_layer import UnimplementedLayer
 
 
 class Model(object):
@@ -27,22 +20,27 @@ class Model(object):
 
         embedia_layers = []
 
-        try:
-            # external normalizar to the model? => add as first layer
-            if self.options.normalizer is not None:
-                obj = self.options.normalizer
-                ly = dict_layers[type(obj)](self, obj, self.options)
-                embedia_layers.append(ly)
+        # external normalizar to the model? => add as first layer
+        if self.options.normalizer is not None:
+            obj = self.options.normalizer
+            ly = self.create_embedia_layer(obj)
+            embedia_layers.append(ly)
 
-            for layer in layers:
-                obj = layer
-                ly = dict_layers[type(layer)](self, layer, self.options)
-                embedia_layers.append(ly)
-        except KeyError:
-            raise UnsupportedLayerError(obj)
+        for layer in layers:
+            obj = layer
+            ly = self.create_embedia_layer(layer)
+            embedia_layers.append(ly)
 
         self.embedia_layers = embedia_layers
         return embedia_layers
+
+    def create_embedia_layer(self, obj):
+        try:
+            layer = dict_layers[type(obj)](self, obj, self.options)
+        except KeyError:
+            layer = UnimplementedLayer(self, obj, self.options)
+
+        return layer
 
     def get_previous_layer(self, layer):
         try:

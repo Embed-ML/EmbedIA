@@ -11,7 +11,7 @@ from embedia.utils import file_management
 from embedia.layers.data_layer import DataLayer
 from embedia.layers.activation.activation import Activation
 from embedia.model_generator.project_options import BinaryBlockSize
-
+from embedia.layers.unimplemented_layer import UnimplementedLayer
 
 def multi_replace(adict, text):
     # Create a regular expression from all of the dictionary keys
@@ -130,55 +130,68 @@ def generate_embedia_model(layers_embedia, src_folder, model_name, options):
     data_layers_input = [{'type': input_data_type, 'var_name': 'input'}, ]
     data_layers_output = []
     layer_id = -1
+    first_layer = True
 
     for layer in layers_embedia:
         layer_id += 1
 
-        # Initialization
-        if isinstance(layer, DataLayer):
-            prototypes_init += layer.prototypes_init()
-            var += layer.var()
-            init += layer.init()
-            functions_init += layer.functions_init()
-
-        # layer section of predict function
-
         predict += f'\n//*************** LAYER {layer_id} **************//'
         predict += f'\n// Layer name: {layer.name}\n'
 
-        if not layer.inplace_output:
+        implemented_layer = not isinstance(layer, UnimplementedLayer)
 
-            input_layer_type = layer.get_input_data_type()
-            if data_layers_input[-1]['type'] != input_layer_type:
-                var_input = f'input{len(data_layers_input)}'
-                predict += f'{input_layer_type} {var_input};\n'
-                data_layers_input.append({'type': input_layer_type, 'var_name': var_input})
 
-            if layer != layers_embedia[0]:
-                predict += f'{data_layers_input[-1]["var_name"]} = {data_layers_output[-1]["var_name"]};\n'
+        if implemented_layer:
+            # Initialization
+            if isinstance(layer, DataLayer):
+                prototypes_init += layer.prototypes_init()
+                var += layer.var()
+                init += layer.init()
+                functions_init += layer.functions_init()
 
-            output_layer_type = layer.get_output_data_type()
-            if data_layers_output == [] or data_layers_output[-1]['type'] != output_layer_type:
-                var_output = f'output{len(data_layers_output)}'
-                predict += f'{output_layer_type} {var_output};\n'
-                data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
+            # layer section of predict function
 
-        param_in = data_layers_input[-1]['var_name']
-        param_out = data_layers_output[-1]['var_name']
-        predict += f'{layer.predict(param_in, param_out)}\n'
+            if not layer.inplace_output:
 
-        # Add activation function
-        act_fn = layer.activation_function(var_output)
-        if act_fn != '':
-            if not isinstance(layer, Activation):
-                predict += f'// Activation layer for {layer.name}\n'
-            predict += f'{act_fn}\n'
+                input_layer_type = layer.get_input_data_type()
+                if data_layers_input[-1]['type'] != input_layer_type:
+                    var_input = f'input{len(data_layers_input)}'
+                    predict += f'{input_layer_type} {var_input};\n'
+                    data_layers_input.append({'type': input_layer_type, 'var_name': var_input})
 
-        # Add debug function if is enabled
-        if options.debug_mode != DebugMode.DISCARD:
-            dbg_fn = layer.debug_function(var_output)
-            predict += f'// Debug function for layer {layer.name}\n'
-            predict += f'{dbg_fn}\n'
+                if not first_layer:
+                    predict += f'{data_layers_input[-1]["var_name"]} = {data_layers_output[-1]["var_name"]};\n'
+                else:
+                    first_layer = False
+
+                output_layer_type = layer.get_output_data_type()
+                if data_layers_output == [] or data_layers_output[-1]['type'] != output_layer_type:
+                    var_output = f'output{len(data_layers_output)}'
+                    predict += f'{output_layer_type} {var_output};\n'
+                    data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
+
+
+
+
+            param_in = data_layers_input[-1]['var_name']
+            param_out = data_layers_output[-1]['var_name']
+            predict += f'{layer.predict(param_in, param_out)}\n'
+
+            # Add activation function
+            act_fn = layer.activation_function(var_output)
+            if act_fn != '':
+                if not isinstance(layer, Activation):
+                    predict += f'// Activation layer for {layer.name}\n'
+                predict += f'{act_fn}\n'
+
+            # Add debug function if is enabled
+            if options.debug_mode != DebugMode.DISCARD:
+                dbg_fn = layer.debug_function(var_output)
+                predict += f'// Debug function for layer {layer.name}\n'
+                predict += f'{dbg_fn}\n'
+        else:
+            # message of unimplemented layer
+            predict += '// ' + layer.message + '\n'
 
     # indent code
     predict = indent(predict)
