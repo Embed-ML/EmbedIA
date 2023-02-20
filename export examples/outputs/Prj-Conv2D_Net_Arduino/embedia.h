@@ -215,7 +215,7 @@ void softmax_activation(float *data, uint32_t length);
 
 void relu_activation(float *data, uint32_t length);
 
-void leaky_relu_activation(float alfa, float *data, uint32_t length);
+void leakyrelu_activation(float *data, uint32_t length, float alpha);
 
 void tanh_activation(float *data, uint32_t length);
 

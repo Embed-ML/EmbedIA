@@ -75,11 +75,12 @@ class ProjectGenerator:
                 file_management.save_to_file(os.path.join(self._dst_folder, filename), content)
 
             # print layers memory size
-            self.print_layers_info(embedia_model, embedia_files['embedia.h'])
+            model_info = self.build_model_info(embedia_model, embedia_files['embedia.h'])
+            print(model_info)
 
         # create model files
         if ProjectFiles.MODEL in options.files:
-            (text_model_h, text_model_c, filename) = generate_embedia_model(layers_embedia, self._lib_folder, model.name, options)
+            (text_model_h, text_model_c, filename) = generate_embedia_model(embedia_model, self._lib_folder, model.name, model_info, options)
             file_management.save_to_file(os.path.join(self._dst_folder, filename + h_ext), text_model_h)
             file_management.save_to_file(os.path.join(self._dst_folder, filename + c_ext), text_model_c)
 
@@ -190,7 +191,7 @@ class ProjectGenerator:
 
         return project_files
 
-    def print_layers_info(self, embedia_model, embedia_decl):
+    def build_model_info(self, embedia_model, embedia_decl):
         layers_info = embedia_model.get_layers_info(embedia_decl)
         total_params = (0, 0)
         total_size = 0
@@ -218,10 +219,13 @@ class ProjectGenerator:
         table.align['Size (KB)'] = 'r'
         table.align['#Param'] = 'r'
         table.add_rows(layers_info)
-        print(table)
+        model_info = '\n'+str(table)+'\n'
+
         total_p = '%d' % (total_params[0] + total_params[1])
         if total_params[1] > 0:
             total_p += '(%d)' % total_params[1]
-        print('Total params (NT)....: ' + total_p)
-        print('Total size in KiB....: %.3f' % (total_size/1024.0))
-        print('Total MACs operations: %.0f \n' % (total_MACs))
+        model_info += 'Total params (NT)....: %s\n' % total_p
+        model_info += 'Total size in KiB....: %.3f\n' % (total_size/1024.0)
+        model_info += 'Total MACs operations: %.0f\n' % total_MACs
+
+        return model_info

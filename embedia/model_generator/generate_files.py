@@ -32,7 +32,7 @@ def indent(multi_ln_code, level=1, spaces=4):
     return re.sub("^", level*spaces*' ', code, flags=re.MULTILINE)
 
 
-def generate_embedia_library(layers_embedia, src_folder, options):
+def generate_embedia_library(embedia_layers, src_folder, options):
 
     embedia_files = dict()
 
@@ -89,13 +89,15 @@ def get_input_const(input_shape):
     return None
 
 
-def generate_embedia_model(layers_embedia, src_folder, model_name, options):
+def generate_embedia_model(model, src_folder, model_name, model_info, options):
 
     def format_model_name(model_name):
         model_name = model_name.lower()
         if not model_name.endswith('model'):
             model_name += '_model'
         return model_name
+
+    embedia_layers = model.embedia_layers
 
     filename = format_model_name(model_name)
 
@@ -107,10 +109,10 @@ def generate_embedia_model(layers_embedia, src_folder, model_name, options):
         includes += '#include "embedia_debug.h"\n'
 
     model_name_h = filename.upper()
-    # macros_first_shape = layers_embedia[0].get_macros_first_shape()
-    input_data_type = layers_embedia[0].get_input_data_type()
-    output_data_type = layers_embedia[-1].get_output_data_type()
-    input_shape = layers_embedia[0].get_input_shape()
+    # macros_first_shape = embedia_layers[0].get_macros_first_shape()
+    input_data_type = embedia_layers[0].get_input_data_type()
+    output_data_type = embedia_layers[-1].get_output_data_type()
+    input_shape = embedia_layers[0].get_input_shape()
 
     # prepare input dimension constant
     input_dict = get_input_const(input_shape)
@@ -132,7 +134,7 @@ def generate_embedia_model(layers_embedia, src_folder, model_name, options):
     layer_id = -1
     first_layer = True
 
-    for layer in layers_embedia:
+    for layer in embedia_layers:
         layer_id += 1
 
         predict += f'\n//*************** LAYER {layer_id} **************//'
@@ -203,6 +205,7 @@ def generate_embedia_model(layers_embedia, src_folder, model_name, options):
 
     h = file_management.read_from_file(src_h).format(
             model_name_h=model_name_h,
+            model_info=model_info,
             input_const=input_const,
             input_data_type=input_data_type,
             output_data_type=output_data_type
@@ -225,7 +228,7 @@ def generate_embedia_model(layers_embedia, src_folder, model_name, options):
     return (h, c, filename)
 
 
-def generate_embedia_main(layers_embedia, src_folder, filename, options):
+def generate_embedia_main(embedia_layers, src_folder, filename, options):
 
     src_c = os.path.join(src_folder, 'main/main_')
 
@@ -259,8 +262,8 @@ def generate_embedia_main(layers_embedia, src_folder, filename, options):
 '''
 
     # prepare data for model input and output
-    input_data_type = layers_embedia[0].get_input_data_type()
-    output_data_type = layers_embedia[-1].get_output_data_type()
+    input_data_type = embedia_layers[0].get_input_data_type()
+    output_data_type = embedia_layers[-1].get_output_data_type()
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado no se usa igual por ahora
 
@@ -271,7 +274,7 @@ def generate_embedia_main(layers_embedia, src_folder, filename, options):
         model_data_type = 'fixed'
 
 
-    input_const = get_input_const(layers_embedia[0].get_input_shape())
+    input_const = get_input_const(embedia_layers[0].get_input_shape())
     input_dim = ''
     for k in input_const:
         input_dim += f'{k}, '

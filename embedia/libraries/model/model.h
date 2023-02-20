@@ -1,6 +1,10 @@
-/* EmbedIA model */
+/* EmbedIA model definition file*/
 #ifndef {model_name_h}_H
 #define {model_name_h}_H
+
+/*
+{model_info}
+*/
 
 #include "embedia.h"
 

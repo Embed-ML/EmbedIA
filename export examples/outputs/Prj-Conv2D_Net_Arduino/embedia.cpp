@@ -321,11 +321,11 @@ void relu_activation(float *data, uint32_t length){
  *  *data  => array of values to update
  *  length => numbers of values to update
  */
-void leaky_relu_activation(float alfa, float *data, uint32_t length){
+void leakyrelu_activation(float *data, uint32_t length, float alpha){
     uint32_t i;
 
     for (i=0;i<(length);i++){
-        data[i] = data[i] < 0 ? alfa*data[i] : data[i];
+        data[i] = data[i] < 0 ? alpha*data[i] : data[i];
     }
 }
 
@@ -398,7 +398,7 @@ void softplus_activation(float *data, uint32_t length){
  *  *output => pointer to the data1d_t structure where the result will be stored.
  */
  void flatten3d_layer(data3d_t input, data1d_t * output){
-    uint16_t c,i,j;
+    uint32_t c,i,j;
     uint32_t cantidad = 0;
 
     output->length = input.channels * input.height * input.width;
@@ -503,7 +503,7 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
  */
 void image_adapt_layer(data3d_t input, data3d_t * output){
 
-    int i, j, c, l;
+    uint32_t i, j, c, l;
 
     output->channels = input.channels;
     output->height   = input.height;
