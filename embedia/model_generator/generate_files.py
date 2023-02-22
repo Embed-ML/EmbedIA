@@ -127,7 +127,7 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
     var = ""
     init = ""
     functions_init = ""
-    predict = ""
+    predict = "prepare_buffers();\n"
 
     data_layers_input = [{'type': input_data_type, 'var_name': 'input'}, ]
     data_layers_output = []

@@ -173,10 +173,10 @@ typedef struct{
 /*********************************************************************************************************************************/
 
 /* structure for normalization type (x_i-s_i)/d_i and (x_i)/d_i
- *  - standard normalization  : (x_i-mean_i)/std_dev_i
- *  - min_max normalization   : (x_i-min_i) / (max_i-min_i)
- *  - robust normalization    : (x_i-q1_i)  / (q3_i-q1_i)
- *  - abs_max_normalization   : (x_i)/(abs_max_xi)
+ *  standard normalization  : (x_i-mean_i)/std_dev_i
+ *  min_max normalization   : (x_i-min_i) / (max_i-min_i)
+ *  robust normalization    : (x_i-q2_i)  / (q3_i-q1_i)
+ *  abs_max_normalization   : (x_i)/(abs_max_xi)
  */
 
 typedef struct{
@@ -202,14 +202,17 @@ typedef struct {
 /* LIBRARY FUNCTIONS PROTOTYPES */
 
 
-/* 
- * quantdense_layer()
- * Performs feed forward of a binary dense layer (quantdense_layer_t) on a given input data set.
- * Parameters:
- *   - dense_layer => structure with the binary weights of the neurons of the dense layer.  
- *   - input       => structure data1d_t with the input data to process. 
- *   - *output     => structure data1d_t to store the output result.
+/*
+ * prepare_buffers()
+ *  This function should be invoked only at the beginning of the predict function of the model file.
+ * Its purpose is to align the exchange buffers used by the different functions of the model. Due to
+ * the allocation strategy that never frees the memory, it happens that if the swap_alloc function
+ * is invoked an odd number of times in the 2nd invocation the predict reserves more memory than
+ * necessary  (something that usually happens with convolutional layers)
  */
+void prepare_buffers();
+
+
 void quantdense_layer(quantdense_layer_t dense_layer, data1d_t input, data1d_t * output);
 
 

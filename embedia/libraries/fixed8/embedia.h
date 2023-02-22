@@ -132,6 +132,18 @@ typedef struct {
 
 /* LIBRARY FUNCTIONS PROTOTYPES */
 
+
+/*
+ * prepare_buffers()
+ *  This function should be invoked only at the beginning of the predict function of the model file.
+ * Its purpose is to align the exchange buffers used by the different functions of the model. Due to
+ * the allocation strategy that never frees the memory, it happens that if the swap_alloc function
+ * is invoked an odd number of times in the 2nd invocation the predict reserves more memory than
+ * necessary  (something that usually happens with convolutional layers)
+ */
+void prepare_buffers();
+
+
 /*
  * conv2d_layer()
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.

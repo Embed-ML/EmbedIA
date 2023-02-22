@@ -12,11 +12,16 @@ typedef struct{
 } raw_buffer;
 
 
-raw_buffer buffer1 = {0, NULL};
-raw_buffer buffer2 = {0, NULL};
+static raw_buffer buffer1 = {0, NULL};
+static raw_buffer buffer2 = {0, NULL};
+static raw_buffer * last_buff = &buffer2;
+
+void prepare_buffers(){
+    last_buff = &buffer2;
+}
 
 void * swap_alloc(size_t s){
-    static raw_buffer * last_buff = &buffer2;
+
     last_buff = (last_buff==&buffer1) ? &buffer2 : &buffer1;
     
     if (last_buff->size < s){
