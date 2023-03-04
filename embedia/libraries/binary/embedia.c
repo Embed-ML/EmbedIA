@@ -724,7 +724,7 @@ void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *da
     uint32_t i;
 
     for (i = 0; i < data->length; i++) {
-        data->data[i] = (data->data[i] - layer.moving_mean[i]) * layer.moving_inv_std_dev[i] + layer.beta[i];
+        data->data[i] = data->data[i] * layer.moving_inv_std_dev[i] + layer.std_beta[i];
     }
 }
 
@@ -735,7 +735,7 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
 
     for (i = 0; i < data->channels; i++, ilen += length) {
         for (j = 0; j < length; j++) {
-            data->data[ilen+j] = (data->data[ilen+j] - layer.moving_mean[i]) * layer.moving_inv_std_dev[i] + layer.beta[i];
+            data->data[ilen+j] = data->data[ilen+j] * layer.moving_inv_std_dev[i] + layer.std_beta[i];
         }
     }
 }

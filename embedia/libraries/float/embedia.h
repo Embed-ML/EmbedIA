@@ -114,15 +114,13 @@ typedef struct{
 
 /* 
  * Structure for BatchNormalization layer.
- * Contains vectors for the four parameters used for normalization.
+ * Contains vectors for the two parameters used for normalization.
  * The number of each of the parameters is determined by the number of channels of the previous layer.
  */
 typedef struct {
     uint32_t length;
-    const float *beta;
-    // const float *gamma; //  removed due to optimization included in moving_inv_std_dev
-    const float *moving_mean;
     const float *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
+    const float *std_beta;           // = beta - moving_mean * moving_inv_std_dev 
 } batch_normalization_layer_t;
 
 

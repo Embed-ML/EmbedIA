@@ -70,7 +70,7 @@ class BatchNormalization(DataLayer):
         # batch norm has 4 data array: beta, gamma, moving mean and moving
         # variance
         n_features = len(self.gamma)
-        n_arrays = 4 - 1  # gamma is omited by optimization
+        n_arrays = 4 - 2  # the four arrays are optimized into two (see below)
 
         # neuron structure size
         sz_batch_norm_t = types_dict['batch_normalization_layer_t']
@@ -88,38 +88,39 @@ class BatchNormalization(DataLayer):
         (data_type, macro_converter) = self.model.get_type_converter()
         name = self.name
         struct_type = self.struct_data_type
-        mov_mean_name = 'mov_mean'
         inv_gamma_dev_name = 'inv_gamma_dev'
-        beta_name = 'beta'
-        gamma_name = 'gamma'
+        std_beta_name = 'std_beta'
         length = len(self.moving_mean)
 
         # Params: data type, var name, macro, array/list of values
         array_type = f'static const {data_type}'
 
-        # gamma can be eliminated due to the optimization performed below
-        # o_gamma = declare_array(array_type, gamma_name, macro_converter, self.gamma)
-        o_beta = declare_array(array_type, beta_name, macro_converter, self.beta)
-        o_mov_mean = declare_array(array_type, mov_mean_name, macro_converter, self.moving_mean)
-
+        # gamma, beta and mov_mean can be eliminated due to the optimization performed below
+        
         # Optimization to avoid a multiplication, a division and square root
         # calculation in the microcontroller
-        # epsilon is small value to avoid division by zero
+        # epsilon is a small value to avoid division by zero
+        
         #gamma_variance = np.array([(gamma[i] / sqrt(moving_variance[i] + epsilon)) for i in range(gamma.size)])
         inv_gamma_dev = ['%f/sqrt(%f+%f)' % (self.gamma[i], self.moving_variance[i], self.epsilon) for i in range(self.gamma.size)]
 
+        # standard_beta = np.array([(beta[i] - moving_mean[i] * standard_gamma[i]) for i in range(beta.size)])
+        std_beta = ['%f - %f*%f' % (self.beta[i], self.moving_mean[i], inv_gamma_dev) for i in range(self.beta.size)]
+
         # get inverse of standard dev (square root of moving variance)
         o_inv_mov_std = declare_array(array_type, inv_gamma_dev_name, macro_converter, inv_gamma_dev)
+        
+        o_std_beta = declare_array(array_type, std_beta_name, macro_converter, std_beta)
 
+        # By exporting this two new parameters, the layer only needs to perform a multiplication and a sum
 
         init_layer = f'''
 {struct_type} init_{name}_data(void){{
 
-    {o_beta};
-    {o_mov_mean};
     {o_inv_mov_std};
+    {o_std_beta};
 
-    static const {struct_type} norm = {{ {length}, {beta_name}, {mov_mean_name}, {inv_gamma_dev_name} }};
+    static const {struct_type} norm = {{ {length}, {inv_gamma_dev_name}, {std_beta_name} }};
     return norm;
 }}
 '''
