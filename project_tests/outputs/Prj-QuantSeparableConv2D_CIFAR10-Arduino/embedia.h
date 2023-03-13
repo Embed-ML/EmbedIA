@@ -7,7 +7,10 @@
 
 #include <stdint.h>
 #include <math.h>
-{includes}
+#include "Arduino.h"
+
+#define binary_block_size 32
+
 
 
 

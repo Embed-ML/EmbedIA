@@ -40,14 +40,14 @@ static inline uint8_t sign(float x){
 
 
 static inline int count_set_bits_Brian_Kernighan_algorithm(xBITS n) {
-  register int count = 0;
+  /*register int count = 0;
   while(n) {
     count++;
     n = n & (n-1);
   }
 
-  return count;
-  //return __builtin_popcount(n);
+  return count;*/
+  return __builtin_popcount(n);
 }
 
 

@@ -11,7 +11,8 @@ class SeparableConv2D(DataLayer):
         super().__init__(model, layer, options, **kwargs)
         # the type defined in "struct_data_type" must exists in "embedia.h"
         # self.struct_data_type = self.get_type_name().lower()+'_layer_t'
-
+        self.input_data_type = "data3d_t"
+        self.output_data_type = "data3d_t"
         self.depth_weights = self.adapt_weights(layer.get_weights()[0])
         self.point_weights = self.adapt_weights(layer.get_weights()[1])
         self.biases = layer.get_weights()[2]

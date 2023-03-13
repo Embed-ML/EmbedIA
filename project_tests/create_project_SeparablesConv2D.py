@@ -1,3 +1,4 @@
+import larq as lq
 import sys
 # add parent folder to path in order to find EmbedIA folder
 sys.path.insert(0, '..')
@@ -10,20 +11,19 @@ from embedia.model_generator.project_options import (
     DebugMode,
     ProjectFiles,
     ProjectOptions,
-    ProjectType
+    ProjectType,
+    BinaryBlockSize
 )
 
-
 OUTPUT_FOLDER = 'outputs/'
-PROJECT_NAME = 'ExampleProjectSeparableConv2d'
-MODEL_FILE = 'models/MNIST_14x14_model(SeparableConv2D).h5'
-SAMPLES_FILE = 'samples/MNIST_20samples_14x14.sav'
+PROJECT_NAME = 'Prj-SeparableConv2D_CIFAR10-Arduino'
+MODEL_FILE = 'models/SeparableConv2D_CIFAR10_65acc.h5'
+SAMPLES_FILE = 'samples/samples_CIFAR10_32x32.sav'
 
 model = load_model(MODEL_FILE)
 
-model._name = "mnist_model"
+model._name = "separable"
 
-model.summary()
 
 options = ProjectOptions()
 
@@ -32,14 +32,22 @@ options.embedia_folder = '../embedia/'
 
 
 options.project_type = ProjectType.ARDUINO
-# options.project_type = ProjectType.C
+#options.project_type = ProjectType.C
 #options.project_type = ProjectType.CODEBLOCK
-# options.project_type = ProjectType.CPP
+#options.project_type = ProjectType.CPP
 
 options.data_type = ModelDataType.FLOAT
 # options.data_type = ModelDataType.FIXED32
 # options.data_type = ModelDataType.FIXED16
 # options.data_type = ModelDataType.FIXED8
+#options.data_type = ModelDataType.BINARY
+#options.data_type = ModelDataType.BINARY_FIXED32
+#options.data_type = ModelDataType.BINARY_FLOAT16
+
+#options.tamano_bloque = BinaryBlockSize.Bits8
+#options.tamano_bloque = BinaryBlockSize.Bits16
+options.tamano_bloque = BinaryBlockSize.Bits32
+#options.tamano_bloque = BinaryBlockSize.Bits64
 
 options.debug_mode = DebugMode.DISCARD
 # options.debug_mode = DebugMode.DISABLED
@@ -58,6 +66,11 @@ options.files = ProjectFiles.ALL
 
 # if True, remove output folder and start a clean export
 options.clean_output = True
+
+
+lq.models.summary(model)
+
+
 
 ############# Generate project #############
 

@@ -7,83 +7,11 @@
 
 #include <stdint.h>
 #include <math.h>
-{includes}
+#include "Arduino.h"
 
-
-
-
-
-
-/* definition of global masks and data types */
-
-
-
-#if binary_block_size == 8
-typedef uint8_t xBITS;
-static const uint8_t MSB = 0x80;  //1000 0000
-#elif binary_block_size == 16
-typedef uint16_t xBITS;
-static const uint16_t MSB = 0x8000; // 1000 0000 0000 0000
-#elif binary_block_size == 32
-typedef uint32_t xBITS;
-static const uint32_t MSB = 0x80000000; // 1000 0000 0000 0000 0000 0000 0000 0000
-#elif binary_block_size == 64
-typedef uint64_t xBITS;
-static const uint64_t MSB = 0x8000000000000000; // 1000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
-#else
-typedef uint8_t xBITS;
-static const uint8_t MSB = 0x80;  //1000 0000
-#endif // binary_block_size
 
 
 /* STRUCTURE DEFINITION */
-
-
-/*
- *Structure that stores the weights of a binary filter.
- *Specifies the number of channels (uint16_t channels), their size (uint16_t kernel_size), the weights (xBITS *bitarray;) and the bias (float bias).
- */
-
-typedef struct{
-    uint16_t channels;
-    uint16_t kernel_size;
-    const xBITS *bitarray;
-    float bias;
-}quant_filter_t;
-
-
-/*
- * Structure that models a binary convolutional layer.
- * Specifies the number of filters (uint16_t n_filters) and a vector of quant filters (quant_filter_t * filters). 
- */
-
-typedef struct{
-    uint16_t n_filters;
-    quant_filter_t * filters;
-}quantconv2d_layer_t;
-
-
-/*
- * Structure that models a binary neuron.
- * Specifies the weights of the neuron as a vector (xBITS  * weights) and the bias (float bias).
- */
-
-typedef struct{
-    const xBITS  * weights;
-    float bias;
-}quant_neuron_t;
-
-
-/*
- * Structure that models a binary dense layer.
- * Specifies the number of neurons (uint16_t n_neurons) and a vector of quant neurons (quant_neuron_t  * neurons). 
- */
-
-typedef struct{
-    uint16_t n_neurons;
-    quant_neuron_t * neurons;
-}quantdense_layer_t;
-
 
 /*
  * Structure that stores an array of float data (float * data) in vector form.
@@ -193,66 +121,13 @@ typedef struct{
 typedef struct {
     uint32_t length;
     const float *beta;
-    // const float *gamma;
+    // const float *gamma; //  removed due to optimization included in moving_inv_std_dev
     const float *moving_mean;
     const float *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
 } batch_normalization_layer_t;
 
 
-/**//*
- * Structure that models a binary separable conv2d layer.
- * Specifies the number of filters (uint16_t n_filters),
- * a filter of the specified size (quant_filter_t depth_filter) 
- * a vector of 1x1 filters (quant_filter_t * point_filters) 
- */
-typedef struct{
-    uint16_t n_filters;
-    quant_filter_t depth_filter;
-    quant_filter_t * point_filters;
-}quant_separable_conv2d_layer_t;
-
-
-
 /* LIBRARY FUNCTIONS PROTOTYPES */
-
-
-/* 
- * quantdense_layer()
- * Performs feed forward of a binary dense layer (quantdense_layer_t) on a given input data set.
- * Parameters:
- *   - dense_layer => structure with the binary weights of the neurons of the dense layer.  
- *   - input       => structure data1d_t with the input data to process. 
- *   - *output     => structure data1d_t to store the output result.
- */
-void quantdense_layer(quantdense_layer_t dense_layer, data1d_t input, data1d_t * output);
-
-
-/* 
- * quantconv2d_layer()
- * Función que se encarga de aplicar la convolución binaria de una capa de  * filtros (quantconv2d_layer_t)
- * sobre un determinado conjunto de datos de entrada.
- * Parámetros:
- *          quantconv2d_layer_t layer  =>  capa convolucional con filtros 
- *                                        cargados
- *         	      data3d_t input  =>  datos de entrada de tipo data3d_t
- *             data3d_t * output  =>  puntero a la estructura data3d_t donde se guardará el resultado
- */
-void quantconv2d_layer(quantconv2d_layer_t layer,data3d_t input, data3d_t *output);
-
-
-
-/* 
- * quantconv2d_input_not_binary_layer()
- * Función que se encarga de aplicar la convolución binaria (entrada no cuantizada) de una capa de filtros (quantconv2d_layer_t)
- * sobre un determinado conjunto de datos de entrada.
- * Parámetros:
- *          quantconv2d_layer_t layer  =>  capa convolucional con filtros 
- *                                        cargados
- *         	      data3d_t input  =>  datos de entrada de tipo data3d_t
- *             data3d_t * output  =>  puntero a la estructura data3d_t donde se guardará el resultado
- */
-void quantconv2d_input_not_binary_layer(quantconv2d_layer_t layer,data3d_t input, data3d_t *output);
-
 
 /* 
  * conv2d_layer()
@@ -320,18 +195,6 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  *   *output => pointer to the data1d_t structure where the result will be stored.
  */
  void flatten3d_layer(data3d_t input, data1d_t * output);
-
-
- /* 
- * quantSeparableConv2D_layer()
- *  Function in charge of applying the binary separable convolution on a given input data set.
- * 
- * Parameters:
- *  layer => quant_separable_conv2d_layer_t layer with loaded filters.
- *  input => input data of type data3d_t
- *  *output => pointer to the data3d_t structure where the result will be saved.
- */
- void quantSeparableConv2D_layer(quant_separable_conv2d_layer_t layer, data3d_t input, data3d_t * output);
      
 /* 
  * argmax()
@@ -393,31 +256,6 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
 
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data);
 
-/* functions */
-/*
-* sign function, used to binarize the input
-*/
-static inline uint8_t sign(float x);
-
-
-/*
-* Brian Kernighan's algorithm, is used to count high bits (logical 1) 
-* efficiently.
-*/
-static inline int count_set_bits_Brian_Kernighan_algorithm(xBITS n);
-
-
-/*
-* POPCOUNT function 
-*/
-static inline float POPCOUNT(xBITS n);
-
-
-/*
-* applies the XNOR function efficiently, between two numbers loaded in 
-* registers
-*/
-static inline xBITS XNOR(register xBITS a,register xBITS b);
 
 /* Tranformation Layers
  *
@@ -428,5 +266,5 @@ static inline xBITS XNOR(register xBITS a,register xBITS b);
 */
 void image_adapt_layer(data3d_t input, data3d_t * output);
 
-#endif
 
+#endif
