@@ -12,18 +12,17 @@ from embedia.model_generator.project_options import (
     ProjectOptions,
     ProjectType
 )
-from embedia.utils.model_loader import ModelLoader
+
+from tflite_convertion import load_tflite_model, convert_tflite_to_tf
 
 OUTPUT_FOLDER = 'outputs/'
 PROJECT_NAME = 'ExampleProject'
 PROJECT_NAME = 'Prj-Conv2D_Net'
 # MODEL_FILE = 'models/MNIST_14x14_model.h5'
-MODEL_FILE = 'models/MNIST[In14x14x1_C2(8)_MP2_C2(16)_MP2_Fl_De(16)_De(10)](1818)_94.49.tflite'
 
 SAMPLES_FILE = 'samples/MNIST_20samples_14x14.sav'
 
-#model = load_model(MODEL_FILE)
-model = ModelLoader.load_model(MODEL_FILE)
+model = load_model('model.h5')
 
 model._name = "mnist_model"
 
@@ -71,10 +70,34 @@ options.clean_output = True
 ############# Generate project #############
 
 generator = ProjectGenerator(options)
-generator.create_project(OUTPUT_FOLDER, PROJECT_NAME, model, options)
+generator.create_project(OUTPUT_FOLDER, PROJECT_NAME+'_keras', model, options)
+
+print("Project", PROJECT_NAME, "exported in", OUTPUT_FOLDER)
+
+
+
+
+##############################################################################
+##############################################################################
+##############################################################################
+
+(info, interpreter) = load_tflite_model('model.tflite')
+model = convert_tflite_to_tf(info, interpreter)
+
+
+model._name = "mnist_model"
+
+model.summary()
+
+
+############# Generate project #############
+
+generator = ProjectGenerator(options)
+generator.create_project(OUTPUT_FOLDER, PROJECT_NAME+'_tflite', model, options)
 
 print("Project", PROJECT_NAME, "exported in", OUTPUT_FOLDER)
 
 import larq
 
 larq.models.summary(model)
+
