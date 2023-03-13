@@ -50,7 +50,7 @@ Activation functions from Keras:
 Layers from Larq:
 * <a href="https://docs.larq.dev/larq/api/layers/#quantconv2d">QuantConv2D</a>
 * <a href="https://docs.larq.dev/larq/api/layers/#quantdense">QuantDense</a>
-* <a href="https://docs.larq.dev/larq/api/layers/#quantdense">QuantSeparableConv2D</a>
+* <a href="https://docs.larq.dev/larq/api/layers/#quantseparableconv2d">QuantSeparableConv2D</a>
 
 Layers from Scikit-Learn (integrated for preprocessing):
 * <a href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MaxAbsScaler.html">MaxAbsScaler</a>
