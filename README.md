@@ -50,6 +50,7 @@ Activation functions from Keras:
 Layers from Larq:
 * <a href="https://docs.larq.dev/larq/api/layers/#quantconv2d">QuantConv2D</a>
 * <a href="https://docs.larq.dev/larq/api/layers/#quantdense">QuantDense</a>
+* <a href="https://docs.larq.dev/larq/api/layers/#quantdense">QuantSeparableConv2D</a>
 
 Layers from Scikit-Learn (integrated for preprocessing):
 * <a href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MaxAbsScaler.html">MaxAbsScaler</a>
@@ -86,6 +87,7 @@ Open the <a href="https://github.com/Embed-ML/EmbedIA/blob/main/create_embedia_p
   * ```ModelDataType.FIXED8```
   * ```ModelDataType.BINARY```
   * ```ModelDataType.BINARY-FIXED32```
+  * ```ModelDataType.BINARY-FLOAT16```
 * _options.binary_block_: options for block size of binary layers:
   * ```ModelDataType.BinaryBlockSize.Bits8```
   * ```ModelDataType.BinaryBlockSize.Bits16```
