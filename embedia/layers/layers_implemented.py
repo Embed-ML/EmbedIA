@@ -3,8 +3,8 @@ import larq as lq
 
 from embedia.layers.dummy_layer import DummyLayer
 from embedia.layers.binary_convolution.quantconv2d import QuantConv2D
-from embedia.layers.binary_convolution.quantseparable_conv2d import QuantSeparableConv2D
 from embedia.layers.binary_dense.quantdense import QuantDense
+from embedia.layers.binary_convolution.quantseparable_conv2d import QuantSeparableConv2D
 from embedia.layers.convolution.separable_conv2d import SeparableConv2D
 from embedia.layers.convolution.conv2d import Conv2D
 from embedia.layers.dense.dense import Dense
@@ -30,6 +30,9 @@ dict_layers = {
     keras.layers.Flatten: Flatten,
     keras.layers.BatchNormalization: BatchNormalization,
     keras.layers.Activation: Activation,
+    keras.layers.ReLU: Activation,
+    keras.layers.LeakyReLU: Activation,
+    keras.layers.Softmax: Activation,
     # pooling layers
     keras.layers.AveragePooling1D: Pooling,  # not yet implemented in C
     keras.layers.AveragePooling2D: Pooling,

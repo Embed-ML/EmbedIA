@@ -77,13 +77,14 @@ class ProjectGenerator:
                     filename = filename.replace('.h', h_ext)
 
                 file_management.save_to_file(os.path.join(self._dst_folder, filename), content)
-                
+
             # print layers memory size
-            self.print_layers_info(embedia_model, embedia_files['embedia.h'])
+            model_info = self.build_model_info(embedia_model, embedia_files['embedia.h'])
+            print(model_info)
 
         # create model files
         if ProjectFiles.MODEL in options.files:
-            (text_model_h, text_model_c, filename) = generate_embedia_model(layers_embedia, self._lib_folder, model.name, options)
+            (text_model_h, text_model_c, filename) = generate_embedia_model(embedia_model, self._lib_folder, model.name, model_info, options)
             file_management.save_to_file(os.path.join(self._dst_folder, filename + h_ext), text_model_h)
             file_management.save_to_file(os.path.join(self._dst_folder, filename + c_ext), text_model_c)
 
@@ -181,10 +182,11 @@ class ProjectGenerator:
         project_files.append(model_filename+h_ext)
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
-        # fixed point files
-        if options.data_type != ModelDataType.BINARY_FLOAT16:
+        #half file
+        if options.data_type == ModelDataType.BINARY_FLOAT16:
             project_files.append('half'+hpp_ext)
-
+        
+        # fixed point files
         if options.data_type != ModelDataType.FLOAT and options.data_type != ModelDataType.BINARY and options.data_type != ModelDataType.BINARY_FLOAT16:
             project_files.append('fixed'+c_ext)
             project_files.append('fixed'+h_ext)
@@ -201,21 +203,41 @@ class ProjectGenerator:
 
         return project_files
 
-    def print_layers_info(self, embedia_model, embedia_decl):
-        layers_size = embedia_model.get_layers_info(embedia_decl)
+    def build_model_info(self, embedia_model, embedia_decl):
+        layers_info = embedia_model.get_layers_info(embedia_decl)
+        total_params = (0, 0)
         total_size = 0
         total_MACs = 0
-        for i, (layer, shape, MACs, size) in enumerate(layers_size):
+
+        for i, (l_name, l_type, l_act, params, shape, MACs, size) in enumerate(layers_info):
             total_size += size
             total_MACs += MACs
+            total_params = (total_params[0] + params[0], total_params[1] + params[1])
             size = '%8.3f' % (size/1024.0)
-            layers_size[i] = (layer, shape, MACs, size)
+            param_str= '%d' % (params[0] + params[1])
+            if params[1] > 0:
+                param_str += '(%d)' % params[1]
+            layer = l_type
+            if l_act is not None:
+                layer += f'({l_act})'
+            layers_info[i] = (layer, l_name, param_str, shape, MACs, size)
         # print table
         table = PrettyTable()
-        table.field_names = ['Layer', 'Shape', 'MACs', 'Size (KiB)']
-        table.align['Layer'] = 'l'
+        table.field_names = ['Layer(activation)', 'Name', '#Param(NT)', 'Shape', 'MACs', 'Size (KiB)']
+        table.align['Layer(activation)'] = 'l'
+        table.align['Name'] = 'l'
+        table.align['#Param(NT)'] = 'r'
+        table.align['MACs'] = 'r'
         table.align['Size (KB)'] = 'r'
-        table.add_rows(layers_size)
-        print(table)
-        print('Total size: %8.3f KiB' % (total_size/1024.0))
-        print('Total MACs: %8.0f \n' % (total_MACs))
+        table.align['#Param'] = 'r'
+        table.add_rows(layers_info)
+        model_info = '\n'+str(table)+'\n'
+
+        total_p = '%d' % (total_params[0] + total_params[1])
+        if total_params[1] > 0:
+            total_p += '(%d)' % total_params[1]
+        model_info += 'Total params (NT)....: %s\n' % total_p
+        model_info += 'Total size in KiB....: %.3f\n' % (total_size/1024.0)
+        model_info += 'Total MACs operations: %.0f\n' % total_MACs
+
+        return model_info

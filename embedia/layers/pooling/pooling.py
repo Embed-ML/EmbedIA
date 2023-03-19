@@ -93,8 +93,6 @@ class Pooling(Layer):
         strides = self.strides
         pool_size = self.pool_size
         dim = self.dimensions
-        text = f'''
-    static const pooling{dim}d_layer_t {name}_data = {{ {pool_size}, {strides} }};
-    {pool_name}({name}_data, {input_name}, &{output_name});
-'''
+        text = f'''static const pooling{dim}d_layer_t {name}_data = {{ {pool_size}, {strides} }};
+{pool_name}({name}_data, {input_name}, &{output_name});'''
         return text

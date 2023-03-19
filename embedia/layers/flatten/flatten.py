@@ -48,5 +48,4 @@ class Flatten(Layer):
         """
         dims = len(self.get_input_shape())
         fn_name = f'flatten{dims}d_layer'
-        return f'''    {fn_name}({input_name}, &{output_name});
-'''
+        return f'''{fn_name}({input_name}, &{output_name});'''

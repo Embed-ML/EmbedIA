@@ -21,19 +21,19 @@
 
 #if binary_block_size == 8
 typedef uint8_t xBITS;
-static const uint8_t mascara_global_bits[8] = { 128 , 64 , 32 , 16 , 8 , 4 , 2 , 1};
+static const uint8_t MSB = 0x80;  //1000 0000
 #elif binary_block_size == 16
 typedef uint16_t xBITS;
-static const uint16_t mascara_global_bits[16] = { 32768 , 16384 , 8192 , 4096 , 2048 , 1024 , 512 , 256 , 128 , 64 , 32 , 16 , 8 , 4 , 2 , 1};
+static const uint16_t MSB = 0x8000; // 1000 0000 0000 0000
 #elif binary_block_size == 32
 typedef uint32_t xBITS;
-static const uint32_t mascara_global_bits[32] = { 2147483648 , 1073741824 , 536870912 , 268435456 , 134217728 , 67108864 , 33554432 , 16777216 , 8388608 , 4194304 , 2097152 , 1048576 , 524288 , 262144 , 131072 , 65536 , 32768 , 16384 , 8192 , 4096 , 2048 , 1024 , 512 , 256 , 128 , 64 , 32 , 16 , 8 , 4 , 2 , 1};
+static const uint32_t MSB = 0x80000000; // 1000 0000 0000 0000 0000 0000 0000 0000
 #elif binary_block_size == 64
 typedef uint64_t xBITS;
-static const uint64_t mascara_global_bits[64] = { 9223372036854775808 , 4611686018427387904 , 2305843009213693952 , 1152921504606846976 , 576460752303423488 , 288230376151711744 , 144115188075855872 , 72057594037927936 , 36028797018963968 , 18014398509481984 , 9007199254740992 , 4503599627370496 , 2251799813685248 , 1125899906842624 , 562949953421312 , 281474976710656 , 140737488355328 , 70368744177664 , 35184372088832 , 17592186044416 , 8796093022208 , 4398046511104 , 2199023255552 , 1099511627776 , 549755813888 , 274877906944 , 137438953472 , 68719476736 , 34359738368 , 17179869184 , 8589934592 , 4294967296 , 2147483648 , 1073741824 , 536870912 , 268435456 , 134217728 , 67108864 , 33554432 , 16777216 , 8388608 , 4194304 , 2097152 , 1048576 , 524288 , 262144 , 131072 , 65536 , 32768 , 16384 , 8192 , 4096 , 2048 , 1024 , 512 , 256 , 128 , 64 , 32 , 16 , 8 , 4 , 2 , 1};
+static const uint64_t MSB = 0x8000000000000000; // 1000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
 #else
 typedef uint8_t xBITS;
-static const uint8_t mascara_global_bits[8] = { 128 , 64 , 32 , 16 , 8 , 4 , 2 , 1};
+static const uint8_t MSB = 0x80;  //1000 0000
 #endif // binary_block_size
 
 
@@ -191,20 +191,42 @@ typedef struct{
 
 /* 
  * Structure for BatchNormalization layer.
- * Contains vectors for the four parameters used for normalization.
+ * Contains vectors for the two parameters used for normalization.
  * The number of each of the parameters is determined by the number of channels of the previous layer.
  */
 typedef struct {
     uint32_t length;
-    const fixed *beta;
-    // const float *gamma; //  removed due to optimization included in moving_inv_std_dev
-    const fixed *moving_mean;
     const fixed *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
+    const fixed *std_beta;           // = beta - moving_mean * moving_inv_std_dev 
 } batch_normalization_layer_t;
+
+
+/*
+ * Structure that models a binary separable conv2d layer.
+ * Specifies the number of filters (uint16_t n_filters),
+ * a filter of the specified size (quant_filter_t depth_filter) 
+ * a vector of 1x1 filters (quant_filter_t * point_filters) 
+ */
+typedef struct{
+    uint16_t n_filters;
+    quant_filter_t depth_filter;
+    quant_filter_t * point_filters;
+}quant_separable_conv2d_layer_t;
 
 
 
 /* LIBRARY FUNCTIONS PROTOTYPES */
+
+
+/*
+ * prepare_buffers()
+ *  This function should be invoked only at the beginning of the predict function of the model file.
+ * Its purpose is to align the exchange buffers used by the different functions of the model. Due to
+ * the allocation strategy that never frees the memory, it happens that if the swap_alloc function
+ * is invoked an odd number of times in the 2nd invocation the predict reserves more memory than
+ * necessary  (something that usually happens with convolutional layers)
+ */
+void prepare_buffers();
 
 
 /* 
@@ -312,6 +334,17 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  *   *output => pointer to the data1d_t structure where the result will be stored.
  */
  void flatten3d_layer(data3d_t input, data1d_t * output);
+
+  /* 
+ * quantSeparableConv2D_layer()
+ *  Function in charge of applying the binary separable convolution on a given input data set.
+ * 
+ * Parameters:
+ *  layer => quant_separable_conv2d_layer_t layer with loaded filters.
+ *  input => input data of type data3d_t
+ *  *output => pointer to the data3d_t structure where the result will be saved.
+ */
+ void quantSeparableConv2D_layer(quant_separable_conv2d_layer_t layer, data3d_t input, data3d_t * output);
      
 /* 
  * argmax()
@@ -332,6 +365,8 @@ uint32_t argmax(data1d_t data);
 void softmax_activation(fixed *data, uint32_t length);
 
 void relu_activation(fixed *data, uint32_t length);
+
+void leakyrelu_activation(fixed *data, uint32_t length, fixed alpha);
 
 void tanh_activation(fixed *data, uint32_t length);
 

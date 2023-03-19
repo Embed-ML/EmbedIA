@@ -53,17 +53,35 @@ class Conv2D(DataLayer):
                         arr[filters, channel, row, column] = value
         return arr
 
-    def get_layer_info(self, types_dict):
+    def calculate_MAC(self):
         """
-        Gets the amount of bytes of memory required by data of the Embedia
-        Layer, including structures.
-
+        calculates amount of multiplication and accumulation operations
         Returns
         -------
         int
-            size in bytes of the layer.
+            amount of multiplication and accumulation operations
 
         """
+        # layer dimensions
+        n_filters, n_channels, n_rows, n_cols = self.weights.shape
+
+        # estimate amount multiplication and addition operations
+        out_size = self.get_output_size()
+        # MACs =  (n_rows * n_cols *  n_filters) * in_size
+        MACs = out_size*n_cols*n_rows*n_channels
+
+        return MACs
+
+    def calculate_memory(self, types_dict):
+        """
+        calculates amount of memory required to store the data of layer
+        Returns
+        -------
+        int
+            amount memory required
+
+        """
+
         # layer dimensions
         n_filters, n_channels, n_rows, n_cols = self.weights.shape
 
@@ -72,17 +90,11 @@ class Conv2D(DataLayer):
 
         # base data type in bits: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)
-       
-        mem_size = (n_channels * n_rows * n_cols * dt_size / 8 + sz_filter_t) * n_filters
+        
+        mem_size = (n_channels * n_rows * n_cols *
+                    dt_size / 8 + sz_filter_t) * n_filters
 
-        # estimate amount multiplication and addition operations
-        # MACs = 0
-        # in_size = self.get_input_size()
-        out_size = self.get_output_size()
-        # MACs =  (n_rows * n_cols *  n_filters) * in_size
-        MACs = out_size*n_cols*n_rows*n_channels
-
-        return (mem_size, self.get_output_shape(), MACs)
+        return mem_size
 
     def functions_init(self):
         """
@@ -101,7 +113,8 @@ class Conv2D(DataLayer):
 
         n_filters, n_channels, n_rows, n_cols = self.weights.shape
         if n_rows != n_cols:  # WORKING WITH SQUARE KERNELS FOR NOW
-            raise UnsupportedFeatureError(self.layer, 'different kernel rows and columns')
+            raise UnsupportedFeatureError(
+                self.layer, 'different kernel rows and columns')
         if self.layer.padding != 'valid':  # no support for padding FOR NOW
             raise UnsupportedFeatureError(self.layer, 'padding')
         kernel_size = n_rows  # Defining kernel size
@@ -166,15 +179,16 @@ class Conv2D(DataLayer):
             processing of the layer in the file "embedia.c".
 
         """
-
-        if len(self.get_input_shape()) >= 3 and  self.model.firstLayerOfItsclass(self):
-            code = f'''    // convert image for first EmbedIA Conv2d layer
-    image_adapt_layer({input_name}, &{output_name});
-    {input_name} = {output_name};
+        if (self.layer.data_format == 'channels_last' and
+                # len(self.get_input_shape()) >= 3 and
+                self.get_input_shape()[-1] >= 2 and
+                self.model.firstLayerOfItsclass(self)):
+            code = f'''// convert image for first EmbedIA Conv2d layer
+image_adapt_layer({input_name}, &{output_name});
+{input_name} = {output_name};
 
  '''
         else:
             code = ''
-        code += f'''   conv2d_layer({self.name}_data, {input_name}, &{output_name});
-'''
+        code += f'''conv2d_layer({self.name}_data, {input_name}, &{output_name});'''
         return code

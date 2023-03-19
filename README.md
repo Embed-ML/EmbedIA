@@ -2,7 +2,7 @@
   <hr>
   <img src="docs/assets/images/logo3.png" width=20%/>
   <h4><strong>EmbedIA is a machine learning framework for developing applications on microcontrollers.</strong></h4>
-  <a href="https://github.com/Embed-ML/EmbedIA"><img src="https://img.shields.io/badge/version-0.8.0-blue"/></a>  
+  <a href="https://github.com/Embed-ML/EmbedIA"><img src="https://img.shields.io/badge/version-0.9.0-blue"/></a>  
   <a href="https://colab.research.google.com/github/Embed-ML/EmbedIA/blob/main/Using_EmbedIA.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg"/></a>
   <hr>
 </div>
@@ -50,11 +50,11 @@ Activation functions from Keras:
 Layers from Larq:
 * <a href="https://docs.larq.dev/larq/api/layers/#quantconv2d">QuantConv2D</a>
 * <a href="https://docs.larq.dev/larq/api/layers/#quantdense">QuantDense</a>
-* <a href="https://docs.larq.dev/larq/api/layers/#quantseparableconv2d">QuantSeparableConv2D</a>
+* <a href="https://docs.larq.dev/larq/api/layers/#quantseparableconv2d">QuanSeparableConv2D</a>
 
 Layers from Scikit-Learn (integrated for preprocessing):
 * <a href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MaxAbsScaler.html">MaxAbsScaler</a>
-* <a href="hhttps://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MinMaxScaler.html">MinMaxScaler</a>
+* <a href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MinMaxScaler.html">MinMaxScaler</a>
 * <a href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html">StandardScaler</a>
 * <a href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.RobustScaler.html">RobustScaler</a>
 

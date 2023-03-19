@@ -6,9 +6,10 @@ from embedia.model_generator.project_options import ModelDataType
 import larq as lq
 import math
 
+
 class QuantDense(DataLayer):
     """
-    The Dense layer is a layer that requires additional data (weights to be 
+    The Dense layer is a layer that requires additional data (weights to be
     initialized) in addition to the input data. For this reason it inherits
     from DataLayer which generates C code automatically with the variable that
     will store the data, the declaration of the prototype of the initialization
@@ -43,64 +44,78 @@ class QuantDense(DataLayer):
         # assign properties to be used in "functions_init"
         self.weights = layer.get_weights()[0]
         self.biases = layer.get_weights()[1]
-        
-        #verificamos a que caso corresponde
+
+        # verificamos a que caso corresponde
         with lq.context.quantized_scope(True):
-            if (layer.get_config()['input_quantizer'] == None) and (layer.get_config()['kernel_quantizer'] == None):
-                #es una desnse normal
+            if (layer.get_config()['input_quantizer'] is None) and (layer.get_config()['kernel_quantizer'] is None):
+                # es una desnse normal
                 self.tipo_densa = 0
-            elif (layer.get_config()['input_quantizer'] == None) and (layer.get_config()['kernel_quantizer'] != None):        
-                
-                   #entrada no binaria
-                   print(f"Error: No support for layer {layer} with this arguments")
-                   raise f"Error: No support for layer {layer} with this arguments"
-                
-            elif (layer.get_config()['input_quantizer'] != None) and (layer.get_config()['kernel_quantizer'] != None):
+            elif (layer.get_config()['input_quantizer'] is None) and (layer.get_config()['kernel_quantizer'] is not None):
+
+                # entrada no binaria
+                print(
+                    f"Error: No support for layer {layer} with this arguments")
+                raise f"Error: No support for layer {layer} with this arguments"
+
+            elif (layer.get_config()['input_quantizer'] is not None) and (layer.get_config()['kernel_quantizer'] is not None):
                 if (layer.get_config()['input_quantizer']['class_name'] == 'SteSign') and (layer.get_config()['kernel_quantizer']['class_name'] == 'SteSign'):
-                    #dnse pura binaria
+                    # dnse pura binaria
                     self.tipo_densa = 1
                 else:
-                    print(f"Error: No support for layer {layer} with this arguments")
-                    raise f"Error: No support for layer {layer} with this arguments"
+                    print("Error: No support for layer {layer} with this arguments")
+                    raise "Error: No support for layer {layer} with this arguments"
             else:
-                print(f"Error: No support for layer {layer} with this arguments")
-                raise f"Error: No support for layer {layer} with this arguments"
-       
-        
-        
+                print("Error: No support for layer {layer} with this arguments")
+                raise "Error: No support for layer {layer} with this arguments"
+
     def var(self):
         if self.tipo_densa == 0:
-            
+
             return f"dense_layer_t {self.name}_data;\n"
-        
+
         else:
-            
+
             return f"quantdense_layer_t {self.name}_data;\n"
 
     def prototypes_init(self):
         if self.tipo_densa == 0:
-            
+
             return f"dense_layer_t init_{self.name}_data(void);\n"
         else:
-            return f"quantdense_layer_t init_{self.name}_data(void);\n"   
+            return f"quantdense_layer_t init_{self.name}_data(void);\n"
 
-    def get_layer_info(self, types_dict):
+    def calculate_MAC(self):
         """
-        Gets the amount of bytes of memory required by data of the Embedia
-        Layer, including structures.
-
+        calculates amount of multiplication and accumulation operations
         Returns
         -------
         int
-            size in bytes of the layer.
+            amount of multiplication and accumulation operations
 
         """
         # layer dimensions
         (n_input, n_neurons) = self.weights.shape
-        
+
+        MACs = n_input * n_neurons
+
+        return MACs
+
+    def calculate_memory(self, types_dict):
+        """
+        calculates amount of memory required to store the data of layer
+        Returns
+        -------
+        int
+            amount memory required
+
+        """
+
+        # layer dimensions
+        (n_input, n_neurons) = self.weights.shape
+
         # base data type in bits: float, fixed (32/16/8), binary 32
         dt_size = ModelDataType.get_size(self.options.data_type)
-        
+
         # neuron structure size
         if(self.tipo_densa==0): #densa float
             sz_neuron_t = types_dict['neuron_t']
@@ -118,10 +133,8 @@ class QuantDense(DataLayer):
                 dt_size = 64
             mem_size = (math.ceil(n_input/dt_size) * dt_size/8 + sz_neuron_t) * n_neurons
 
-        MACs = n_input * n_neurons
+        return mem_size
 
-        return (mem_size, self.get_output_shape(), MACs)
-    
     def functions_init(self):
         """
         Generate C code with the initialization function of the additional
@@ -141,50 +154,51 @@ class QuantDense(DataLayer):
 
         def macro_vacia(valuee):
             return valuee
-        
-        #contemplar los dos casos
+
+        # contemplar los dos casos
         if self.tipo_densa == 0:
-            #densa normal
-            
+            # densa normal
+
             struct_type = 'dense_layer_t'
             (data_type, macro_converter) = self.model.get_type_converter()
-    
+
             (n_input, n_neurons) = weights.shape
-    
+
             init_dense_layer = f'''
     {struct_type} init_{name}_data(void){{
-    
+
         static neuron_t neurons[{n_neurons}];
     '''
             o_code = ""
-    
+
             for neuron_id in range(n_neurons):
-    
-                o_weights = declare_array(f'static {data_type}', f'weights{neuron_id}', macro_converter, weights[:, neuron_id])
-    
+
+                o_weights = declare_array(
+                    f'static  {data_type}', f'weights{neuron_id}', macro_converter, weights[:, neuron_id])
+
                 o_code += f'''
         {o_weights};
         static const neuron_t neuron{neuron_id} = {{weights{neuron_id}, {macro_converter(biases[neuron_id])}}};
         neurons[{neuron_id}]=neuron{neuron_id};
     '''
             init_dense_layer += o_code
-    
+
             init_dense_layer += f'''
         dense_layer_t layer= {{{n_neurons}, neurons}};
         return layer;
     }}
     '''
-    
+
         else:
-            #densa full binaria
+            # densa full binaria
             struct_type = 'quantdense_layer_t'
             (data_type, macro_converter) = self.model.get_type_converter()
-    
+
             (n_input, n_neurons) = weights.shape
-            toti = weights[:,0].size
-            
-            lista_contadores = [0,0,0]  #suma,cont,cont2
-            
+            toti = weights[:, 0].size
+
+            lista_contadores = [0, 0, 0]  # suma,cont,cont2
+
             if self.options.tamano_bloque == BinaryBlockSize.Bits8:
                 xBits = 8
                 block_type = 'uint8_t'
@@ -197,40 +211,37 @@ class QuantDense(DataLayer):
             else:
                 xBits = 64
                 block_type = 'uint64_t'
-            
-            
+
             init_dense_layer = f'''
     {struct_type} init_{name}_data(void){{
-    
+
         static quant_neuron_t neurons[{n_neurons}];
     '''
             o_code = ""
-    
+
             for neuron_id in range(n_neurons):
-                
-                lista_contadores[0] = 0 #suma
-                lista_contadores[1] = 0 #cont
-                lista_contadores[2] = 0 #cont2
-            
-                o_weights = declare_array2(toti,xBits,lista_contadores,f'static  {block_type}', f'weights{neuron_id}', macro_vacia , weights[:, neuron_id])
-    
+
+                lista_contadores[0] = 0  # suma
+                lista_contadores[1] = 0  # cont
+                lista_contadores[2] = 0  # cont2
+
+                o_weights = declare_array2(
+                    toti, xBits, lista_contadores, f'static  {block_type}', f'weights{neuron_id}', macro_vacia, weights[:, neuron_id])
+
                 o_code += f'''
         {o_weights};
         static const quant_neuron_t neuron{neuron_id} = {{weights{neuron_id}, {macro_converter(biases[neuron_id])}}};
         neurons[{neuron_id}]=neuron{neuron_id};
     '''
             init_dense_layer += o_code
-    
+
             init_dense_layer += f'''
         quantdense_layer_t layer= {{{n_neurons}, neurons}};
         return layer;
     }}
     '''
-    
+
         return init_dense_layer
-    
-    
-    
 
     def predict(self, input_name, output_name):
         """
@@ -260,11 +271,9 @@ class QuantDense(DataLayer):
         """
 
         if self.tipo_densa == 0:
-            #densa normal 
-            return f'''    dense_layer({self.name}_data, {input_name}, &{output_name});
-    '''
-    
+            # densa normal
+            return f'''dense_layer({self.name}_data, {input_name}, &{output_name});'''
+
         elif self.tipo_densa == 1:
-            #densa binaria
-            return f'''    quantdense_layer({self.name}_data, {input_name}, &{output_name});
-    '''
+            # densa binaria
+            return f'''quantdense_layer({self.name}_data, {input_name}, &{output_name});'''

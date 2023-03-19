@@ -11,7 +11,7 @@ from embedia.utils import file_management
 from embedia.layers.data_layer import DataLayer
 from embedia.layers.activation.activation import Activation
 from embedia.model_generator.project_options import BinaryBlockSize
-
+from embedia.layers.unimplemented_layer import UnimplementedLayer
 
 def multi_replace(adict, text):
     # Create a regular expression from all of the dictionary keys
@@ -21,19 +21,30 @@ def multi_replace(adict, text):
     return regex.sub(lambda match: adict[match.group(0)], text)
 
 
-def generate_embedia_library(layers_embedia, src_folder, options):
+def indent(multi_ln_code, level=1, spaces=4):
+
+    # remove the whitespaces at the end of each line
+    code = re.sub(r'[ \t]+(?=\n)', '', multi_ln_code)
+
+    # check if the code has a trailing new line
+    has_nl = code.endswith("\n")
+
+    return re.sub("^", level*spaces*' ', code, flags=re.MULTILINE)
+
+
+def generate_embedia_library(embedia_layers, src_folder, options):
 
     embedia_files = dict()
 
     filenames = os.listdir(src_folder)
     for filename in filenames:
         embedia_files[filename] = file_management.read_from_file(src_folder+filename)
-        
+
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
     # Prepare includes
-    
+
     if options.data_type == ModelDataType.BINARY or options.data_type == ModelDataType.BINARY_FIXED32 or options.data_type == ModelDataType.BINARY_FLOAT16:
-    
+
         if options.tamano_bloque == BinaryBlockSize.Bits8:
             tam_block = 8
         elif options.tamano_bloque == BinaryBlockSize.Bits16:
@@ -42,24 +53,24 @@ def generate_embedia_library(layers_embedia, src_folder, options):
             tam_block = 32
         else:
             tam_block = 64
-            
+
         if options.project_type == ProjectType.ARDUINO:
             includes_h = '#include "Arduino.h"\n'
             includes_h += f'\n#define binary_block_size {tam_block}\n'
-            
+
         else:
             includes_h = '#include <stdlib.h>\n'
             includes_h += f'\n#define binary_block_size {tam_block}\n'
-    
+
         embedia_files['embedia.h'] = multi_replace({'{includes}': includes_h}, embedia_files['embedia.h'])
 
     else:
-        
+
         if options.project_type == ProjectType.ARDUINO:
             includes_h = '#include "Arduino.h"\n'
         else:
             includes_h = '#include <stdlib.h>\n'
-    
+
         embedia_files['embedia.h'] = multi_replace({'{includes}': includes_h}, embedia_files['embedia.h'])
 
 
@@ -78,13 +89,15 @@ def get_input_const(input_shape):
     return None
 
 
-def generate_embedia_model(layers_embedia, src_folder, model_name, options):
+def generate_embedia_model(model, src_folder, model_name, model_info, options):
 
     def format_model_name(model_name):
         model_name = model_name.lower()
         if not model_name.endswith('model'):
             model_name += '_model'
         return model_name
+
+    embedia_layers = model.embedia_layers
 
     filename = format_model_name(model_name)
 
@@ -96,10 +109,10 @@ def generate_embedia_model(layers_embedia, src_folder, model_name, options):
         includes += '#include "embedia_debug.h"\n'
 
     model_name_h = filename.upper()
-    # macros_first_shape = layers_embedia[0].get_macros_first_shape()
-    input_data_type = layers_embedia[0].get_input_data_type()
-    output_data_type = layers_embedia[-1].get_output_data_type()
-    input_shape = layers_embedia[0].get_input_shape()
+    # macros_first_shape = embedia_layers[0].get_macros_first_shape()
+    input_data_type = embedia_layers[0].get_input_data_type()
+    output_data_type = embedia_layers[-1].get_output_data_type()
+    input_shape = embedia_layers[0].get_input_shape()
 
     # prepare input dimension constant
     input_dict = get_input_const(input_shape)
@@ -114,65 +127,85 @@ def generate_embedia_model(layers_embedia, src_folder, model_name, options):
     var = ""
     init = ""
     functions_init = ""
-    predict = ""
+    predict = "prepare_buffers();\n"
 
     data_layers_input = [{'type': input_data_type, 'var_name': 'input'}, ]
     data_layers_output = []
     layer_id = -1
+    first_layer = True
 
-    for layer in layers_embedia:
+    for layer in embedia_layers:
         layer_id += 1
 
-        # Initialization
-        if isinstance(layer, DataLayer):
-            prototypes_init += layer.prototypes_init()
-            var += layer.var()
-            init += layer.init()
-            functions_init += layer.functions_init()
+        predict += f'\n//*************** LAYER {layer_id} **************//'
+        predict += f'\n// Layer name: {layer.name}\n'
 
-        # layer section of predict function
-        input_layer_type = layer.get_input_data_type()
-        if data_layers_input[-1]['type'] != input_layer_type:
-            var_input = f'input{len(data_layers_input)}'
-            predict += f'    {input_layer_type} {var_input};\n'
-            data_layers_input.append({'type': input_layer_type, 'var_name': var_input})
-
-        if not layer.inplace_output and layer != layers_embedia[0]:
-            predict += '\n    ' + data_layers_input[-1]['var_name'] + ' = ' + data_layers_output[-1]['var_name'] + ';\n'
-
-        output_layer_type = layer.get_output_data_type()
-        if data_layers_output == [] or data_layers_output[-1]['type'] != output_layer_type:
-            var_output = f'output{len(data_layers_output)}'
-            predict += f'    {output_layer_type} {var_output};\n'
-            data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
+        implemented_layer = not isinstance(layer, UnimplementedLayer)
 
 
-        predict += f'\n    //*************** LAYER {layer_id} ***************//'
-        predict += f'\n    // Layer name: {layer.name}\n'
+        if implemented_layer:
+            # Initialization
+            if isinstance(layer, DataLayer):
+                prototypes_init += layer.prototypes_init()
+                var += layer.var()
+                init += layer.init()
+                functions_init += layer.functions_init()
 
-        predict += layer.predict(data_layers_input[-1]['var_name'], data_layers_output[-1]['var_name'])
+            # layer section of predict function
 
-        # Add activation function
-        act_fn = layer.activation_function(var_output)
-        if act_fn != '':
-            if not isinstance(layer, Activation):
-                predict += f'    // Activation layer for {layer.name}\n'
-            predict += f'{act_fn}\n'
+            if not layer.inplace_output:
 
-        # Add debug function if is enabled
-        if options.debug_mode != DebugMode.DISCARD:
-            dbg_fn = layer.debug_function(var_output)
-            predict += f'    // Debug function for layer {layer.name}\n'
-            predict += f'{dbg_fn}\n'
+                input_layer_type = layer.get_input_data_type()
+                if data_layers_input[-1]['type'] != input_layer_type:
+                    var_input = f'input{len(data_layers_input)}'
+                    predict += f'{input_layer_type} {var_input};\n'
+                    data_layers_input.append({'type': input_layer_type, 'var_name': var_input})
 
+                if not first_layer:
+                    predict += f'{data_layers_input[-1]["var_name"]} = {data_layers_output[-1]["var_name"]};\n'
+                else:
+                    first_layer = False
+
+                output_layer_type = layer.get_output_data_type()
+                if data_layers_output == [] or data_layers_output[-1]['type'] != output_layer_type:
+                    var_output = f'output{len(data_layers_output)}'
+                    predict += f'{output_layer_type} {var_output};\n'
+                    data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
+
+
+
+
+            param_in = data_layers_input[-1]['var_name']
+            param_out = data_layers_output[-1]['var_name']
+            predict += f'{layer.predict(param_in, param_out)}\n'
+
+            # Add activation function
+            act_fn = layer.activation_function(var_output)
+            if act_fn != '':
+                if not isinstance(layer, Activation):
+                    predict += f'// Activation layer for {layer.name}\n'
+                predict += f'{act_fn}\n'
+
+            # Add debug function if is enabled
+            if options.debug_mode != DebugMode.DISCARD:
+                dbg_fn = layer.debug_function(var_output)
+                predict += f'// Debug function for layer {layer.name}\n'
+                predict += f'{dbg_fn}\n'
+        else:
+            # message of unimplemented layer
+            predict += '// ' + layer.message + '\n'
+
+    # indent code
+    predict = indent(predict)
     if output_data_type == 'data1d_t':
-        predict_class = '''    return argmax(*results); '''
+        predict_class = 'return argmax(*results);'
     else:
         predict_class = '''//TO DO: argmax with data2d_t and data3d_t
     return -1; '''
 
     h = file_management.read_from_file(src_h).format(
             model_name_h=model_name_h,
+            model_info=model_info,
             input_const=input_const,
             input_data_type=input_data_type,
             output_data_type=output_data_type
@@ -195,7 +228,7 @@ def generate_embedia_model(layers_embedia, src_folder, model_name, options):
     return (h, c, filename)
 
 
-def generate_embedia_main(layers_embedia, src_folder, filename, options):
+def generate_embedia_main(embedia_layers, src_folder, filename, options):
 
     src_c = os.path.join(src_folder, 'main/main_')
 
@@ -229,9 +262,9 @@ def generate_embedia_main(layers_embedia, src_folder, filename, options):
 '''
 
     # prepare data for model input and output
-    input_data_type = layers_embedia[0].get_input_data_type()
-    output_data_type = layers_embedia[-1].get_output_data_type()
-    
+    input_data_type = embedia_layers[0].get_input_data_type()
+    output_data_type = embedia_layers[-1].get_output_data_type()
+
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado no se usa igual por ahora
 
     # (FLOAT, FIXED32, FIXED16, FIXED8, BINARY) = (0,1,2,3,4)
@@ -241,7 +274,7 @@ def generate_embedia_main(layers_embedia, src_folder, filename, options):
         model_data_type = 'fixed'
 
 
-    input_const = get_input_const(layers_embedia[0].get_input_shape())
+    input_const = get_input_const(embedia_layers[0].get_input_shape())
     input_dim = ''
     for k in input_const:
         input_dim += f'{k}, '
@@ -253,7 +286,7 @@ def generate_embedia_main(layers_embedia, src_folder, filename, options):
 
     // make model prediction
     // uncomment corresponding code
-    /*
+
     int prediction = model_predict_class(input, &results);
 
     // print predicted class id'''
@@ -263,16 +296,26 @@ def generate_embedia_main(layers_embedia, src_folder, filename, options):
     Serial.print("Prediction class id: ");
     Serial.println(prediction);
 '''
+        if options.example_data is not None:
+            main_code += '''
+    Serial.print("   Example class id: ");
+    Serial.println(sample_data_id);
+'''
     else:
         main_code += '''
     printf("Prediction class id: %d\\n", prediction);
 '''
+        if options.example_data is not None:
+            main_code += '''
+    printf("   Example class id: %d\\n", sample_data_id);
+'''
 
     main_code += '''
-    */
+    /*
 
     model_predict(input, &results);
-    printf("prediccion: %5f", results.data[0]);
+    printf("prediccion: %.5f", results.data[0]);
+    */
 
 '''
 

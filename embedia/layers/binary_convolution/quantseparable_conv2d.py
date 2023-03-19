@@ -5,7 +5,7 @@ from embedia.utils.binary_helper import BinaryGlobalMask
 from embedia.model_generator.project_options import BinaryBlockSize
 import numpy as np
 import larq as lq
-
+import math
 
 class QuantSeparableConv2D(DataLayer):
 
@@ -66,6 +66,65 @@ class QuantSeparableConv2D(DataLayer):
                     for filt, value in enumerate(elem3):
                         arr[filt, chn, row, col] = value
         return arr
+
+ 
+    def calculate_MAC(self):
+
+        out_size = self.get_output_size()
+
+        # layer dimensions
+        n_channels, n_filters, n_rows, n_cols = self.depth_weights.shape
+        MACs = out_size*n_cols*n_rows*n_channels
+
+        n_channels, n_filters, n_rows, n_cols = self.point_weights.shape
+        MACs += out_size*n_cols*n_rows*n_channels
+
+        return MACs
+
+    def calculate_memory(self, types_dict):
+        """
+        calculates amount of memory required to store the data of layer
+        Returns
+        -------
+        int
+            amount memory required
+
+        """
+
+        # layer dimensions
+        n_channels, n_filters, n_rows, n_cols = self.depth_weights.shape
+        depth_params = n_channels * n_filters * n_rows * n_cols
+
+        n_channels, n_filters, n_rows, n_cols = self.point_weights.shape
+        point_params = n_channels * n_filters * n_rows * n_cols
+
+        # base data type in bits: float, fixed (32/16/8)
+        dt_size = ModelDataType.get_size(self.options.data_type)
+
+        if (self.tipo_conv==0):
+
+            # EmbedIA filter structure size
+            sz_filter_t = types_dict['filter_t']
+
+            mem_size = ((depth_params * dt_size / 8 + sz_filter_t) + ((point_params * dt_size / 8 + sz_filter_t) * n_filters))
+
+        else:
+            # EmbedIA filter structure size
+            sz_filter_t = types_dict['quant_filter_t']
+
+            if self.options.tamano_bloque == BinaryBlockSize.Bits8:
+                dt_size = 8
+            elif self.options.tamano_bloque == BinaryBlockSize.Bits16:
+                dt_size = 16
+            elif self.options.tamano_bloque == BinaryBlockSize.Bits32:
+                dt_size = 32
+            else:
+                dt_size = 64
+
+            mem_size = ((math.ceil(depth_params/dt_size) * dt_size / 8 + sz_filter_t) + ((math.ceil(point_params/dt_size) * dt_size / 8 + sz_filter_t) * n_filters))
+
+        return mem_size
+
 
     def functions_init(self):
         depth_filtros, depth_channels, depth_rows, depth_columns = self.depth_weights.shape  # Getting layer info from it's weights

@@ -4,17 +4,12 @@ from embedia.model_generator.project_options import ModelDataType
 import regex as re
 import pycparser as pcp
 from embedia.model_generator.project_options import BinaryBlockSize
-
-class UnsupportedLayerError(Exception):
-    types_dict = {}
-
-    def __init__(self, obj):
-        super().__init__(f"EmbedIA layer/element not implemented for {str(type(obj))}")
-        self.object = obj
+from embedia.layers.unimplemented_layer import UnimplementedLayer
 
 
 class Model(object):
-    types_dict ={}
+    types_dict = {}
+
     def __init__(self, options):
         self.options = options
         self.clear_names()
@@ -25,22 +20,37 @@ class Model(object):
 
         embedia_layers = []
 
-        try:
-            # external normalizar to the model? => add as first layer
-            if not (self.options.normalizer is None):
-                obj = self.options.normalizer
-                ly = dict_layers[type(obj)](self, obj, self.options)
-                embedia_layers.append(ly)
+        # external normalizar to the model? => add as first layer
+        if self.options.normalizer is not None:
+            obj = self.options.normalizer
+            ly = self.create_embedia_layer(obj)
+            embedia_layers.append(ly)
 
-            for layer in layers:
-                obj = layer
-                ly = dict_layers[type(layer)](self, layer, self.options)
-                embedia_layers.append(ly)
-        except KeyError:
-            raise UnsupportedLayerError(obj)
+        for layer in layers:
+            obj = layer
+            ly = self.create_embedia_layer(layer)
+            embedia_layers.append(ly)
 
         self.embedia_layers = embedia_layers
         return embedia_layers
+
+    def create_embedia_layer(self, obj):
+        try:
+            layer = dict_layers[type(obj)](self, obj, self.options)
+        except KeyError:
+            layer = UnimplementedLayer(self, obj, self.options)
+
+        return layer
+
+    def get_previous_layer(self, layer):
+        try:
+            idx = self.embedia_layers.index(layer)
+        except ValueError:
+            return None
+        if idx == 0:
+            return None
+        return self.embedia_layers[idx-1]
+
 
     def clear_names(self):
         self.names = defaultdict(lambda: 0)
@@ -51,7 +61,7 @@ class Model(object):
         elif hasattr(obj, "__name__"):
             name = obj.__name__
         else:
-             name = obj.__class__.__name__
+            name = obj.__class__.__name__
 
         name = re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
         num = self.names[name]
@@ -75,7 +85,7 @@ class Model(object):
         Returns
         -------
         tuple (str, str)
-            tupla con el tipo y la macro de conversión en C.
+            tuple with type and macro convertion for C.
 
         """
 
@@ -97,7 +107,6 @@ class Model(object):
 
     def _build_types_size_dict(self, embedia_decl):
         # prepare to extract declaration of structures
-
         # get code to first function definition in order to includes structures
         if (self.options.data_type == ModelDataType.BINARY or self.options.data_type == ModelDataType.BINARY_FIXED32 or self.options.data_type == ModelDataType.BINARY_FLOAT16):
             start = embedia_decl.find('endif')
@@ -183,22 +192,28 @@ typedef char half;
             return self.types_dict[node.type.type.names[0]]
 
         raise Exception(node.type)
-    
+
     def get_layers_info(self, embedia_decl):
         if len(self.types_dict) == 0:
             self._build_types_size_dict(embedia_decl)
-            
+
         layers_info = []
         for layer in self.embedia_layers:
-            (size, shape, MACs) =  layer.get_layer_info(self.types_dict)
-            layers_info.append((layer.name, shape, MACs, size))
-            
+            info = layer.get_info(self.types_dict)
+            l_type = info.class_name
+            l_name = info.layer_name
+            l_act = info.activation
+            params = info.params
+            shape = info.output_shape
+            MACs = info.macs_ops
+            size = info.memory
+
+            layers_info.append((l_name, l_type, l_act, params, shape, MACs, size))
+
         return layers_info
-    
-    
+
     def firstLayerOfItsclass(self, embedia_layer):
         for layer in self.embedia_layers:
             if type(embedia_layer) is type(layer):
                 return embedia_layer == layer
         return False
-    

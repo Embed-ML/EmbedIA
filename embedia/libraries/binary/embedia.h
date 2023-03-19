@@ -187,19 +187,17 @@ typedef struct{
 
 /* 
  * Structure for BatchNormalization layer.
- * Contains vectors for the four parameters used for normalization.
+ * Contains vectors for the two parameters used for normalization.
  * The number of each of the parameters is determined by the number of channels of the previous layer.
  */
 typedef struct {
     uint32_t length;
-    const float *beta;
-    // const float *gamma;
-    const float *moving_mean;
     const float *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
+    const float *std_beta;           // = beta - moving_mean * moving_inv_std_dev 
 } batch_normalization_layer_t;
 
 
-/**//*
+/*
  * Structure that models a binary separable conv2d layer.
  * Specifies the number of filters (uint16_t n_filters),
  * a filter of the specified size (quant_filter_t depth_filter) 
@@ -214,6 +212,16 @@ typedef struct{
 
 
 /* LIBRARY FUNCTIONS PROTOTYPES */
+
+/*
+ * prepare_buffers()
+ *  This function should be invoked only at the beginning of the predict function of the model file.
+ * Its purpose is to align the exchange buffers used by the different functions of the model. Due to
+ * the allocation strategy that never frees the memory, it happens that if the swap_alloc function
+ * is invoked an odd number of times in the 2nd invocation the predict reserves more memory than
+ * necessary  (something that usually happens with convolutional layers)
+ */
+void prepare_buffers();
 
 
 /* 
@@ -352,6 +360,8 @@ uint16_t argmax(data1d_t data);
 void softmax_activation(float *data, uint32_t length);
 
 void relu_activation(float *data, uint32_t length);
+
+void leakyrelu_activation(float *data, uint32_t length, float alpha);
 
 void tanh_activation(float *data, uint32_t length);
 

@@ -5,7 +5,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "cwd": "${workspaceFolder}/project_tests"
+            "cwd": "${workspaceFolder}/export examples"
         },
         {
             "name": "C/C++: gcc.exe build and debug active file",

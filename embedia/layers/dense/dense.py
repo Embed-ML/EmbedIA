@@ -41,17 +41,33 @@ class Dense(DataLayer):
         self.weights = layer.get_weights()[0]
         self.biases = layer.get_weights()[1]
 
-    def get_layer_info(self, types_dict):
+    def calculate_MAC(self):
         """
-        Gets the amount of bytes of memory required by data of the Embedia
-        Layer, including structures.
-
+        calculates amount of multiplication and accumulation operations
         Returns
         -------
         int
-            size in bytes of the layer.
+            amount of multiplication and accumulation operations
 
         """
+        # layer dimensions
+        (n_input, n_neurons) = self.weights.shape
+
+        MACs = n_input * n_neurons
+
+        return MACs
+
+
+    def calculate_memory(self, types_dict):
+        """
+        calculates amount of memory required to store the data of layer
+        Returns
+        -------
+        int
+            amount memory required
+
+        """
+
         # layer dimensions
         (n_input, n_neurons) = self.weights.shape
 
@@ -60,15 +76,10 @@ class Dense(DataLayer):
 
         # base data type in bits: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)
-        
 
-        #mem_size = (n_input+1) * dt_size/8 + n_neurons * sz_neuron_t   BAD
+        mem_size = (n_input * dt_size/8 + sz_neuron_t) * n_neurons
 
-        mem_size = (n_input * dt_size/8 + sz_neuron_t ) * n_neurons
-
-        MACs = n_input * n_neurons
-
-        return (mem_size, self.get_output_shape(), MACs)
+        return mem_size
 
     def functions_init(self):
         """
@@ -86,7 +97,7 @@ class Dense(DataLayer):
         weights = self.weights
         biases = self.biases
         name = self.name
-        struct_type = self.struct_data_type 
+        struct_type = self.struct_data_type
         (data_type, macro_converter) = self.model.get_type_converter()
 
         (n_input, n_neurons) = weights.shape
@@ -100,7 +111,7 @@ class Dense(DataLayer):
 
         for neuron_id in range(n_neurons):
 
-            o_weights = declare_array(f'static {data_type}', f'weights{neuron_id}', macro_converter, weights[:, neuron_id])
+            o_weights = declare_array(f'static const {data_type}', f'weights{neuron_id}', macro_converter, weights[:, neuron_id])
 
             o_code += f'''
     {o_weights};
@@ -143,5 +154,5 @@ class Dense(DataLayer):
 
         """
 
-        return f'''    dense_layer({self.name}_data, {input_name}, &{output_name});
+        return f'''dense_layer({self.name}_data, {input_name}, &{output_name});
 '''

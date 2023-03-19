@@ -8,7 +8,6 @@ class ModelDataType:
         return ModelDataType.SIZES[dt]
 
 
-
 class ProjectType:
     (C, CPP, ARDUINO, CODEBLOCK) = (0, 1, 2, 3)
 
@@ -26,6 +25,10 @@ class BinaryBlockSize:
     (Bits8, Bits16, Bits32, Bits64) = (0, 1, 2, 3)
 
 
+class UnimplementedLayerAction:
+    (FAILURE, IGNORE_ALL, IGNORE_KNOWN) = (0, 1, 2)
+
+
 class ProjectOptions:
     def __init__(self):
         self.embedia_folder = None
@@ -39,3 +42,4 @@ class ProjectOptions:
         self.clean_output = False
         self.normalizer = None
         self.tamano_bloque = BinaryBlockSize.Bits8
+        self.on_unimplemented_layer = UnimplementedLayerAction.IGNORE_KNOWN

@@ -71,7 +71,7 @@ typedef struct{
 
 /*
  * Structure that models a neuron.
- * Specifies the weights of the neuron as a vector (float * weights) and the bias (float bias).
+ * Specifies the weights of the neuron as a vector (fixed * weights) and the bias (fixed bias).
  */
 typedef struct{
     const float  * weights;
@@ -100,10 +100,10 @@ typedef struct{
 /*********************************************************************************************************************************/
 
 /* structure for normalization type (x_i-s_i)/d_i and (x_i)/d_i
- *  - standard normalization  : (x_i-mean_i)/std_dev_i
- *  - min_max normalization   : (x_i-min_i) / (max_i-min_i)
- *  - robust normalization    : (x_i-q1_i)  / (q3_i-q1_i)
- *  - abs_max_normalization   : (x_i)/(abs_max_xi)
+ *  standard normalization  : (x_i-mean_i)/std_dev_i
+ *  min_max normalization   : (x_i-min_i) / (max_i-min_i)
+ *  robust normalization    : (x_i-q2_i)  / (q3_i-q1_i)
+ *  abs_max_normalization   : (x_i)/(abs_max_xi)
  */
 
 typedef struct{
@@ -114,28 +114,38 @@ typedef struct{
 
 /* 
  * Structure for BatchNormalization layer.
- * Contains vectors for the four parameters used for normalization.
+ * Contains vectors for the two parameters used for normalization.
  * The number of each of the parameters is determined by the number of channels of the previous layer.
  */
 typedef struct {
     uint32_t length;
-    const float *beta;
-    // const float *gamma; //  removed due to optimization included in moving_inv_std_dev
-    const float *moving_mean;
     const float *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
+    const float *std_beta;           // = beta - moving_mean * moving_inv_std_dev 
 } batch_normalization_layer_t;
+
 
 
 /* LIBRARY FUNCTIONS PROTOTYPES */
 
-/* 
+
+/*
+ * prepare_buffers()
+ *  This function should be invoked only at the beginning of the predict function of the model file.
+ * Its purpose is to align the exchange buffers used by the different functions of the model. Due to
+ * the allocation strategy that never frees the memory, it happens that if the swap_alloc function
+ * is invoked an odd number of times in the 2nd invocation the predict reserves more memory than
+ * necessary  (something that usually happens with convolutional layers)
+ */
+void prepare_buffers();
+
+
+/*
  * conv2d_layer()
- * Función que se encarga de aplicar la convolución de una capa de filtros (conv_layer_t)
- * sobre un determinado conjunto de datos de entrada.
- * Parámetros:
- *          conv_layer_t layer  =>  capa convolucional con filtros cargados
- *         	      data3d_t input  =>  datos de entrada de tipo data3d_t
- *             data3d_t * output  =>  puntero a la estructura data3d_t donde se guardará el resultado
+ *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
+ * Parameters:
+ *  layer => convolutional layer with loaded filters.
+ *  input => input data of type data3d_t
+ *  *output => pointer to the data3d_t structure where the result will be saved.
  */
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
@@ -144,9 +154,9 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
  * 
  * Parameters:
- *  layer => convolutional layer with loaded filters.
- *  input => input data of type data3d_t
- *  *output => pointer to the data3d_t structure where the result will be saved.
+ *   layer => convolutional layer with loaded filters.
+ *   input => input data of type data3d_t
+ *   *output => pointer to the data3d_t structure where the result will be saved.
  */
 void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
@@ -155,9 +165,9 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
  * dense_layer()
  * Performs feed forward of a dense layer (dense_layer_t) on a given input data set.
  * Parameters:
- *   - dense_layer => structure with the weights of the neurons of the dense layer.  
- *   - input       => structure data1d_t with the input data to process. 
- *   - *output     => structure data1d_t to store the output result.
+ *   dense_layer => structure with the weights of the neurons of the dense layer.  
+ *   input       => structure data1d_t with the input data to process. 
+ *   *output     => structure data1d_t to store the output result.
  */
 void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output);
 
@@ -165,21 +175,21 @@ void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output);
  * max_pooling2d_layer()
  * Maxpooling layer, for now supports square size and stride. No support for padding 
  * Parameters:
- *   - pool_size => size for pooling
- *   - stride    => stride for pooling
- *   - input     => input data 
- *   - output    => output data
+ *   pool_size => size for pooling
+ *   stride    => stride for pooling
+ *   input     => input data 
+ *   output    => output data
  */
 void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
 /* 
  * avg_pooling_2d()
- *  Function that applies an average pooling to an input with a window size of received 
- *  by parameter (uint16_t strides)
+ * Function that applies an average pooling to an input with a window size of received 
+ * by parameter (uint16_t strides)
  *
  * Parameters:
- *  input => input data of type data3d_t.
- *  *output => pointer to the data3d_t structure where the result will be stored.
+ *   input => input data of type data3d_t.
+ *   *output => pointer to the data3d_t structure where the result will be stored.
  */
 void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
@@ -190,22 +200,21 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  * Converts the data format from data3d_t array format to data1d_t vector.
  * (prepares data for input into a layer of type dense_layer_t).
  * Parameters:
- *   input => input data of type data3d_t.
- *   *output => pointer to the data1d_t structure where the result will be stored.
+ *    input => input data of type data3d_t.
+ *    *output => pointer to the data1d_t structure where the result will be stored.
  */
  void flatten3d_layer(data3d_t input, data1d_t * output);
      
 /* 
  * argmax()
- *  Finds the index of the largest value within a vector of data (data1d_t)
- * 
+ * Finds the index of the largest value within a vector of data (data1d_t)
  * Parameters:
- *  data => data of type data1d_t to search for max.
+ *   data => data of type data1d_t to search for max.
  *
  * Returns:
  *  search result - index of the maximum value
  */
-uint16_t argmax(data1d_t data);
+uint32_t argmax(data1d_t data);
 
 
 /***************************************************************************************************************************/
@@ -214,6 +223,8 @@ uint16_t argmax(data1d_t data);
 void softmax_activation(float *data, uint32_t length);
 
 void relu_activation(float *data, uint32_t length);
+
+void leakyrelu_activation(float *data, uint32_t length, float alpha);
 
 void tanh_activation(float *data, uint32_t length);
 
@@ -227,9 +238,9 @@ void softsign_activation(float *data, uint32_t length);
 /* Normalization layers */
 
 /* Normalization function for:
- *  - standard normalization  : (x_i-mean_i)/std_dev_i
- *  - min_max normalization   : (x_i-min_i) / (max_i-min_i)
- *  - robust normalization    : (x_i-q1_i)  / (q3_i-q1_i)
+ *  standard normalization  : (x_i-mean_i)/std_dev_i
+ *  min_max normalization   : (x_i-min_i) / (max_i-min_i)
+ *  robust normalization    : (x_i-q2_i)  / (q3_i-q1_i)
  */
 void normalization1(normalization_layer_t s, data1d_t input, data1d_t * output);
 
@@ -241,7 +252,7 @@ void normalization1(normalization_layer_t s, data1d_t input, data1d_t * output);
 
 
 /* Normalization function for:
- *  - abs_max_normalization   : (x_i)/(abs_max_xi)
+ *  abs_max_normalization   : (x_i)/(abs_max_xi)
  */
 void normalization2(normalization_layer_t s, data1d_t input, data1d_t * output);
 

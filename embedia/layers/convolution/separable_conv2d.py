@@ -11,13 +11,12 @@ class SeparableConv2D(DataLayer):
         super().__init__(model, layer, options, **kwargs)
         # the type defined in "struct_data_type" must exists in "embedia.h"
         # self.struct_data_type = self.get_type_name().lower()+'_layer_t'
-        self.input_data_type = "data3d_t"
-        self.output_data_type = "data3d_t"
-        self.depth_weights = self.adapt_weights(layer.get_weights()[0])
-        self.point_weights = self.adapt_weights(layer.get_weights()[1])
+
+        self.depth_weights = self._adapt_weights(layer.get_weights()[0])
+        self.point_weights = self._adapt_weights(layer.get_weights()[1])
         self.biases = layer.get_weights()[2]
 
-    def adapt_weights(self, weights):
+    def _adapt_weights(self, weights):
         _row, _col, _can, _filt = weights.shape
         arr = np.zeros((_filt, _can, _row, _col))
         for row, elem in enumerate(weights):
@@ -26,6 +25,55 @@ class SeparableConv2D(DataLayer):
                     for filt, value in enumerate(elem3):
                         arr[filt, chn, row, col] = value
         return arr
+
+    def calculate_MAC(self):
+        """
+        calculates amount of multiplication and accumulation operations
+        Returns
+        -------
+        int
+            amount of multiplication and accumulation operations
+
+        """
+        # estimate amount multiplication and addition operations
+        out_size = self.get_output_size()
+
+        # layer dimensions
+        n_channels, n_filters, n_rows, n_cols = self.depth_weights.shape
+        MACs = out_size*n_cols*n_rows*n_channels
+
+        n_channels, n_filters, n_rows, n_cols = self.point_weights.shape
+        MACs += out_size*n_cols*n_rows*n_channels
+
+        return MACs
+
+    def calculate_memory(self, types_dict):
+        """
+        calculates amount of memory required to store the data of layer
+        Returns
+        -------
+        int
+            amount memory required
+
+        """
+
+        # layer dimensions
+        n_channels, n_filters, n_rows, n_cols = self.depth_weights.shape
+        depth_params = n_channels * n_filters * n_rows * n_cols
+
+        n_channels, n_filters, n_rows, n_cols = self.point_weights.shape
+        point_params = n_channels * n_filters * n_rows * n_cols
+
+        # EmbedIA filter structure size
+        sz_filter_t = types_dict['filter_t']
+
+        # base data type in bits: float, fixed (32/16/8)
+        dt_size = ModelDataType.get_size(self.options.data_type)
+
+        mem_size = ((depth_params + point_params + n_filters) * dt_size / 8 +
+                    sz_filter_t * n_filters)
+
+        return mem_size
 
     def functions_init(self):
         depth_filtros, depth_channels, depth_rows, depth_columns = self.depth_weights.shape  # Getting layer info from it's weights
@@ -59,7 +107,7 @@ class SeparableConv2D(DataLayer):
         static filter_t point_filters[{point_filters}];
         '''
         init_conv_layer += o_code
-        
+
         for i in range(point_filters):
             o_weights = ""
             for ch in range(point_channels):
@@ -80,7 +128,7 @@ class SeparableConv2D(DataLayer):
         '''
 
         return init_conv_layer
-    
+
     def predict(self, input_name, output_name):
         """
         Generates C code for the invocation of the EmbedIA function that
@@ -107,6 +155,14 @@ class SeparableConv2D(DataLayer):
             processing of the layer in the file "embedia.c".
 
         """
+        code = ''
+        if (self.layer.data_format == 'channels_last' and
+                # len(self.get_input_shape()) >= 3 and
+                self.get_input_shape()[-1] >= 2 and
+                self.model.firstLayerOfItsclass(self)):
+            code += f'''// convert image for first EmbedIA Conv2d layer
+image_adapt_layer({input_name}, &{output_name});
+{input_name} = {output_name};
 
-        return f'''    separable_conv2d_layer({self.name}_data, {input_name}, &{output_name});
 '''
+        return code + f'''separable_conv2d_layer({self.name}_data, {input_name}, &{output_name});'''

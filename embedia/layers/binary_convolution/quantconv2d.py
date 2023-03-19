@@ -11,7 +11,6 @@ import larq as lq
 import math
 
 
-
 class QuantConv2D(DataLayer):
     """
     The Conv2D convolutional layer is a layer that requires additional data
@@ -44,50 +43,49 @@ class QuantConv2D(DataLayer):
         super().__init__(model, layer, options, **kwargs)
         self.input_data_type = "data3d_t"
         self.output_data_type = "data3d_t"
-        
+
         # assign properties to be used in "functions_init"
         self.weights = self._adapt_weights(layer.get_weights()[0])
         self.biases = layer.get_weights()[1]
-        
-        #verificamos a que caso de los tres corresponde...
+
+        # verificamos a que caso de los tres corresponde...
         with lq.context.quantized_scope(True):
-            if (layer.get_config()['input_quantizer'] == None) and (layer.get_config()['kernel_quantizer'] == None):
-                
-                #es una conv normal
+            if (layer.get_config()['input_quantizer'] is None) and (layer.get_config()['kernel_quantizer'] is None):
+
+                # es una conv normal
                 self.tipo_conv = 0
-                
-            elif (layer.get_config()['input_quantizer'] == None) and (layer.get_config()['kernel_quantizer'] != None):
+
+            elif (layer.get_config()['input_quantizer'] is None) and (layer.get_config()['kernel_quantizer'] is not None):
                 if (layer.get_config()['kernel_quantizer']['class_name'] == 'SteSign'):
-                    #conv binaria entrada no binarizada
+                    # conv binaria entrada no binarizada
                     self.tipo_conv = 1
                 else:
-                    print(f"Error: No support for layer with this arguments")
-                    raise f"Error: No support for layer with this arguments"
-                    
-            elif (layer.get_config()['input_quantizer'] != None) and (layer.get_config()['kernel_quantizer'] != None):
+                    print("Error: No support for layer with this arguments")
+                    raise "Error: No support for layer with this arguments"
+
+            elif (layer.get_config()['input_quantizer'] is not None) and (layer.get_config()['kernel_quantizer'] is not None):
                 if (layer.get_config()['input_quantizer']['class_name'] == 'SteSign') and (layer.get_config()['kernel_quantizer']['class_name'] == 'SteSign'):
-                    #conv pura binaria 
+                    # conv pura binaria
                     self.tipo_conv = 2
                 else:
-                    print(f"Error: No support for layer with this arguments")
-                    raise f"Error: No support for layer with this arguments"
+                    print("Error: No support for layer with this arguments")
+                    raise "Error: No support for layer with this arguments"
             else:
-                print(f"Error: No support for layer with this arguments")
-                raise f"Error: No support for layer with this arguments"
-            
-            
+                print("Error: No support for layer with this arguments")
+                raise "Error: No support for layer with this arguments"
+
     def var(self):
         if self.tipo_conv == 0:
-            
+
             return f"conv2d_layer_t {self.name}_data;\n"
-        
+
         else:
-            
+
             return f"quantconv2d_layer_t {self.name}_data;\n"
 
     def prototypes_init(self):
         if self.tipo_conv == 0:
-            
+
             return f"conv2d_layer_t init_{self.name}_data(void);\n"
         else:
             return f"quantconv2d_layer_t init_{self.name}_data(void);\n"
@@ -102,17 +100,28 @@ class QuantConv2D(DataLayer):
                         arr[filters, channel, row, column] = value
         return arr
 
-    def get_layer_info(self, types_dict):
+    def calculate_MAC(self):
+        # layer dimensions
+        n_filters, n_channels, n_rows, n_cols = self.weights.shape
+
+        # estimate amount multiplication and accumulation operations
+
+        out_size = self.get_output_size()
+        # MACs =  (n_rows * n_cols *  n_filters) * in_size
+        MACs = out_size*n_cols*n_rows*n_channels
+
+        return MACs
+
+    def calculate_memory(self, types_dict):
         """
-        Gets the amount of bytes of memory required by data of the Embedia
-        Layer, including structures.
-    
+        calculates amount of memory required to store the data of layer
         Returns
         -------
         int
-            size in bytes of the layer.
-    
+            amount memory required
+
         """
+
         # layer dimensions
         n_filters, n_channels, n_rows, n_cols = self.weights.shape
         
@@ -136,15 +145,8 @@ class QuantConv2D(DataLayer):
             else:
                 dt_size = 64
             mem_size = (math.ceil((n_channels * n_rows * n_cols)/dt_size) * dt_size / 8 + sz_filter_t) * n_filters
-
-        # estimate amount multiplication and addition operations
-        # MACs = 0
-        # in_size = self.get_input_size()
-        out_size = self.get_output_size()
-        # MACs =  (n_rows * n_cols *  n_filters) * in_size
-        MACs = out_size*n_cols*n_rows*n_channels
     
-        return (mem_size, self.get_output_shape(), MACs)
+        return mem_size
 
     def functions_init(self):
         """
@@ -158,8 +160,7 @@ class QuantConv2D(DataLayer):
         str
             C function for data initialization
         """
-        
-        
+
         #contemplamos los tres casos posibles
         
         if self.tipo_conv == 0:
@@ -284,8 +285,6 @@ class QuantConv2D(DataLayer):
             ret+=text
 
         return ret
-    
-    
 
     def predict(self, input_name, output_name):
         """
@@ -313,8 +312,8 @@ class QuantConv2D(DataLayer):
             processing of the layer in the file "embedia.c".
 
         """
-        
-        if len(self.get_input_shape()) >= 3 and  self.model.firstLayerOfItsclass(self):
+
+        if len(self.get_input_shape()) >= 3 and self.model.firstLayerOfItsclass(self):
             code = f'''    // convert image for first EmbedIA Conv2d layer
     image_adapt_layer({input_name}, &{output_name});
     {input_name} = {output_name};
@@ -322,21 +321,19 @@ class QuantConv2D(DataLayer):
  '''
         else:
             code = ''
-        
+
         if self.tipo_conv == 0:
-            #conv normal 
-            code += f'''    conv2d_layer({self.name}_data, {input_name}, &{output_name});
+            # conv normal
+            code += f'''conv2d_layer({self.name}_data, {input_name}, &{output_name});
     '''
-    
+
         elif self.tipo_conv == 1:
-            #conv binaria entrada no binarizada
-            code += f'''    quantconv2d_input_not_binary_layer({self.name}_data, {input_name}, &{output_name});
+            # conv binaria entrada no binarizada
+            code += f'''quantconv2d_input_not_binary_layer({self.name}_data, {input_name}, &{output_name});
     '''
 
         else:
-            #conv binaria pura
-            code += f'''    quantconv2d_layer({self.name}_data, {input_name}, &{output_name});
-    '''
-        
-        return code
+            # conv binaria pura
+            code += f'''quantconv2d_layer({self.name}_data, {input_name}, &{output_name});'''
 
+        return code
