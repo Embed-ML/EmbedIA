@@ -77,6 +77,7 @@ class Dense(DataLayer):
         # base data type in bits: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)
 
+
         mem_size = (n_input * dt_size/8 + sz_neuron_t) * n_neurons
 
         return mem_size

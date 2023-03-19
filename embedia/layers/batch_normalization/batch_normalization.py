@@ -77,6 +77,7 @@ class BatchNormalization(DataLayer):
 
         # base data type: float, fixed, binary (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)
+
         mem_size = n_arrays * n_features * dt_size/8 + sz_batch_norm_t
 
         return mem_size
@@ -103,7 +104,9 @@ class BatchNormalization(DataLayer):
         inv_gamma_dev = ['%f/sqrt(%f+%f)' % (self.gamma[i], self.moving_variance[i], self.epsilon) for i in range(self.gamma.size)]
 
         # standard_beta = np.array([(beta[i] - moving_mean[i] * standard_gamma[i]) for i in range(beta.size)])
+
         std_beta = ['%f-(%f*%f/sqrt(%f+%f))' % (self.beta[i], self.moving_mean[i], self.gamma[i], self.moving_variance[i], self.epsilon) for i in range(self.beta.size)]
+
 
         # get inverse of standard dev (square root of moving variance)
         o_inv_mov_std = declare_array(array_type, inv_gamma_dev_name, macro_converter, inv_gamma_dev)

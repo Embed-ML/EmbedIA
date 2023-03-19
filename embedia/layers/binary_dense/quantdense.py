@@ -98,7 +98,9 @@ class QuantDense(DataLayer):
 
         MACs = n_input * n_neurons
 
+
         return MACs
+
 
     def calculate_memory(self, types_dict):
         """
@@ -113,11 +115,13 @@ class QuantDense(DataLayer):
         # layer dimensions
         (n_input, n_neurons) = self.weights.shape
 
+
         # base data type in bits: float, fixed (32/16/8), binary 32
+
         dt_size = ModelDataType.get_size(self.options.data_type)
 
         # neuron structure size
-        if(self.tipo_densa==0): #densa float
+        if(self.tipo_densa == 0):  # densa float
             sz_neuron_t = types_dict['neuron_t']
             
             mem_size = (n_input * dt_size/8 + sz_neuron_t) * n_neurons
@@ -130,8 +134,10 @@ class QuantDense(DataLayer):
             elif self.options.tamano_bloque == BinaryBlockSize.Bits32:
                 dt_size = 32
             else:
+
                 dt_size = 64
             mem_size = (math.ceil(n_input/dt_size) * dt_size/8 + sz_neuron_t) * n_neurons
+
 
         return mem_size
 
@@ -152,8 +158,10 @@ class QuantDense(DataLayer):
         biases = self.biases
         name = self.name
 
+
         def macro_vacia(valuee):
             return valuee
+
 
         # contemplar los dos casos
         if self.tipo_densa == 0:
@@ -226,7 +234,9 @@ class QuantDense(DataLayer):
                 lista_contadores[2] = 0  # cont2
 
                 o_weights = declare_array2(
+
                     toti, xBits, lista_contadores, f'static  {block_type}', f'weights{neuron_id}', macro_vacia, weights[:, neuron_id])
+
 
                 o_code += f'''
         {o_weights};

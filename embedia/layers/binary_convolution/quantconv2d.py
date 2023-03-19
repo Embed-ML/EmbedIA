@@ -124,17 +124,17 @@ class QuantConv2D(DataLayer):
 
         # layer dimensions
         n_filters, n_channels, n_rows, n_cols = self.weights.shape
-        
-        
+
         # base data type in bits: float, fixed (32/16/8), binary 1
         dt_size = ModelDataType.get_size(self.options.data_type)
-        
+
         # EmbedIA filter structure size
-        if(self.tipo_conv==0): #conv2d float
+        if(self.tipo_conv == 0):  # conv2d float
             sz_filter_t = types_dict['filter_t']
-            
+
             mem_size = (n_channels * n_rows * n_cols * dt_size / 8 + sz_filter_t) * n_filters
         else:    #semi-cuantizada o full binary
+
             sz_filter_t = types_dict['quant_filter_t']
             if self.options.tamano_bloque == BinaryBlockSize.Bits8:
                 dt_size = 8
@@ -143,9 +143,11 @@ class QuantConv2D(DataLayer):
             elif self.options.tamano_bloque == BinaryBlockSize.Bits32:
                 dt_size = 32
             else:
+
                 dt_size = 64
             mem_size = (math.ceil((n_channels * n_rows * n_cols)/dt_size) * dt_size / 8 + sz_filter_t) * n_filters
     
+
         return mem_size
 
     def functions_init(self):
@@ -161,24 +163,26 @@ class QuantConv2D(DataLayer):
             C function for data initialization
         """
 
+
         #contemplamos los tres casos posibles
         
+
         if self.tipo_conv == 0:
-            #conv normal
+            # conv normal
 
             (data_type, macro_converter) = self.model.get_type_converter()
-    
+
             n_filters, n_channels, n_rows, n_cols = self.weights.shape
             assert n_rows == n_cols  # WORKING WITH SQUARE KERNELS FOR NOW
             kernel_size = n_rows  # Defining kernel size
-    
+
             ret = ""
             struct_type = 'conv2d_layer_t'
             name = self.name+'_data'
             text = f'''
-    
+
     {struct_type} init_{name}(void){{
-    
+
             static filter_t filters[{n_filters}];
             '''
             for i in range(n_filters):
@@ -189,7 +193,7 @@ class QuantConv2D(DataLayer):
                         for c in range(n_cols):
                             o_weights += f'''{macro_converter(self.weights[i, ch, f, c])}, '''
                     o_weights += '\n'
-    
+
                 o_code = f'''
             static const {data_type} weights{i}[]={{ {o_weights}
             }};
@@ -203,19 +207,19 @@ class QuantConv2D(DataLayer):
             }}
             '''
             ret += text
-            #fin caso 0
-            
+            # fin caso 0
+
         else:
-            
-            #conv binaria entrada no binary o binaria pura
+
+            # conv binaria entrada no binary o binaria pura
             (data_type, macro_converter) = self.model.get_type_converter()
-    
+
             n_filters, n_channels, n_rows, n_cols = self.weights.shape
             assert n_rows == n_cols  # WORKING WITH SQUARE KERNELS FOR NOW
             kernel_size = n_rows  # Defining kernel size
-            
+
             largo_total = (n_rows)*(n_channels)*(n_cols)
-            
+
             if self.options.tamano_bloque == BinaryBlockSize.Bits8:
                 xBits = 8
                 block_type = 'uint8_t'
@@ -228,7 +232,7 @@ class QuantConv2D(DataLayer):
             else:
                 xBits = 64
                 block_type = 'uint64_t'
-    
+
             ret = ""
             struct_type = 'quantconv2d_layer_t'
             name = self.name+'_data'
@@ -239,6 +243,7 @@ class QuantConv2D(DataLayer):
             static quant_filter_t filtros_b[{n_filters}];
             '''
             for i in range(n_filters):
+
               cont = 0
               suma = 0
               o_weights=""
@@ -270,19 +275,20 @@ class QuantConv2D(DataLayer):
               
               o_weights=o_weights[:-1] #remuevo la ultima coma
               o_code=f'''
+
             static const {block_type} weights{i}[]={{{o_weights}
             }};
             static quant_filter_t filter{i} = {{{n_channels}, {kernel_size}, weights{i}, {macro_converter(self.biases[i])}}};
             filtros_b[{i}]=filter{i};
               '''
-              text+=o_code
-            text+=f'''
+                text += o_code
+            text += f'''
             {struct_type} layer = {{{n_filters},filtros_b}};
             return layer;
           }}
             '''
 
-            ret+=text
+            ret += text
 
         return ret
 

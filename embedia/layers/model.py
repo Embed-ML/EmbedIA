@@ -90,8 +90,8 @@ class Model(object):
         """
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
-        if self.options.data_type == ModelDataType.FLOAT or self.options.data_type == ModelDataType.BINARY: 
-            def macro_converter(v): 
+        if self.options.data_type == ModelDataType.FLOAT or self.options.data_type == ModelDataType.BINARY:
+            def macro_converter(v):
                 return v
             data_type = 'float'       #binary layers dont use data_type, use block_type
         elif self.options.data_type == ModelDataType.BINARY_FLOAT16:
@@ -102,7 +102,7 @@ class Model(object):
             def macro_converter(s):
                 return f"FL2FX({s})"
             data_type = 'fixed'
-                                    
+
         return (data_type, macro_converter)
 
     def _build_types_size_dict(self, embedia_decl):
@@ -115,14 +115,14 @@ class Model(object):
             start = embedia_decl.find('typedef')
         end = embedia_decl.find('void')
         embedia_decl = embedia_decl[start:end]
-        
+
          # remove comments, pycparser doesnt support them
         pattern = re.compile(
                 r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
                 re.DOTALL | re.MULTILINE
             )
         embedia_decl = re.sub(pattern, '', embedia_decl)
-        
+
         # add dummy base data type declaration into EmbedIA code
         embedia_decl = """
 typedef char uint8_t;
