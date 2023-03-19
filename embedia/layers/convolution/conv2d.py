@@ -90,8 +90,7 @@ class Conv2D(DataLayer):
 
         # base data type in bits: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)
-        if self.options.data_type == ModelDataType.BINARY:
-            dt_size = 32
+
         mem_size = (n_channels * n_rows * n_cols *
                     dt_size / 8 + sz_filter_t) * n_filters
 

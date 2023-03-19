@@ -131,24 +131,22 @@ class QuantConv2D(DataLayer):
         # EmbedIA filter structure size
         if(self.tipo_conv == 0):  # conv2d float
             sz_filter_t = types_dict['filter_t']
-            dt_size = dt_size*32
-        else:  # semi-cuantizada o full binary
+
+            mem_size = (n_channels * n_rows * n_cols * dt_size / 8 + sz_filter_t) * n_filters
+        else:    #semi-cuantizada o full binary
+
             sz_filter_t = types_dict['quant_filter_t']
             if self.options.tamano_bloque == BinaryBlockSize.Bits8:
-                dt_size = dt_size*8
+                dt_size = 8
             elif self.options.tamano_bloque == BinaryBlockSize.Bits16:
-                dt_size = dt_size*16
+                dt_size = 16
             elif self.options.tamano_bloque == BinaryBlockSize.Bits32:
-                dt_size = dt_size*32
+                dt_size = 32
             else:
-                dt_size = dt_size*64
 
-        if(self.tipo_conv == 0):
-            mem_size = (n_channels * n_rows * n_cols *
-                        dt_size / 8 + sz_filter_t) * n_filters
-        else:
-            mem_size = (math.ceil((n_channels * n_rows * n_cols) /
-                        dt_size) * dt_size / 8 + sz_filter_t) * n_filters
+                dt_size = 64
+            mem_size = (math.ceil((n_channels * n_rows * n_cols)/dt_size) * dt_size / 8 + sz_filter_t) * n_filters
+    
 
         return mem_size
 
@@ -165,7 +163,9 @@ class QuantConv2D(DataLayer):
             C function for data initialization
         """
 
-        # contemplamos los tres casos posibles
+
+        #contemplamos los tres casos posibles
+        
 
         if self.tipo_conv == 0:
             # conv normal
@@ -243,41 +243,39 @@ class QuantConv2D(DataLayer):
             static quant_filter_t filtros_b[{n_filters}];
             '''
             for i in range(n_filters):
-                cont = 0
-                suma = 0
-                o_weights = ""
-                for ch in range(n_channels):
-                    for f in range(n_rows):
-                        for c in range(n_cols):
-                            num = self.weights[i, ch, f, c]
-                            if xBits == 16:
-                                if num == 1.0:
-                                    suma += (BinaryGlobalMask.get_mask_16()
-                                             )[cont]
-                            elif xBits == 32:
-                                if num == 1.0:
-                                    suma += (BinaryGlobalMask.get_mask_32()
-                                             )[cont]
-                            elif xBits == 64:
-                                if num == 1.0:
-                                    suma += (BinaryGlobalMask.get_mask_64()
-                                             )[cont]
-                            else:
-                                if num == 1.0:
-                                    suma += (BinaryGlobalMask.get_mask_8()
-                                             )[cont]
 
-                            if cont == xBits-1 or ((ch+1)*(f+1)*(c+1) == largo_total):
+              cont = 0
+              suma = 0
+              o_weights=""
+              for ch in range(n_channels):
+                for f in range(n_rows):
+                  for c in range(n_cols):
+                      num = self.weights[i,ch,f,c]
+                      if xBits==16:
+                          if num == 1.0:  
+                              suma += (BinaryGlobalMask.get_mask_16())[cont]
+                      elif xBits==32:
+                          if num == 1.0: 
+                              suma += (BinaryGlobalMask.get_mask_32())[cont]
+                      elif xBits==64:
+                          if num == 1.0: 
+                              suma += (BinaryGlobalMask.get_mask_64())[cont]
+                      else:
+                          if num == 1.0: 
+                              suma += (BinaryGlobalMask.get_mask_8())[cont]
+                      
+                      if cont == xBits-1 or ((ch+1)*(f+1)*(c+1) == largo_total):
+                          
+                          o_weights+=f'''{(suma)},'''
+                          cont = 0
+                          suma = 0
+                          
+                      else:
+                          cont+=1
+              
+              o_weights=o_weights[:-1] #remuevo la ultima coma
+              o_code=f'''
 
-                                o_weights += f'''{macro_converter(suma)},'''
-                                cont = 0
-                                suma = 0
-
-                            else:
-                                cont += 1
-
-                o_weights = o_weights[:-1]  # remuevo la ultima coma
-                o_code = f'''
             static const {block_type} weights{i}[]={{{o_weights}
             }};
             static quant_filter_t filter{i} = {{{n_channels}, {kernel_size}, weights{i}, {macro_converter(self.biases[i])}}};

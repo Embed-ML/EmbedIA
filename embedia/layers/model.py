@@ -94,18 +94,21 @@ class Model(object):
             def macro_converter(v):
                 return v
             data_type = 'float'       #binary layers dont use data_type, use block_type
+        elif self.options.data_type == ModelDataType.BINARY_FLOAT16:
+            def macro_converter(s):
+                return f"half({s})"
+            data_type = 'half'
         else:
-            def macro_converter(v):
-                return f'''FL2FX({v})'''
+            def macro_converter(s):
+                return f"FL2FX({s})"
             data_type = 'fixed'
 
         return (data_type, macro_converter)
 
     def _build_types_size_dict(self, embedia_decl):
         # prepare to extract declaration of structures
-
         # get code to first function definition in order to includes structures
-        if (self.options.data_type == ModelDataType.BINARY):
+        if (self.options.data_type == ModelDataType.BINARY or self.options.data_type == ModelDataType.BINARY_FIXED32 or self.options.data_type == ModelDataType.BINARY_FLOAT16):
             start = embedia_decl.find('endif')
             start = start + 5
         else:
@@ -129,13 +132,13 @@ typedef char uint64_t;
 typedef char xBITS;
 typedef char fixed;
 typedef char dfixed;
-
+typedef char half;
 """ + embedia_decl
 
         parser = pcp.CParser()
 
         code = parser.parse(embedia_decl)
-
+        bytes_size4 = 2
         if(self.options.tamano_bloque==BinaryBlockSize.Bits8):
             bytes_size = 1
         elif(self.options.tamano_bloque==BinaryBlockSize.Bits16):
@@ -144,13 +147,16 @@ typedef char dfixed;
             bytes_size = 4
         else:
             bytes_size = 8
+        
+        bytes_size2 = 0
+        bytes_size3 = 0
         if(self.options.data_type == ModelDataType.FIXED8):
             bytes_size2 = 1
             bytes_size3 = 2
         elif(self.options.data_type == ModelDataType.FIXED16):
             bytes_size2 = 2
             bytes_size3 = 4
-        else:
+        elif(self.options.data_type == ModelDataType.FIXED32 or self.options.data_type == ModelDataType.BINARY_FIXED32):
             bytes_size2 = 4
             bytes_size3 = 8
         # base types sizes in bytes
@@ -162,7 +168,8 @@ typedef char dfixed;
             'float': 4,
             'xBITS': bytes_size,
             'fixed': bytes_size2,
-            'dfixed': bytes_size3
+            'dfixed': bytes_size3,
+            'half': bytes_size4
         }
 
         for node in code.ext:

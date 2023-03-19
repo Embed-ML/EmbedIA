@@ -43,7 +43,8 @@ def generate_embedia_library(embedia_layers, src_folder, options):
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
     # Prepare includes
 
-    if options.data_type == ModelDataType.BINARY:
+    if options.data_type == ModelDataType.BINARY or options.data_type == ModelDataType.BINARY_FIXED32 or options.data_type == ModelDataType.BINARY_FLOAT16:
+
 
         if options.tamano_bloque == BinaryBlockSize.Bits8:
             tam_block = 8
@@ -56,11 +57,13 @@ def generate_embedia_library(embedia_layers, src_folder, options):
 
         if options.project_type == ProjectType.ARDUINO:
             includes_h = '#include "Arduino.h"\n'
-            includes_h += f'\n#define tamano_del_bloque {tam_block}\n'
+
+            includes_h += f'\n#define binary_block_size {tam_block}\n'
 
         else:
             includes_h = '#include <stdlib.h>\n'
-            includes_h += f'\n#define tamano_del_bloque {tam_block}\n'
+            includes_h += f'\n#define binary_block_size {tam_block}\n'
+
 
         embedia_files['embedia.h'] = multi_replace({'{includes}': includes_h}, embedia_files['embedia.h'])
 
@@ -140,6 +143,7 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
         predict += f'\n//*************** LAYER {layer_id} **************//'
         predict += f'\n// Layer name: {layer.name}\n'
 
+
         implemented_layer = not isinstance(layer, UnimplementedLayer)
 
 
@@ -171,6 +175,7 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
                     var_output = f'output{len(data_layers_output)}'
                     predict += f'{output_layer_type} {var_output};\n'
                     data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
+
 
 
 
@@ -314,7 +319,9 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options):
     /*
 
     model_predict(input, &results);
-    printf("prediccion: %5f", results.data[0]);
+
+    printf("prediccion: %.5f", results.data[0]);
+
     */
 
 '''
@@ -373,6 +380,10 @@ def generate_examples(src_folder, var_name, options):
         def conv(s):
             return s
         data_type = 'float'
+    elif options.data_type == ModelDataType.BINARY_FLOAT16:
+        def conv(s):
+            return f"half({s})"
+        data_type = 'half'
     else:
         def conv(s):
             return f"FL2FX({s})"
