@@ -122,6 +122,7 @@ If the process was successful, a message will be displayed indicating where the 
 
 <strong>Example:</strong> In the following Colab there is an example of the use of the EmbedIA converter to create a project in C language for the classification of the images of the <a href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html">digits dataset</a>: 
 <p align=center><a href="https://colab.research.google.com/github/Embed-ML/EmbedIA/blob/main/Using_EmbedIA.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg"/></a></p>
+Or an example of simulation in the Wokwi online environment: https://wokwi.com/projects/359745013247499265
 
 
 ## EmbedIA in C 👍 <A NAME="inC"></A>
