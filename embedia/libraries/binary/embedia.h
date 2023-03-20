@@ -353,7 +353,7 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  * Returns:
  *  search result - index of the maximum value
  */
-uint16_t argmax(data1d_t data);
+uint32_t argmax(data1d_t data);
 
 
 /***************************************************************************************************************************/

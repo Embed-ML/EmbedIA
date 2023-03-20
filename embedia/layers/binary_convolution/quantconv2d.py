@@ -244,10 +244,10 @@ class QuantConv2D(DataLayer):
             '''
             for i in range(n_filters):
 
-              cont = 0
-              suma = 0
-              o_weights=""
-              for ch in range(n_channels):
+                cont = 0
+                suma = 0
+                o_weights=""
+                for ch in range(n_channels):
                 for f in range(n_rows):
                   for c in range(n_cols):
                       num = self.weights[i,ch,f,c]
@@ -272,9 +272,9 @@ class QuantConv2D(DataLayer):
                           
                       else:
                           cont+=1
-              
-              o_weights=o_weights[:-1] #remuevo la ultima coma
-              o_code=f'''
+
+                o_weights=o_weights[:-1] #remuevo la ultima coma
+                o_code=f'''
 
             static const {block_type} weights{i}[]={{{o_weights}
             }};

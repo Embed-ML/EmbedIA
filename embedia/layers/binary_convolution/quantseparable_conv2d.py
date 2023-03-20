@@ -215,24 +215,24 @@ class QuantSeparableConv2D(DataLayer):
                     for c in range(depth_columns):
                         num = self.depth_weights[0,ch,f,c]
                         if xBits==16:
-                          if num == 1.0:  
-                              suma += (BinaryGlobalMask.get_mask_16())[cont]
+                            if num == 1.0:  
+                                suma += (BinaryGlobalMask.get_mask_16())[cont]
                         elif xBits==32:
-                          if num == 1.0: 
-                              suma += (BinaryGlobalMask.get_mask_32())[cont]
+                            if num == 1.0: 
+                                suma += (BinaryGlobalMask.get_mask_32())[cont]
                         elif xBits==64:
-                          if num == 1.0: 
-                              suma += (BinaryGlobalMask.get_mask_64())[cont]
+                            if num == 1.0: 
+                                suma += (BinaryGlobalMask.get_mask_64())[cont]
                         else:
-                          if num == 1.0: 
-                              suma += (BinaryGlobalMask.get_mask_8())[cont]
+                            if num == 1.0: 
+                                suma += (BinaryGlobalMask.get_mask_8())[cont]
 
                         if cont == xBits-1 or ((f+1)*(c+1) == largo_total):
-                          o_weights+=f'''{(suma)},'''
-                          cont = 0
-                          suma = 0
+                            o_weights+=f'''{(suma)},'''
+                            cont = 0
+                            suma = 0
                         else:
-                          cont+=1
+                            cont+=1
 
                 o_weights += '\n  '
 
