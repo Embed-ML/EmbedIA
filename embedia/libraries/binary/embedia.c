@@ -700,24 +700,6 @@ void leakyrelu_activation(float *data, uint32_t length, float alpha){
     }
 }
 
-
-/*
- * leaky relu activation function
- * Parameters:
- *  alfa   => coeficient to multiply negative values
- *  *data  => array of values to update
- *  length => numbers of values to update
- */
-void leakyrelu_activation(float *data, uint32_t length, float alpha){
-    uint32_t i;
-
-    for(i=0;i<(length);i++){
-        data[i] = data[i] < 0 ? alpha*data[i] : data[i];
-    }
-}
-
-
-
 /* 
  * tanh activation function: (2 / (1+e^(-2x)) -1
  * Parameters:
