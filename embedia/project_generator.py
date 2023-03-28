@@ -230,7 +230,9 @@ class ProjectGenerator:
         table.align['MACs'] = 'r'
         table.align['Size (KB)'] = 'r'
         table.align['#Param'] = 'r'
-        table.add_rows(layers_info)
+#         table.add_rows(layers_info)
+        for layer_info in layers_info:
+            table.add_row(layer_info)
         model_info = '\n'+str(table)+'\n'
 
         total_p = '%d' % (total_params[0] + total_params[1])
