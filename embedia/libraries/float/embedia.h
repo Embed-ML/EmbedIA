@@ -1,5 +1,5 @@
-/* 
- * EmbedIA 
+/*
+ * EmbedIA
  * C LIBRARY FOR THE IMPLEMENTATION OF NEURAL NETWORKS ON MICROCONTROLLERS
  */
 #ifndef _EMBEDIA_H
@@ -45,28 +45,47 @@ typedef struct{
     uint16_t channels;
     uint16_t kernel_size;
     const float  * weights;
-    float  bias; 
+    float  bias;
 }filter_t;
+
+typedef struct{
+    uint16_t channels;
+    uint16_t kernel_size;
+    const float  * weights;
+    const float  * bias;
+}filters_t;
 
 /*
  * Structure that models a convolutional layer.
- * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters). 
+ * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters).
  */
 typedef struct{
+    uint16_t channels;
+    uint16_t kernel_size;
     uint16_t n_filters;
-    filter_t * filters; 
+    filter_t * filters;
 }conv2d_layer_t;
+
+/*
+ * Structure that models a convolutional layer.
+ * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters).
+ */
+typedef struct{
+    uint16_t channels;
+    uint16_t kernel_size;
+    filters_t filters;
+}depthwise_conv2d_layer_t;
 
 /*
  * Structure that models a separable layer...
  * Specifies the number of filters (uint16_t n_filters,
- * a filter of the specified size (filter_t depth_filter) 
- * a vector of 1x1 filters (filter_t * point_filters) 
+ * a filter of the specified size (filter_t depth_filter)
+ * a vector of 1x1 filters (filter_t * point_filters)
  */
 typedef struct{
     uint16_t n_filters;
     filter_t depth_filter;
-    filter_t * point_filters; 
+    filter_t * point_filters;
 }separable_conv2d_layer_t;
 
 /*
@@ -80,7 +99,7 @@ typedef struct{
 
 /*
  * Structure that models a dense layer.
- * Specifies the number of neurons (uint16_t n_neurons) and a vector of neurons (neuron_t * neurons). 
+ * Specifies the number of neurons (uint16_t n_neurons) and a vector of neurons (neuron_t * neurons).
  */
 typedef struct{
     uint16_t n_neurons;
@@ -91,7 +110,7 @@ typedef struct{
 /*
  * Pooling Structure
  */
- 
+
 typedef struct{
     uint16_t size;
     uint16_t strides;
@@ -112,7 +131,7 @@ typedef struct{
 } normalization_layer_t;
 
 
-/* 
+/*
  * Structure for BatchNormalization layer.
  * Contains vectors for the two parameters used for normalization.
  * The number of each of the parameters is determined by the number of channels of the previous layer.
@@ -120,7 +139,7 @@ typedef struct{
 typedef struct {
     uint32_t length;
     const float *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
-    const float *std_beta;           // = beta - moving_mean * moving_inv_std_dev 
+    const float *std_beta;           // = beta - moving_mean * moving_inv_std_dev
 } batch_normalization_layer_t;
 
 
@@ -149,10 +168,10 @@ void prepare_buffers();
  */
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
-/* 
+/*
  * separable_conv2d_layer()
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
- * 
+ *
  * Parameters:
  *   layer => convolutional layer with loaded filters.
  *   input => input data of type data3d_t
@@ -161,30 +180,42 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
 void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
 
-/* 
+/*
+ * depthwise_conv2d_layer()
+ *  Function in charge of applying the depthwise of a filter layer (conv_layer_t) on a given input data set.
+ * Parameters:
+ *  layer => depthwise layer with loaded filters.
+ *  input => input data of type data3d_t
+ *  *output => pointer to the data3d_t structure where the result will be saved.
+ */
+
+void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output);
+
+
+/*
  * dense_layer()
  * Performs feed forward of a dense layer (dense_layer_t) on a given input data set.
  * Parameters:
- *   dense_layer => structure with the weights of the neurons of the dense layer.  
- *   input       => structure data1d_t with the input data to process. 
+ *   dense_layer => structure with the weights of the neurons of the dense layer.
+ *   input       => structure data1d_t with the input data to process.
  *   *output     => structure data1d_t to store the output result.
  */
 void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output);
 
-/* 
+/*
  * max_pooling2d_layer()
- * Maxpooling layer, for now supports square size and stride. No support for padding 
+ * Maxpooling layer, for now supports square size and stride. No support for padding
  * Parameters:
  *   pool_size => size for pooling
  *   stride    => stride for pooling
- *   input     => input data 
+ *   input     => input data
  *   output    => output data
  */
 void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
-/* 
+/*
  * avg_pooling_2d()
- * Function that applies an average pooling to an input with a window size of received 
+ * Function that applies an average pooling to an input with a window size of received
  * by parameter (uint16_t strides)
  *
  * Parameters:
@@ -194,9 +225,9 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
 void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
 
-/* 
+/*
  * flatten3d_layer()
- * Performs a variable shape change. 
+ * Performs a variable shape change.
  * Converts the data format from data3d_t array format to data1d_t vector.
  * (prepares data for input into a layer of type dense_layer_t).
  * Parameters:
@@ -204,8 +235,8 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  *    *output => pointer to the data1d_t structure where the result will be stored.
  */
  void flatten3d_layer(data3d_t input, data1d_t * output);
-     
-/* 
+
+/*
  * argmax()
  * Finds the index of the largest value within a vector of data (data1d_t)
  * Parameters:

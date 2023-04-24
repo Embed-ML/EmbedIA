@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import (InputLayer, Dense, Conv2D,
-                                     SeparableConv2D, MaxPooling2D,
+                                     DepthwiseConv2D, MaxPooling2D,
                                      Reshape, AveragePooling2D, LeakyReLU,
                                      Activation, Flatten
                                      )
@@ -152,7 +152,7 @@ class TFLiteModelConverter:
                 elif name == 'AVERAGE_POOL_2D':
                     layer = self.add_pool2d(AveragePooling2D, operator)
                 elif name == 'DEPTHWISE_CONV_2D':
-                    layer = self.add_separable_conv2d(operator)
+                    layer = self.add_depthwise_conv2d(operator)
                 elif name == 'RESHAPE':
                     layer = self.add_reshape(operator)
                 elif name == 'LEAKY_RELU':
@@ -247,7 +247,7 @@ class TFLiteModelConverter:
 
         return (w_dp, w_pt, bias)
 
-    def add_separable_conv2d(self, operator):
+    def add_depthwise_conv2d(self, operator):
         (opt, inp) = (operator.builtinOptions, operator.inputs)
 
         w_dp, w_pt, bias = self._get_separable_conv2d_weights(inp)
@@ -261,11 +261,11 @@ class TFLiteModelConverter:
 
         dilation_rate = (opt.dilationHFactor, opt.dilationWFactor)
         depth_multiplier = opt.depthMultiplier
-        layer = SeparableConv2D(filters=filters, kernel_size=kernel_size,
-                       strides=strides, padding=padding,
-                       data_format='channels_last',
-                       dilation_rate=dilation_rate,
-                       depth_multiplier=depth_multiplier)
+        layer = DepthwiseConv2D(kernel_size=kernel_size, # depth_multiplier?
+                                strides=strides, padding=padding,
+                                data_format='channels_last',
+                                dilation_rate=dilation_rate,
+                                depth_multiplier=depth_multiplier)
 
         self._model.add(layer)
 

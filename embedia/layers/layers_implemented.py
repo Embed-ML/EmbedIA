@@ -6,6 +6,7 @@ from embedia.layers.binary_convolution.quantconv2d import QuantConv2D
 from embedia.layers.binary_dense.quantdense import QuantDense
 from embedia.layers.convolution.separable_conv2d import SeparableConv2D
 from embedia.layers.convolution.conv2d import Conv2D
+from embedia.layers.convolution.depthwise_conv2d import DepthwiseConv2D
 from embedia.layers.dense.dense import Dense
 from embedia.layers.flatten.flatten import Flatten
 from embedia.layers.pooling.pooling import Pooling
@@ -23,6 +24,7 @@ dict_layers = {
     lq.layers.QuantConv2D: QuantConv2D,
     lq.layers.QuantDense: QuantDense,
     keras.layers.SeparableConv2D: SeparableConv2D,
+    keras.layers.DepthwiseConv2D: DepthwiseConv2D,
     keras.layers.Conv2D: Conv2D,
     keras.layers.Dense: Dense,
     keras.layers.Flatten: Flatten,
