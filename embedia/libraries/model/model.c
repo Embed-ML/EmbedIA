@@ -1,8 +1,8 @@
 {includes}
-// Prototipos inicialización
+// Initialization function prototypes
 {prototypes_init}
 
-// Variables Globales
+// Global Variables
 {var}
 
 void model_init(){{
@@ -27,6 +27,6 @@ int model_predict_class({input_data_type} input, {output_data_type} * results){{
 
 }}
 
-// Implementación de funciones de inicialización
+// Implementation of initialization functions
 
 {functions_init}

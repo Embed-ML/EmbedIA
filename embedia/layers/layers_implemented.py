@@ -4,6 +4,7 @@ import larq as lq
 from embedia.layers.dummy_layer import DummyLayer
 from embedia.layers.binary_convolution.quantconv2d import QuantConv2D
 from embedia.layers.binary_dense.quantdense import QuantDense
+from embedia.layers.binary_convolution.quantseparable_conv2d import QuantSeparableConv2D
 from embedia.layers.convolution.separable_conv2d import SeparableConv2D
 from embedia.layers.convolution.conv2d import Conv2D
 from embedia.layers.convolution.depthwise_conv2d import DepthwiseConv2D
@@ -23,6 +24,7 @@ dict_layers = {
     keras.layers.Dropout: DummyLayer,        # No porpose in inference
     lq.layers.QuantConv2D: QuantConv2D,
     lq.layers.QuantDense: QuantDense,
+    lq.layers.QuantSeparableConv2D: QuantSeparableConv2D,
     keras.layers.SeparableConv2D: SeparableConv2D,
     keras.layers.DepthwiseConv2D: DepthwiseConv2D,
     keras.layers.Conv2D: Conv2D,

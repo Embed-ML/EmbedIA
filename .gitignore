@@ -8,3 +8,4 @@ embedia tests/outputs
 *.pyc
 *.pyc
 *.exe
+.vscode/

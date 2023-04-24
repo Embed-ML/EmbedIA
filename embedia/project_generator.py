@@ -38,6 +38,10 @@ class ProjectGenerator:
             self.set_embedia_folder('embedia/')
         else:
             self.set_embedia_folder(options.embedia_folder)
+        if options.project_type==ProjectType.C and options.data_type == ModelDataType.BINARY_FLOAT16:
+            raise ValueError("FLOAT16 is not compatible with C, only with C++ and Arduino!!")
+        if options.project_type==ProjectType.CODEBLOCK and options.data_type == ModelDataType.BINARY_FLOAT16:
+            raise ValueError("FLOAT16 is not compatible with CodeBlocks, only with C++ and Arduino!!")
 
     def set_embedia_folder(self, folder):
         if folder[-1] != '/':
@@ -133,6 +137,10 @@ class ProjectGenerator:
             return 'fixed32/'
         elif data_type == ModelDataType.BINARY:
             return 'binary/'
+        elif data_type == ModelDataType.BINARY_FIXED32:
+            return 'binary&fixed32/'
+        elif data_type == ModelDataType.BINARY_FLOAT16:
+            return 'binary&float16/'
         return 'float/'
 
     def _prepare_folders(self, output_folder, project_name, options):
@@ -155,7 +163,7 @@ class ProjectGenerator:
     def _get_project_files(self, model_filename, options):
 
         project_files = list()
-
+        hpp_ext = '.hpp'
         # main file and files extensions
         if options.project_type in [ProjectType.C, ProjectType.CODEBLOCK]:
             (h_ext, c_ext) = ('.h', '.c')
@@ -174,8 +182,12 @@ class ProjectGenerator:
         project_files.append(model_filename+h_ext)
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
+        #half file
+        if options.data_type == ModelDataType.BINARY_FLOAT16:
+            project_files.append('half'+hpp_ext)
+        
         # fixed point files
-        if options.data_type != ModelDataType.FLOAT and options.data_type != ModelDataType.BINARY:
+        if options.data_type != ModelDataType.FLOAT and options.data_type != ModelDataType.BINARY and options.data_type != ModelDataType.BINARY_FLOAT16:
             project_files.append('fixed'+c_ext)
             project_files.append('fixed'+h_ext)
 
@@ -218,7 +230,9 @@ class ProjectGenerator:
         table.align['MACs'] = 'r'
         table.align['Size (KB)'] = 'r'
         table.align['#Param'] = 'r'
-        table.add_rows(layers_info)
+#         table.add_rows(layers_info)
+        for layer_info in layers_info:
+            table.add_row(layer_info)
         model_info = '\n'+str(table)+'\n'
 
         total_p = '%d' % (total_params[0] + total_params[1])
