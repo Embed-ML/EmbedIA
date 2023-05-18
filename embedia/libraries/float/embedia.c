@@ -181,7 +181,7 @@ static void depthwise_new(depthwise_conv2d_layer_t layer, data3d_t input, data3d
     float *output_data = output->data;
     float *input_data = input.data;
     float *weights = layer.filters.weights;
-    float bias = layer.filters.bias;
+    float *bias = layer.filters.bias; // agregado *bias ya que es un vector - solución error de compilación
 
     for (i = 0; i < output_channels; i++) {
         for (j = 0; j < output_height; j++) {
@@ -195,7 +195,7 @@ static void depthwise_new(depthwise_conv2d_layer_t layer, data3d_t input, data3d
                         }
                     }
                 }
-                output_data[i * output_width * output_height + j * output_width + k] = sum + bias;
+                output_data[i * output_width * output_height + j * output_width + k] = sum + bias[l]; //[l] bias correspondiente al canal? a revisar!!! - solución error de compilación
             }
         }
     }

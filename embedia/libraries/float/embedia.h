@@ -59,9 +59,17 @@ typedef struct{
  * Structure that models a convolutional layer.
  * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters).
  */
+// Futura implementación de los datos correspondientes a las
+// capas convolucionales, datos como la cantidad de canales
+// y el tamaño del kernel son propios de la capa y no de cada filtro
+// typedef struct{
+//     uint16_t channels;
+//     uint16_t kernel_size;
+//     uint16_t n_filters;
+//     filter_t * filters;
+// }conv2d_layer_t;
+
 typedef struct{
-    uint16_t channels;
-    uint16_t kernel_size;
     uint16_t n_filters;
     filter_t * filters;
 }conv2d_layer_t;
