@@ -83,9 +83,9 @@ def generate_embedia_library(embedia_layers, src_folder, options):
 # Warning TO DO: check width vs height order
 def get_input_const(input_shape):
     if len(input_shape) == 3:
-        return {'INPUT_CHANNELS': input_shape[2], 'INPUT_WIDTH': input_shape[0], 'INPUT_HEIGHT': input_shape[1]}
+        return {'INPUT_CHANNELS': input_shape[2], 'INPUT_WIDTH': input_shape[1], 'INPUT_HEIGHT': input_shape[0]}
     elif len(input_shape) == 2:
-        return {'INPUT_WIDTH': input_shape[0], 'INPUT_HEIGHT': input_shape[1]}
+        return {'INPUT_WIDTH': input_shape[1], 'INPUT_HEIGHT': input_shape[0]}
     elif len(input_shape) == 1:
         return {'INPUT_LENGTH': input_shape[0]}
 
