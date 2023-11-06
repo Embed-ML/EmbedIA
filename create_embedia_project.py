@@ -1,22 +1,21 @@
+import numpy as np
 from tensorflow.keras.models import load_model
 from sklearn.datasets import load_digits
 
-from embedia.project_options import *
+from embedia.model_generator.project_options import *
 from embedia.project_generator import ProjectGenerator
-
 
 ############# Settings to create the project #############
 
 OUTPUT_FOLDER = 'outputs/'
-PROJECT_NAME  = 'C_mnist_min_tanh_float'
-MODEL_FILE    = 'models/mnist_model_min_tanh.h5'
+PROJECT_NAME  = 'C_mnist_float'
+MODEL_FILE    = 'models/mnist_model.h5'
 
 model = load_model(MODEL_FILE)
 
 digits = load_digits()
-example_number = 33
-sample = digits.images[example_number]
-comment= "number %d example for test" % digits.target[example_number]
+samples = digits.images[0:10]
+ids = digits.target[0:10]
 
 options = ProjectOptions()
 
@@ -35,19 +34,17 @@ options.debug_mode = DebugMode.DISCARD
 # options.debug_mode = DebugMode.HEADERS
 # options.debug_mode = DebugMode.DATA
 
-options.example_data = sample
-options.example_comment = comment
-
 options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MAIN}
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}
 
+options.example_data = samples
+options.example_ids = ids
 
 ############# Generate project #############
 
-generator = ProjectGenerator()
+generator = ProjectGenerator(options)
 generator.create_project(OUTPUT_FOLDER, PROJECT_NAME, model, options)
 
 print("Project", PROJECT_NAME, "exported in", OUTPUT_FOLDER)
-print("\n"+comment)
