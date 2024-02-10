@@ -43,22 +43,29 @@ void * swap_alloc(size_t s){
 
 void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t delta){
     uint32_t i,j,k,l,c;
-    fixed suma;
+    dfixed suma;
 
-    for(i=0; i<output->height; i++){
-        for(j=0; j<output->width; j++){
-            suma = 0;
-            for(c=0; c<filter.channels; c++){
-                for(k=0; k<filter.kernel_size; k++){
-                    for(l=0; l<filter.kernel_size; l++){
-                        suma += FIXED_MUL(filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l] , input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
-                    }
-                }
-            }
-            
-            output->data[delta + i*output->width + j] = suma + filter.bias;
-        }
-    }
+	for(i=0; i<output->height; i++){
+		for(j=0; j<output->width; j++){
+			suma = 0;
+			for(c=0; c<filter.channels; c++){
+				for(k=0; k<filter.kernel_size; k++){
+					for(l=0; l<filter.kernel_size; l++){
+						suma += DFIXED_MUL(filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l] , input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
+					}
+				}
+			}
+
+			suma = suma + FIXED_TO_DFIXED(filter.bias);
+			if (suma > DFIX_MAX)
+				suma = FIX_MAX;
+			else if (suma < DFIX_MIN)
+				suma = FIX_MIN;
+			else suma = DFIXED_TO_FIXED(suma);
+			
+			output->data[delta + i*output->width + j] = suma;
+		}
+	}
 
 }
 
@@ -87,34 +94,49 @@ void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t delta){
 
 static void depthwise(filter_t filter, data3d_t input, data3d_t * output){
     uint32_t i,j,k,l,c;
-    fixed suma;
+    dfixed suma;
 
-    for(i=0; i<output->height; i++){
-        for(j=0; j<output->width; j++){
-            for(c=0; c<filter.channels; c++){
-                suma=0;
-                for(k=0; k<filter.kernel_size; k++){
-                    for(l=0; l<filter.kernel_size; l++){
-                        suma += FIXED_MUL(filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l] , input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
-                    }
-                }
-                output->data[c*output->width*output->height + i*output->width + j] = suma;
-            }
-        }
-    }
+	for(i=0; i<output->height; i++){
+		for(j=0; j<output->width; j++){
+			for(c=0; c<filter.channels; c++){
+				suma=0;
+				for(k=0; k<filter.kernel_size; k++){
+					for(l=0; l<filter.kernel_size; l++){
+						suma += DFIXED_MUL(filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l] , input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
+					}
+				}
+
+				if (suma > DFIX_MAX)
+					suma = FIX_MAX;
+				else if (suma < DFIX_MIN)
+					suma = FIX_MIN;
+				else suma = DFIXED_TO_FIXED(suma);
+
+				output->data[c*output->width*output->height + i*output->width + j] = suma;
+			}
+		}
+	}
 }
 
 static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32_t delta){
     uint32_t i,j,c;
-    fixed suma;
+    dfixed suma;
 
     for(i=0; i<output->height; i++){
         for(j=0; j<output->width; j++){
             suma = 0;
             for(c=0; c<filter.channels; c++){
-                suma += FIXED_MUL(filter.weights[c], input.data[(c*input.height*input.width)+i*input.width+j]);
+                suma += DFIXED_MUL(filter.weights[c], input.data[(c*input.height*input.width)+i*input.width+j]);
             }
-            output->data[delta + i*output->width + j] = suma + filter.bias;
+
+			suma = suma + FIXED_TO_DFIXED(filter.bias);
+			if (suma > DFIX_MAX)
+				suma = FIX_MAX;
+			else if (suma < DFIX_MIN)
+				suma = FIX_MIN;
+			else suma = DFIXED_TO_FIXED(suma);
+			
+			output->data[delta + i*output->width + j] = suma;
         }
     }
 }
@@ -162,13 +184,19 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
 
 static fixed neuron_forward(neuron_t neuron, data1d_t input){
     uint32_t i;
-    fixed result = 0;
+    dfixed result = 0;
 
     for(i=0;i<input.length;i++){
-        result += FIXED_MUL(input.data[i],neuron.weights[i]);
+        result += DFIXED_MUL(input.data[i],neuron.weights[i]);
     }
 
-    return result + neuron.bias;
+	result =  result + FIXED_TO_DFIXED(neuron.bias);
+
+	if (result > DFIX_MAX)
+		return FIX_MAX;
+	else if (result < DFIX_MIN)
+		return FIX_MIN;
+	return DFIXED_TO_FIXED(result);
 }
 
 /*
@@ -481,21 +509,41 @@ void normalization2(normalization_layer_t n, data1d_t input, data1d_t * output){
 
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data) {
     uint32_t i;
+	dfixed d_data;
 
-    for(i = 0; i < data->length; i++) {
-        data->data[i] = FIXED_MUL(data->data[i], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
-    }
+	for(i = 0; i < data->length; i++) {
+		
+		d_data = DFIXED_MUL(data->data[i], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
+
+		if (d_data > DFIX_MAX)
+			d_data = FIX_MAX;
+		else if (d_data < DFIX_MIN)
+			d_data = FIX_MIN;
+		else 
+			d_data = DFIXED_TO_FIXED(d_data);
+
+		data->data[i] = d_data;
+	}
 }
-
 
 void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *data) {
     uint32_t i, j, ilen = 0;
     uint32_t length = data->height * data->width;
+	dfixed d_data;
 
     for(i = 0; i < data->channels; i++, ilen += length) {
         for(j = 0; j < length; j++) {
-            data->data[ilen+j] = FIXED_MUL(data->data[ilen+j], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
-        }
+            d_data = DFIXED_MUL(data->data[ilen+j], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
+			
+			if (d_data > DFIX_MAX)
+				d_data = FIX_MAX;
+			else if (d_data < DFIX_MIN)
+				d_data = FIX_MIN;
+			else 
+				d_data = DFIXED_TO_FIXED(d_data);
+
+			data->data[ilen+j] = d_data;
+		}
     }
 }
 
@@ -523,148 +571,4 @@ void image_adapt_layer(data3d_t input, data3d_t * output){
             }
         }
     }
-}
-
-
-/******************* Signal processing *******************/
-
-/* 
- * void fft(float data_re[], float data_im[], const unsigned int N)
- * Performs a Fast Fourier Transform (FFT) on the complex data passed as parameters.
- * Parameters:
- *   - data_re: Array containing the real part of the complex data.
- *   - data_im: Array containing the imaginary part of the complex data. 
- *   - N: Amount of samples to perform the FFT over.
- * First performs a reordering of the data and then applies the FFT calculations.
- */
-void fft(float data_re[], float data_im[], const unsigned int N){
-    rearrange(data_re, data_im, N);
-    compute(data_re, data_im, N);
-}
-
-/*
- * void rearrange(float data_re[], float data_im[], const unsigned int N)   
- * Performs the necessary reordering of the data before applying the FFT.
- * Parameters:
- *   - data_re: Array containing the real part of the complex data.
- *   - data_im: Array containing the imaginary part of the complex data. 
- *   - N: Amount of samples to perform the FFT over.
- */
-void rearrange(float data_re[], float data_im[], const unsigned int N){
-  register unsigned int position;
-  unsigned int target = 0;
-
-  for(position=0; position<N;position++){
-      if(target>position) {
-        const float temp_re = data_re[target];
-        const float temp_im = data_im[target];
-        data_re[target] = data_re[position];
-        data_im[target] = data_im[position];
-        data_re[position] = temp_re;
-        data_im[position] = temp_im;
-      }
-      unsigned int mask = N;
-      while(target & (mask >>=1))
-        target &= ~mask;
-      target |= mask;
-    }
-}
-
-/*
- * void compute(float data_re[], float data_im[], const unsigned int N)
- * Contains the FFT calculation core, applying the Fourier transforms for 
- * each recursive step.
- * Parameters: 
- *   - data_re: Array containing the real part of the complex data.
- *   - data_im: Array containing the imaginary part of the complex data. 
- *   - N: Amount of samples to perform the FFT over.
- */
-void compute(float data_re[], float data_im[], const unsigned int N){
-  const float pi = -3.14159265358979323846;
-  register unsigned int step,group,pair;
-  
-  for(step=1; step<N; step <<=1) {
-    const unsigned int jump = step << 1;
-    const float step_d = (float) step;
-    float twiddle_re = 1.0;
-    float twiddle_im = 0.0;
-    for(group=0; group<step; group++){
-        for(pair=group; pair<N; pair+=jump){
-            const unsigned int match = pair + step;
-            const float product_re = twiddle_re*data_re[match]-twiddle_im*data_im[match];
-            const float product_im = twiddle_im*data_re[match]+twiddle_re*data_im[match];
-            data_re[match] = data_re[pair]-product_re;
-            data_im[match] = data_im[pair]-product_im;
-            data_re[pair] += product_re;
-            data_im[pair] += product_im;
-        }
-    
-        // we need the factors below for the next iteration
-        // if we don't iterate then don't compute
-        if(group+1 == step){
-            continue;
-        }
-
-        float angle = pi*((float) group+1)/step_d;
-        twiddle_re = cos(angle);
-        twiddle_im = sin(angle);
-    }
-  }
-}
-
-/*
- * void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t *output)
- * Generates the spectrogram from the input signal by applying FFTs
- * and further processing.
- * Parameters:
- *   - config: Spectrogram layer configuration
- *   - input:  1D input signal  
- *   - output: 3D output spectrogram (W = n_mels, H = b_blocks, Ch = 1)
- */
-void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t * output){
-    register int i,j,k;
-    float aux;
-    
-    float data_re[config.n_fft];
-    float data_im[config.n_fft];
-
-    output->width    = config.n_mels;
-    output->height   = config.n_blocks;
-    output->channels = 1;
-    output->data     = (fixed*)swap_alloc( sizeof(fixed)*output->channels*output->height*output->width );
-    
-    for(i=0;i<config.n_blocks;i++){
-        // Copy the values ​​to the input of the fft
-        const unsigned int start = i*config.step;
-        for(j=0;j<config.n_fft;j++){
-            data_re[j] = FX2FL(input.data[start+j]);
-            data_im[j] = 0;
-        }
-
-        // Calculate fft
-        fft(data_re,data_im,config.n_fft);
-
-        // Get the module of the fft
-        for(j=0;j<config.n_fft;j++){
-            const float aux_re = data_re[j];
-            const float aux_im = data_im[j];
-            data_re[j] = sqrt(aux_re*aux_re + aux_im*aux_im);
-        }
-
-        // N_MELS processing
-        const unsigned int start2 = i*config.n_mels;
-        for(j=0;j<config.n_mels;j++){
-            const unsigned int start3 = j*config.len_nfft_nmels;
-            aux = 0;
-            for(k=0;k<config.len_nfft_nmels;k++){
-                aux += data_re[start3+k];
-            }
-            aux /= config.len_nfft_nmels;
-            if(config.convert_to_db){
-                output->data[start2+j] = FL2FX(10*log10(aux));
-            }else{
-                output->data[start2+j] = FL2FX(aux);
-            }
-        }
-    }
-}
+ }

@@ -1,5 +1,5 @@
-/* 
- * EmbedIA 
+/*
+ * EmbedIA
  * C LIBRARY FOR THE IMPLEMENTATION OF NEURAL NETWORKS ON MICROCONTROLLERS
  */
 #ifndef _EMBEDIA_H
@@ -7,16 +7,14 @@
 
 #include <stdint.h>
 #include <math.h>
-#include "fixed.h"
+#include <stdlib.h>
 
-{includes}
 
-#define PRINT_RESULTS 0
 
 /* STRUCTURE DEFINITION */
 
 /*
- * Structure that stores an array of fixed data (fixed * data) in vector form.
+ * Structure that stores an array of float data (float * data) in vector form.
  * Specifies the number of channels, the width and the height of the array.
  */
 
@@ -24,52 +22,79 @@ typedef struct{
     uint16_t channels;
     uint16_t width;
     uint16_t height;
-    fixed  * data;
+    float  * data;
 }data3d_t;
 
 typedef struct{
     uint16_t width;
     uint16_t height;
-    fixed  * data;
+    float  * data;
 }data2d_t;
 
 typedef struct{
     uint32_t length;
-    fixed  * data;
+    float  * data;
 }data1d_t;
 
 
 /*
  * Structure that stores the weights of a filter.
- Specifies the number of channels (uint16_t channels), their size (uint16_t kernel_size), the weights (fixed * weights) and the bias (fixed bias),
- * the weights (fixed * weights) and the bias (fixed bias).
+ Specifies the number of channels (uint16_t channels), their size (uint16_t kernel_size), the weights (float * weights) and the bias (float bias),
+ * the weights (float * weights) and the bias (float bias).
  */
 typedef struct{
     uint16_t channels;
     uint16_t kernel_size;
-    const fixed  * weights;
-    fixed  bias; 
+    const float  * weights;
+    float  bias;
 }filter_t;
+
+typedef struct{
+    uint16_t channels;
+    uint16_t kernel_size;
+    const float  * weights;
+    const float  * bias;
+}filters_t;
 
 /*
  * Structure that models a convolutional layer.
- * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters). 
+ * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters).
  */
+// Futura implementación de los datos correspondientes a las
+// capas convolucionales, datos como la cantidad de canales
+// y el tamaño del kernel son propios de la capa y no de cada filtro
+// typedef struct{
+//     uint16_t channels;
+//     uint16_t kernel_size;
+//     uint16_t n_filters;
+//     filter_t * filters;
+// }conv2d_layer_t;
+
 typedef struct{
     uint16_t n_filters;
-    filter_t * filters; 
+    filter_t * filters;
 }conv2d_layer_t;
+
+/*
+ * Structure that models a convolutional layer.
+ * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters).
+ */
+typedef struct{
+    uint16_t channels;
+    uint16_t kernel_size;
+    filters_t filters;
+}depthwise_conv2d_layer_t;
 
 /*
  * Structure that models a separable layer...
  * Specifies the number of filters (uint16_t n_filters,
- * a filter of the specified size (filter_t depth_filter) 
- * a vector of 1x1 filters (filter_t * point_filters) 
+ * a filter of the specified size (filter_t depth_filter)
+ * a vector of 1x1 filters (filter_t * point_filters)
  */
 typedef struct{
     uint16_t n_filters;
     filter_t depth_filter;
-    filter_t * point_filters; 
+    filter_t * point_filters;
 }separable_conv2d_layer_t;
 
 /*
@@ -77,13 +102,13 @@ typedef struct{
  * Specifies the weights of the neuron as a vector (fixed * weights) and the bias (fixed bias).
  */
 typedef struct{
-    const fixed  * weights;
-    fixed  bias;
+    const float  * weights;
+    float  bias;
 }neuron_t;
 
 /*
  * Structure that models a dense layer.
- * Specifies the number of neurons (uint16_t n_neurons) and a vector of neurons (neuron_t * neurons). 
+ * Specifies the number of neurons (uint16_t n_neurons) and a vector of neurons (neuron_t * neurons).
  */
 typedef struct{
     uint16_t n_neurons;
@@ -94,7 +119,7 @@ typedef struct{
 /*
  * Pooling Structure
  */
- 
+
 typedef struct{
     uint16_t size;
     uint16_t strides;
@@ -110,42 +135,22 @@ typedef struct{
  */
 
 typedef struct{
-    const fixed *sub_val;
-    const fixed *inv_div_val;
+    const float *sub_val;
+    const float *inv_div_val;
 } normalization_layer_t;
 
 
-/* 
+/*
  * Structure for BatchNormalization layer.
  * Contains vectors for the two parameters used for normalization.
  * The number of each of the parameters is determined by the number of channels of the previous layer.
  */
 typedef struct {
     uint32_t length;
-    const fixed *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
-    const fixed *std_beta;           // = beta - moving_mean * moving_inv_std_dev 
+    const float *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
+    const float *std_beta;           // = beta - moving_mean * moving_inv_std_dev
 } batch_normalization_layer_t;
 
-/*
- * spectrogram_layer_t struct
- * 
- * Defines the necessary configuration to generate a spectrogram from an 
- * audio signal. It groups all the key parameters into a single data type 
- * to facilitate passing to the processing functions.
- * 
- * - convert_to_db: indicates if the output should be converted to decibels.
- * - n_fft: FFT size.
- * - n_mels: number of mel bands.
- * - frame_length: frame length in samples. 
- * - sample_rate: sampling rate.
- * - n_blocks: number of frames.
- * - n_fft_table: 
- * - noverlap: overlap between frames.
- * - step: indicates the jump or advance in samples between each frame.
- * - len_nfft_nmels: length of the range over which the FFT values ​​are averaged to map to each mel band.
- * - spec_size: total spectrogram size in samples.
- * - ts_us: time step in microseconds between samples.
- */
 typedef struct {
     uint16_t convert_to_db;
     uint16_t n_fft;
@@ -160,7 +165,6 @@ typedef struct {
     uint16_t spec_size;
     uint16_t ts_us;
 } spectrogram_layer_t;
-
 
 /* LIBRARY FUNCTIONS PROTOTYPES */
 
@@ -186,10 +190,10 @@ void prepare_buffers();
  */
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
-/* 
+/*
  * separable_conv2d_layer()
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
- * 
+ *
  * Parameters:
  *   layer => convolutional layer with loaded filters.
  *   input => input data of type data3d_t
@@ -198,30 +202,42 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
 void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
 
-/* 
+/*
+ * depthwise_conv2d_layer()
+ *  Function in charge of applying the depthwise of a filter layer (conv_layer_t) on a given input data set.
+ * Parameters:
+ *  layer => depthwise layer with loaded filters.
+ *  input => input data of type data3d_t
+ *  *output => pointer to the data3d_t structure where the result will be saved.
+ */
+
+void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output);
+
+
+/*
  * dense_layer()
  * Performs feed forward of a dense layer (dense_layer_t) on a given input data set.
  * Parameters:
- *   dense_layer => structure with the weights of the neurons of the dense layer.  
- *   input       => structure data1d_t with the input data to process. 
+ *   dense_layer => structure with the weights of the neurons of the dense layer.
+ *   input       => structure data1d_t with the input data to process.
  *   *output     => structure data1d_t to store the output result.
  */
 void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output);
 
-/* 
+/*
  * max_pooling2d_layer()
- * Maxpooling layer, for now supports square size and stride. No support for padding 
+ * Maxpooling layer, for now supports square size and stride. No support for padding
  * Parameters:
  *   pool_size => size for pooling
  *   stride    => stride for pooling
- *   input     => input data 
+ *   input     => input data
  *   output    => output data
  */
 void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
-/* 
+/*
  * avg_pooling_2d()
- * Function that applies an average pooling to an input with a window size of received 
+ * Function that applies an average pooling to an input with a window size of received
  * by parameter (uint16_t strides)
  *
  * Parameters:
@@ -231,9 +247,9 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
 void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
 
-/* 
+/*
  * flatten3d_layer()
- * Performs a variable shape change. 
+ * Performs a variable shape change.
  * Converts the data format from data3d_t array format to data1d_t vector.
  * (prepares data for input into a layer of type dense_layer_t).
  * Parameters:
@@ -241,8 +257,8 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  *    *output => pointer to the data1d_t structure where the result will be stored.
  */
  void flatten3d_layer(data3d_t input, data1d_t * output);
-     
-/* 
+
+/*
  * argmax()
  * Finds the index of the largest value within a vector of data (data1d_t)
  * Parameters:
@@ -257,17 +273,17 @@ uint32_t argmax(data1d_t data);
 /***************************************************************************************************************************/
 /* Activation functions/layers */
 
-void softmax_activation(fixed *data, uint32_t length);
+void softmax_activation(float *data, uint32_t length);
 
-void relu_activation(fixed *data, uint32_t length);
+void relu_activation(float *data, uint32_t length);
 
-void leakyrelu_activation(fixed *data, uint32_t length, fixed alpha);
+void leakyrelu_activation(float *data, uint32_t length, float alpha);
 
-void tanh_activation(fixed *data, uint32_t length);
+void tanh_activation(float *data, uint32_t length);
 
-void sigmoid_activation(fixed *data, uint32_t length);
+void sigmoid_activation(float *data, uint32_t length);
 
-void softsign_activation(fixed *data, uint32_t length);
+void softsign_activation(float *data, uint32_t length);
 
 
 
@@ -296,7 +312,7 @@ void normalization2(normalization_layer_t s, data1d_t input, data1d_t * output);
 #define max_abs_norm_layer(norm, input, output) normalization2(norm, input, output)
 
 
-void batch_normalization_layer(batch_normalization_layer_t norm, uint32_t length, fixed *data);
+void batch_normalization_layer(batch_normalization_layer_t norm, uint32_t length, float *data);
 
 
 void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *data);
@@ -313,48 +329,27 @@ void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *da
 */
 void image_adapt_layer(data3d_t input, data3d_t * output);
 
-/* Signal processing */
 
-/* 
- * void fft(float data_re[], float data_im[], const unsigned int N)
- * Performs a Fast Fourier Transform (FFT) on the complex data passed as parameters.
- * Parameters:
- *   - data_re: Array containing the real part of the complex data.
- *   - data_im: Array containing the imaginary part of the complex data. 
- *   - N: Amount of samples to perform the FFT over.
- */
+
+
+
+
+// The arrays for the fft will be computed in place
+// and thus your array will have the fft result
+// written over your original data.
+// We require an array of real and imaginary floats
+// where they are both of length N
 void fft(float data_re[], float data_im[],const unsigned int N);
 
-/*
- * void rearrange(float data_re[], float data_im[], const unsigned int N)   
- * Performs the necessary reordering of the data before applying the FFT.
- * Parameters:
- *   - data_re: Array containing the real part of the complex data.
- *   - data_im: Array containing the imaginary part of the complex data. 
- *   - N: Amount of samples to perform the FFT over.
- */
+// helper functions called by the fft
+// data will first be rearranged then computed
+// an array of  {1, 2, 3, 4, 5, 6, 7, 8} will be
+// rearranged to {1, 5, 3, 7, 2, 6, 4, 8}
 void rearrange(float data_re[],float data_im[],const unsigned int N);
 
-/*
- * void compute(float data_re[], float data_im[], const unsigned int N)
- * Contains the FFT calculation core, applying the Fourier transforms for 
- * each recursive step.
- * Parameters: 
- *   - data_re: Array containing the real part of the complex data.
- *   - data_im: Array containing the imaginary part of the complex data. 
- *   - N: Amount of samples to perform the FFT over.
- */
+// the heavy lifting of computation
 void compute(float data_re[],float data_im[],const unsigned int N);
 
-/*
- * void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t *output)
- * Generates the spectrogram from the input signal by applying FFTs
- * and further processing.
- * Parameters:
- *   - config: Spectrogram layer configuration
- *   - input:  1D input signal  
- *   - output: 3D output spectrogram (W = n_mels, H = b_blocks, Ch = 1)
- */
 void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t * output);
 
 

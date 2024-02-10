@@ -9,3 +9,4 @@ embedia tests/outputs
 *.pyc
 *.exe
 .vscode/
+mini_speech_commands/

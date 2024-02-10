@@ -65,7 +65,6 @@ class ProjectGenerator:
 
         # copy library files
         if ProjectFiles.LIBRARY in options.files:
-
             embedia_files = generate_embedia_library(layers_embedia, self._datatype_folder, options)
 
             for filename in embedia_files:
