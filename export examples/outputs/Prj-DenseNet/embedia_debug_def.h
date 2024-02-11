@@ -11,11 +11,11 @@ const char* INT_FMT = "%d ";
 
 
 #define PRINT_FL(txt, fl)          \
-    printf("%s",txt);                   \
+    printf("%s",txt);              \
     printf(FL_FMT,DBG_FL(fl))
 
 #define PRINT_FL_LN(txt, fl)       \
-    printf("%s",txt);                   \
+    printf("%s",txt);              \
     printf(FL_FMT,DBG_FL(fl));     \
     printf("%s\n","")
 

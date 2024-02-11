@@ -11,7 +11,41 @@ const char* STR_LEN = "  Length : ";
 const char* STR_FSZ = " - F.K_size: ";
 const char* STR_FBS = " - F.bias: ";
 
+/*
+ * print_data1d_t()
+ * Imprime los valores presentes en un vector de datos y su largo
+ * Parámetros:
+ *            flatten_data_t data => vector de datos a imprimir
+ */
+void print_data1d_t(const char *head_text, data1d_t data){
 
+    #if EMBEDIA_DEBUG > 0
+
+    PRINT_TXT_LN(head_text);
+
+    PRINT_INT_LN(STR_LEN, data.length);
+
+    #if EMBEDIA_DEBUG > 1
+
+    PRINT_TXT_LN(STR_CONTENT);
+
+    uint16_t i;
+    float v;
+    for(i=0;i<data.length;i++){
+
+        v = data.data[i];
+        PRINT_FL("", v);
+
+    }
+    PRINT_TXT_LN("");
+
+    #endif // EMBEDIA_DEBUG 1
+
+    PRINT_TXT_LN(SEP_LINE);
+
+    #endif // EMBEDIA_DEBUG 0
+
+}
 
 void print_datad2_t(const char *head_text, data2d_t data){
 
@@ -36,7 +70,7 @@ void print_datad2_t(const char *head_text, data2d_t data){
     #endif // EMBEDIA_DEBUG 1
 
     PRINT_TXT_LN(SEP_LINE);
-    
+
     #endif // EMBEDIA_DEBUG 0
 
 
@@ -70,43 +104,12 @@ void print_data3d_t(const char *head_text, data3d_t data){
     #endif // EMBEDIA_DEBUG 1
 
     PRINT_TXT_LN(SEP_LINE);
-    
-    #endif // EMBEDIA_DEBUG 0
-
-}
-
-/*
- * print_flatten_data_t()
- * Imprime los valores presentes en un vector de datos y su largo
- * Parámetros:
- *            flatten_data_t data => vector de datos a imprimir
- */
-void print_data1d_t(const char *head_text, data1d_t data){
-
-
-    #if EMBEDIA_DEBUG > 0
-
-    PRINT_TXT_LN(head_text);
-
-    PRINT_INT_LN(STR_LEN, data.length);
-
-    #if EMBEDIA_DEBUG > 1
-
-    PRINT_TXT_LN(STR_CONTENT);
-
-    uint16_t i;
-    for(i=0;i<data.length;i++){
-        PRINT_FL("", data.data[i]);
-    }
-    PRINT_TXT_LN("");
-
-    #endif // EMBEDIA_DEBUG 1
-
-    PRINT_TXT_LN(SEP_LINE);
 
     #endif // EMBEDIA_DEBUG 0
 
 }
+
+
 
 
 /*
@@ -118,7 +121,7 @@ void print_data1d_t(const char *head_text, data1d_t data){
 void print_filter_t(const char *head_text, filter_t filter){
 
     #if EMBEDIA_DEBUG > 0
-    
+
     PRINT_TXT_LN(head_text);
 
     PRINT_INT_LN(STR_CHN, filter.channels);
@@ -142,7 +145,6 @@ void print_filter_t(const char *head_text, filter_t filter){
     #endif // EMBEDIA_DEBUG 1
 
     PRINT_TXT_LN(SEP_LINE);
-    
+
     #endif // EMBEDIA_DEBUG 0
 }
-

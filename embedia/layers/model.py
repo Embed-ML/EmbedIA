@@ -3,8 +3,13 @@ from collections import defaultdict
 from embedia.model_generator.project_options import ModelDataType
 import regex as re
 import pycparser as pcp
+import numpy as np
 from embedia.model_generator.project_options import BinaryBlockSize
 from embedia.layers.unimplemented_layer import UnimplementedLayer
+from embedia.layers.type_converters import *
+from embedia.layers.exceptions import *
+import tensorflow as tf
+
 
 
 class Model(object):
@@ -13,6 +18,7 @@ class Model(object):
     def __init__(self, options):
         self.options = options
         self.clear_names()
+
 
     def set_layers(self, layers, options_array=None):
         # options es la generica del proyecto
@@ -70,40 +76,104 @@ class Model(object):
             return name
         return name+str(num)
 
-    def get_type_converter(self):
-        """
-        returns a tuple with the name of the type used (float or float) in the
-        data representation (e.g. neuron weights) together with the conversion
-        macro to be invoked to transform a float value to the data type
+    def get_type_converter(self, data_type=None):
+            """
+            returns a tuple with the name of the embedia type used (float, fixed, quant8) in the
+            data representation (e.g. neuron weights) together with the conversion
+            object to be invoked to transform a float value to the data type
 
-        Parameters
-        ----------
-        data_type : ModelDataType
-            variable with the data type used in the data representation
-            (float, fixed8, fixed16, fixed32)
+            Parameters
+            ----------
+            data_type : ModelDataType
+                variable with the data type used in the data representation
+                (float, fixed8, fixed16, fixed32, quant8, etc)
+
+            Returns
+            -------
+            tuple (str, TypeConverter object)
+                tuple with type and macro convertion for C.
+
+            """
+
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
+            if data_type is None:
+                data_type = self.options.data_type
+            if data_type == ModelDataType.FLOAT or data_type == ModelDataType.BINARY:
+                return ('float', FloatConverter()) # binary layers dont use data_type, use block_type
+            elif data_type == ModelDataType.BINARY_FLOAT16:
+                return ('half', None) # should use Float16TypeConverter(), test required
+                # def macro_converter(s):
+                #    return f"half({s})"
+                # data_type = 'half'
+            elif data_type == ModelDataType.QUANT8:
+                return ('quant8', QuantizedTypeConverter(8, False))
+            elif data_type == ModelDataType.FIXED32:
+                return ('fixed', FixedTypeConverter(17, 15))
+            elif data_type == ModelDataType.FIXED16:
+                return ('fixed', FixedTypeConverter(9, 7))
+            elif data_type == ModelDataType.FIXED8:
+                return ('fixed', FixedTypeConverter(4, 4))
+            else:
+                raise UnsupportedFeatureError(data_type, 'Data type converter not supported')
+
+    def identify_target_classes(self):
+        layer = self.embedia_layers[-1].layer
+
+        # add code to check y last layer is an activation function
+        # if isinstance(layer, tf.keras.layers.Activation):
+        #
+        #     if layer.activation in [tf.sigmoid, tf.tanh]:
+        #         return 1
+        #     if layer.activation == tf.softmax:
+        #         return self.model.outputs[0].shape[1]
+        if layer.activation is not None:
+            act_fn = layer.activation.__name__.lower()
+            if act_fn in ['sigmoid', 'sigmoidal', 'softsign', 'tanh']:
+                return 1
+            if act_fn == 'softmax':
+                return layer.output_shape[-1]
+        else:
+            # TO DO: layer can be an activation layer
+            return 0
+        return 0
+
+    def is_data_quantized(self):
+        return self.options.data_type == ModelDataType.QUANT8
+    def get_type_initializer(self):
+        """
+        Returns a function whose purpose is to explore the data to obtain conversion parameters, such as in the case
+        of 8-bit quantization.
 
         Returns
         -------
-        tuple (str, str)
-            tuple with type and macro convertion for C.
+        function(data)
+            function to explore data to extract parameters for convertion
 
         """
 
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
-        if self.options.data_type == ModelDataType.FLOAT or self.options.data_type == ModelDataType.BINARY:
-            def macro_converter(v):
-                return v
-            data_type = 'float'       #binary layers dont use data_type, use block_type
-        elif self.options.data_type == ModelDataType.BINARY_FLOAT16:
-            def macro_converter(s):
-                return f"half({s})"
-            data_type = 'half'
-        else:
-            def macro_converter(s):
-                return f"FL2FX({s})"
-            data_type = 'fixed'
+        if self.options.data_type == ModelDataType.QUANT8:
+            def data_type_explorer(values):
+                Q_MAX = 255
+                min_val = np.min(values)
+                max_val = np.max(values)
+                # Calcular la escala y el punto cero para la cuantización
+                scale = (max_val - min_val) / Q_MAX
+                zero_pt = -min_val / scale  # Punto cero para mapear al rango
 
-        return (data_type, macro_converter)
+                if zero_pt < 0:
+                    zero_pt = 0
+                elif zero_pt > Q_MAX:
+                    zero_pt = Q_MAX
+                else:
+                    zero_pt = round(zero_pt)
+                return (scale, zero_pt)
+        else:
+            def data_type_explorer(values):
+                return None
+
+        return data_type_explorer
+
+
 
     def _build_types_size_dict(self, embedia_decl):
         # prepare to extract declaration of structures
@@ -133,6 +203,8 @@ typedef char xBITS;
 typedef char fixed;
 typedef char dfixed;
 typedef char half;
+typedef char quant8;
+typedef char qparam;
 """ + embedia_decl
 
         parser = pcp.CParser()
@@ -166,6 +238,8 @@ typedef char half;
             'uint32_t': 4,
             'uint64_t': 8,
             'float': 4,
+            'quant8': 1,
+            'qparam': 5,
             'xBITS': bytes_size,
             'fixed': bytes_size2,
             'dfixed': bytes_size3,

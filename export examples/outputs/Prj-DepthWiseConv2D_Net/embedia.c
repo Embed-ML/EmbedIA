@@ -41,24 +41,26 @@ void * swap_alloc(size_t s){
  *  delta => positioning of feature_map inside output.data
  */
 
-static void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t delta){
-    uint32_t i,j,k,l,c;
-    float suma;
+void conv2d(filter_t filter, qparam qp, data3d_t input, data3d_t * output, uint32_t delta){
+     uint32_t i,j,k,l,c;
+     uint8_t fi;
+    float suma, value;
 
-    for (i=0; i<output->height; i++){
-        for (j=0; j<output->width; j++){
+    for(i=0; i<output->height; i++){
+        for(j=0; j<output->width; j++){
             suma = 0;
-            for (c=0; c<filter.channels; c++){
-                for (k=0; k<filter.kernel_size; k++){
-                    for (l=0; l<filter.kernel_size; l++){
-                        suma += (filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l] * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
+            for(c=0; c<filter.channels; c++){
+                for(k=0; k<filter.kernel_size; k++){
+                    for(l=0; l<filter.kernel_size; l++){
+                        fi = (c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+;
+                        value = DEQUANTIZE(filter.weights[fi], qp);
+                        suma += (value * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
                     }
                 }
             }
-            output->data[delta + i*output->width + j] = suma + filter.bias;
+            output->data[delta + i*output->width + j] = suma + DEQUANTIZE(filter.bias, qp);
         }
     }
-
 }
 
 /*
@@ -69,18 +71,17 @@ static void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t 
  *  input => input data of type data3d_t
  *  *output => pointer to the data3d_t structure where the result will be saved.
  */
-
-void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
-    uint32_t delta;
+ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
+    uint32_t delta, i;
 
     output->channels = layer.n_filters; //cantidad de filtros
     output->height   = input.height - layer.filters[0].kernel_size + 1;
     output->width    = input.width - layer.filters[0].kernel_size + 1;
     output->data     = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
 
-    for(uint32_t i=0; i<layer.n_filters; i++){
+    for(i=0; i<layer.n_filters; i++){
         delta = i*(output->height)*(output->width);
-        conv2d(layer.filters[i],input,output,delta);
+        conv2d(layer.filters[i], layer.qparam, input, output,delta);
     }
 
 }
@@ -89,12 +90,12 @@ static void depthwise(filter_t filter, data3d_t input, data3d_t * output){
     uint32_t i,j,k,l,c;
     float suma;
 
-    for (i=0; i<output->height; i++){
-        for (j=0; j<output->width; j++){
-            for (c=0; c<filter.channels; c++){
+    for(i=0; i<output->height; i++){
+        for(j=0; j<output->width; j++){
+            for(c=0; c<filter.channels; c++){
                 suma=0;
-                for (k=0; k<filter.kernel_size; k++){
-                    for (l=0; l<filter.kernel_size; l++){
+                for(k=0; k<filter.kernel_size; k++){
+                    for(l=0; l<filter.kernel_size; l++){
                         suma += (filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l] * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
                     }
                 }
@@ -108,16 +109,17 @@ static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32
     uint32_t i,j,c;
     float suma;
 
-    for (i=0; i<output->height; i++){
-        for (j=0; j<output->width; j++){
+    for(i=0; i<output->height; i++){
+        for(j=0; j<output->width; j++){
             suma = 0;
-            for (c=0; c<filter.channels; c++){
+            for(c=0; c<filter.channels; c++){
                 suma += (filter.weights[c] * input.data[(c*input.height*input.width)+i*input.width+j]);
             }
             output->data[delta + i*output->width + j] = suma + filter.bias;
         }
     }
 }
+
 
 /* 
  * separable_conv2d_layer()
@@ -129,64 +131,26 @@ static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32
  */
 
 void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output){
-    uint32_t delta;
+  /*  uint32_t delta, i;
     data3d_t depth_output;
 
     depth_output.channels = input.channels; //cantidad de canales
     depth_output.height   = input.height - layer.depth_filter.kernel_size + 1;
     depth_output.width    = input.width - layer.depth_filter.kernel_size + 1;
-    depth_output.data     = (float*)swap_alloc( sizeof(float)*depth_output.channels*depth_output.height*depth_output.width );
+    depth_output.data     = (fixed*)swap_alloc( sizeof(fixed)*depth_output.channels*depth_output.height*depth_output.width );
 
     depthwise(layer.depth_filter,input,&depth_output);
 
     output->channels = layer.n_filters; //cantidad de filtros
     output->height   = depth_output.height;
     output->width    = depth_output.width;
-    output->data     = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
-
-    for(uint32_t i=0; i<layer.n_filters; i++){
+    output->data     = (fixed*)swap_alloc( sizeof(fixed)*output->channels*output->height*output->width );
+    
+    for(i=0; i<layer.n_filters; i++){
         delta = i*(output->height)*(output->width);
         pointwise(layer.point_filters[i],depth_output,output,delta);
     }
-}
-
-
-static void depthwise_new(filters_t filters, data3d_t input, data3d_t * output){
-    uint32_t i,j,k,l,c;
-    float suma;
-
-    for (i=0; i<output->height; i++){
-        for (j=0; j<output->width; j++){
-            for (c=0; c<filters.channels; c++){
-                suma=filters.bias[c];
-                for (k=0; k<filters.kernel_size; k++){
-                    for (l=0; l<filters.kernel_size; l++){
-                        suma += (filters.weights[(c*filters.kernel_size*filters.kernel_size)+k*filters.kernel_size+l] * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
-                    }
-                }
-                output->data[c*output->width*output->height + i*output->width + j] = suma;
-            }
-        }
-    }
-}
-
-/* 
- * depthwise_conv2d_layer()
- *  Function in charge of applying the depthwise of a filter layer (conv_layer_t) on a given input data set.
- * Parameters:
- *  layer => depthwise layer with loaded filters.
- *  input => input data of type data3d_t
- *  *output => pointer to the data3d_t structure where the result will be saved.
- */
-
-void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
-
-    output->channels = input.channels; //cantidad de canales
-    output->height   = input.height - layer.filters.kernel_size + 1;
-    output->width    = input.width - layer.filters.kernel_size + 1;
-    output->data     = (float*)swap_alloc( sizeof(float)*output->height*output->width*output->channels );
-
-    depthwise_new(layer.filters, input, output);
+    */
 }
 
 /*
@@ -196,20 +160,14 @@ void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data
  *  neuron_t neuron => neuron with its weights and bias loaded.
  *  flatten_data_t input => input data in vector form (flatten_data_t).
  * Returns:
- *  float => result of the operation         
+ *  fixed => result of the operation         
  */
-
+/*
 static float neuron_forward(neuron_t neuron, data1d_t input){
-    uint32_t i;
-    float result = 0;
-
-    for(i=0;i<input.length;i++){
-        result += input.data[i]*neuron.weights[i];
-    }
-
-    return result + neuron.bias;
+    
+    return mul_add_vec(neuron
 }
-
+*/
 /*
  * dense_layer()
  *  Performs feed forward of a dense layer (dense_layer_t) on a given input data set.
@@ -219,13 +177,17 @@ static float neuron_forward(neuron_t neuron, data1d_t input){
  *  *output     => structure data1d_t to store the output result.
  */
 void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output){
-    uint32_t i;
-
+    uint32_t i,j;
+    float result;
     output->length = dense_layer.n_neurons;
     output->data = (float*)swap_alloc(sizeof(float)*dense_layer.n_neurons);
 
     for(i=0;i<dense_layer.n_neurons;i++){
-        output->data[i] = neuron_forward(dense_layer.neurons[i],input);
+        result = 0;
+        for(j=0;j<input.length; j++) {
+            result += DEQUANTIZE(dense_layer.neurons[i].weights[j], dense_layer.neurons[i].qparam) * input.data[j];
+        }
+        output->data[i] = result + DEQUANTIZE(dense_layer.neurons[i].bias, dense_layer.neurons[i].qparam);
     }
 }
 
@@ -241,22 +203,22 @@ void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output){
  */
 
 void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output){
-    uint32_t c,i,j,aux1,aux2;
-    float max = -INFINITY;
-    float num;
+ /*   uint32_t c,i,j,aux1,aux2;
+    fixed max = -FIX_MAX;
+    fixed num;
 
-    // output->height = (input.height)/pool_size ;
-    // output->width =  (input.width )/pool_size ;
-    output->height = ((uint16_t) ((input.height - pool.size)/pool.strides)) + 1;
-    output->width  = ((uint16_t) ((input.width - pool.size)/pool.strides)) + 1;
+    // output->height = (input.height)/strides ;//+ (input.height%strides ? 0 : 1);
+    // output->width =  (input.width )/strides ;//+ (input.width %strides ? 0 : 1);
+    output->height = ((uint32_t) ((input.height - pool.size)/pool.strides)) + 1;
+    output->width  = ((uint32_t) ((input.width  - pool.size)/pool.strides)) + 1;
     output->channels = input.channels;
-    output->data = (float*)swap_alloc(sizeof(float)*(output->channels)*(output->height)*(output->width));
+    output->data = (fixed*)swap_alloc(sizeof(fixed)*(output->channels)*(output->height)*(output->width));
 
-    for (c=0; c<output->channels; c++){
-        for (i=0; i<output->height; i++){
-            for (j=0; j<output->width; j++){
+    for(c=0; c<output->channels; c++){
+        for(i=0; i<output->height; i++){
+            for(j=0; j<output->width; j++){
 
-                max = -INFINITY;
+                max = -FIX_MAX;
 
                 for(aux1=0; aux1<pool.size; aux1++){
                         for(aux2=0; aux2<pool.size; aux2++){
@@ -273,6 +235,7 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
             }
         }    
     }
+    */
 }
 
 
@@ -286,21 +249,21 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  */
 
 void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output){
-    uint32_t c,i,j,aux1,aux2;
-    uint32_t cant = pool.size*pool.size;
-    float avg = 0;
-    float num;
+   /* uint32_t c,i,j,aux1,aux2;
+    dfixed cant = INT_TO_FIXED(pool.size*pool.size);
+    dfixed avg = 0;
+    fixed num;
 
     // output->height = (input.height)/strides ;
     // output->width =  (input.width )/strides ;
     output->height = ((uint32_t) ((input.height - pool.size)/pool.strides)) + 1;
     output->width  = ((uint32_t) ((input.width - pool.size)/pool.strides)) + 1;
     output->channels = input.channels;
-    output->data = (float*)swap_alloc(sizeof(float)*(output->channels)*(output->height)*(output->width));
+    output->data = (fixed*)swap_alloc(sizeof(fixed)*(output->channels)*(output->height)*(output->width));
 
-    for (c=0; c<output->channels; c++){
-        for (i=0; i<output->height; i++){
-            for (j=0; j<output->width; j++){
+    for(c=0; c<output->channels; c++){
+        for(i=0; i<output->height; i++){
+            for(j=0; j<output->width; j++){
 
                 avg = 0;
 
@@ -311,10 +274,10 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
                     }                  
                 }
 
-                output->data[c*output->width*output->height + i*output->width + j] = avg/cant;
+                output->data[c*output->width*output->height + i*output->width + j] = FIXED_DIV(avg,cant);
             }
         }    
-    }
+    }*/
 }
 
 /*
@@ -324,20 +287,21 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  *  length => numbers of values to update
  */
 void softmax_activation(float *data, uint32_t length){
+    uint32_t i;
     float m = -INFINITY;
-    for (size_t i = 0; i < length; i++) {
+    for(i = 0; i < length; i++) {
         if (data[i] > m) {
             m = data[i];
         }
     }
 
     float sum = (0.0);
-    for (size_t i = 0; i < length; i++) {
+    for(i = 0; i < length; i++) {
         sum += exp(data[i] - m);
     }
 
     float offset = m + log(sum);
-    for (size_t i = 0; i < length; i++) {
+    for(i = 0; i < length; i++) {
         data[i] = exp(data[i] - offset);
     }
 }
@@ -352,7 +316,7 @@ void softmax_activation(float *data, uint32_t length){
 void relu_activation(float *data, uint32_t length){
     uint32_t i;
 
-    for (i=0;i<(length);i++){
+    for(i=0;i<(length);i++){
         data[i] = data[i] < 0 ? 0 : data[i];
     }
 }
@@ -367,7 +331,7 @@ void relu_activation(float *data, uint32_t length){
 void leakyrelu_activation(float *data, uint32_t length, float alpha){
     uint32_t i;
 
-    for (i=0;i<(length);i++){
+    for(i=0;i<(length);i++){
         data[i] = data[i] < 0 ? alpha*data[i] : data[i];
     }
 }
@@ -382,7 +346,7 @@ void leakyrelu_activation(float *data, uint32_t length, float alpha){
 void tanh_activation(float *data, uint32_t length){
     uint32_t i;
 
-    for (i=0;i<length;i++){
+    for(i=0;i<length;i++){
         // data.data[i] = tanh(data.data[i]);
         data[i] = 2/(1+exp(-2*data[i])) - 1;
     }
@@ -397,7 +361,7 @@ void tanh_activation(float *data, uint32_t length){
 void sigmoid_activation(float *data, uint32_t length){
     uint32_t i;
 
-    for (i=0;i<length;i++){
+    for(i=0;i<length;i++){
         data[i] = 1 / (1 + exp(-data[i]));
     }
 }
@@ -411,7 +375,7 @@ void sigmoid_activation(float *data, uint32_t length){
 void softsign_activation(float *data, uint32_t length){
     uint32_t i;
 
-    for (i=0;i<length;i++){
+    for(i=0;i<length;i++){
         data[i] = data[i] / (abs(data[i])+1);
     }
 }
@@ -425,11 +389,10 @@ void softsign_activation(float *data, uint32_t length){
 void softplus_activation(float *data, uint32_t length){
     uint32_t i;
 
-    for (i=0;i<length;i++){
+    for(i=0;i<length;i++){
         data[i] = log( exp(data[i])+1 );
     }
 }
-
 
 /*
  * flatten3d_layer()
@@ -440,12 +403,12 @@ void softplus_activation(float *data, uint32_t length){
  *  input => input data of type data3d_t.
  *  *output => pointer to the data1d_t structure where the result will be stored.
  */
- void flatten3d_layer(data3d_t input, data1d_t * output){
+void flatten3d_layer(data3d_t input, data1d_t * output){
     uint32_t c,i,j;
     uint32_t cantidad = 0;
 
     output->length = input.channels * input.height * input.width;
-    output->data = (float*)swap_alloc(sizeof(float)*output->length);
+    output->data = (quant8*)swap_alloc(sizeof(quant8)*output->length);
 
     for(i=0;i<input.height;i++){
         for(j=0;j<input.width;j++){
@@ -467,10 +430,10 @@ void softplus_activation(float *data, uint32_t length){
  */
 
 uint32_t argmax(data1d_t data){
-    float max = data.data[0];
-    uint32_t pos = 0;
+    quant8 max = data.data[0];
+    uint32_t i, pos = 0;
 
-    for(uint32_t i=1;i<data.length;i++){
+    for(i=1;i<data.length;i++){
         if(data.data[i]>max){
             max = data.data[i];
             pos = i;
@@ -498,14 +461,15 @@ void normalization1(normalization_layer_t n, data1d_t input, data1d_t * output){
 
 void normalization2(normalization_layer_t n, data1d_t input, data1d_t * output){
 
-    uint32_t i;
+  /*  uint32_t i;
 
     output->length = input.length;
-    output->data = (float*)swap_alloc(sizeof(float)*output->length);
+    output->data = (fixed*)swap_alloc(sizeof(fixed)*output->length);
 
     for(i=0; i<input.length; i++){
-        output->data[i] = input.data[i]*n.inv_div_val[i];
+        output->data[i] = FIXED_MUL(input.data[i],n.inv_div_val[i]);
     }
+    */
 }
 
 /*
@@ -517,23 +481,46 @@ void normalization2(normalization_layer_t n, data1d_t input, data1d_t * output){
  */
 
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data) {
-    uint32_t i;
+   /* uint32_t i;
+	dfixed d_data;
 
-    for (i = 0; i < data->length; i++) {
-        data->data[i] = data->data[i] * layer.moving_inv_std_dev[i] + layer.std_beta[i];
-    }
+	for(i = 0; i < data->length; i++) {
+		
+		d_data = DFIXED_MUL(data->data[i], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
+
+		if (d_data > DFIX_MAX)
+			d_data = FIX_MAX;
+		else if (d_data < DFIX_MIN)
+			d_data = FIX_MIN;
+		else 
+			d_data = DFIXED_TO_FIXED(d_data);
+
+		data->data[i] = d_data;
+	}
+    */
 }
 
-
 void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *data) {
-    uint32_t i, j, ilen = 0;
+  /*
+  uint32_t i, j, ilen = 0;
     uint32_t length = data->height * data->width;
+	dfixed d_data;
 
-    for (i = 0; i < data->channels; i++, ilen += length) {
-        for (j = 0; j < length; j++) {
-            data->data[ilen+j] = data->data[ilen+j] * layer.moving_inv_std_dev[i] + layer.std_beta[i];
-        }
+    for(i = 0; i < data->channels; i++, ilen += length) {
+        for(j = 0; j < length; j++) {
+            d_data = DFIXED_MUL(data->data[ilen+j], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
+			
+			if (d_data > DFIX_MAX)
+				d_data = FIX_MAX;
+			else if (d_data < DFIX_MIN)
+				d_data = FIX_MIN;
+			else 
+				d_data = DFIXED_TO_FIXED(d_data);
+
+			data->data[ilen+j] = d_data;
+		}
     }
+    */
 }
 
 
@@ -551,11 +538,11 @@ void image_adapt_layer(data3d_t input, data3d_t * output){
     output->channels = input.channels;
     output->height   = input.height;
     output->width    = input.width;
-    output->data     = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
+    output->data     = (quant8*)swap_alloc( sizeof(quant8)*output->channels*output->height*output->width );
 
-    for (c=0, l=0; c < input.channels; c++){
-        for (i=0; i < input.height; i++) {
-            for (j=0; j < input.width; j++, l++ ){
+    for(c=0, l=0; c < input.channels; c++){
+        for(i=0; i < input.height; i++) {
+            for(j=0; j < input.width; j++, l++ ){
                 output->data[l] = input.data[i*input.channels*input.width+input.channels*j+c];
             }
         }

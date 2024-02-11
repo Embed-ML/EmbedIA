@@ -40,10 +40,11 @@ options.embedia_folder = '../embedia/'
 options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
 
-options.data_type = ModelDataType.FLOAT
+# options.data_type = ModelDataType.FLOAT
 # options.data_type = ModelDataType.FIXED32
 # options.data_type = ModelDataType.FIXED16
 # options.data_type = ModelDataType.FIXED8
+options.data_type = ModelDataType.QUANT8
 
 # options.debug_mode = DebugMode.DISCARD
 # options.debug_mode = DebugMode.DISABLED
@@ -86,3 +87,14 @@ print("Project", PROJECT_NAME, "exported in", OUTPUT_FOLDER)
 import larq
 
 larq.models.summary(model)
+
+from embedia.utils.model_inspector import ModelInspector
+inspector = ModelInspector(model)
+
+s_id = 4
+# print(inspector.as_string(samples[s_id]))
+
+sample = samples[s_id]
+
+inspector.save('PruebaInspeccion'+f'sample{s_id}.txt', sample, ln_break=-1)
+

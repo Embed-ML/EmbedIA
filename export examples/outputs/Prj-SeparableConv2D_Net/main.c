@@ -15,8 +15,8 @@ data1d_t results;
 
 
 int main(void){
-
-
+	
+    
     // sample intitialization
     input.data = sample_data;
 
@@ -31,14 +31,18 @@ int main(void){
 
     // print predicted class id
     printf("Prediction class id: %d\n", prediction);
+
     printf("   Example class id: %d\n", sample_data_id);
+
     /*
 
     model_predict(input, &results);
-    printf("clase.....: %0d\n", sample_data_id);
-    printf("prediccion: %0.0f\n", results.data[0]);
+
+    printf("prediccion: %.5f", results.data[0]);
+
+    */
 
 
-*/
+
 	return 0;
 }

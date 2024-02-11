@@ -110,7 +110,7 @@ class ProjectGenerator:
 
         # create main file with an example
         if ProjectFiles.MAIN in options.files:
-            (text_example_h, text_main_c) = generate_embedia_main(layers_embedia, self._lib_folder, filename, options)
+            (text_example_h, text_main_c) = generate_embedia_main(layers_embedia, self._lib_folder, filename, options, embedia_model)
             if options.project_type == ProjectType.ARDUINO:
                 filename = project_name
                 c_ext = '.ino'
@@ -135,6 +135,8 @@ class ProjectGenerator:
             return 'fixed16/'
         elif data_type == ModelDataType.FIXED32:
             return 'fixed32/'
+        elif data_type == ModelDataType.QUANT8:
+            return 'quant8/'
         elif data_type == ModelDataType.BINARY:
             return 'binary/'
         elif data_type == ModelDataType.BINARY_FIXED32:
@@ -185,9 +187,11 @@ class ProjectGenerator:
         #half file
         if options.data_type == ModelDataType.BINARY_FLOAT16:
             project_files.append('half'+hpp_ext)
-        
-        # fixed point files
-        if options.data_type != ModelDataType.FLOAT and options.data_type != ModelDataType.BINARY and options.data_type != ModelDataType.BINARY_FLOAT16:
+        elif options.data_type == ModelDataType.QUANT8:
+            project_files.append('quant8' + c_ext)
+            project_files.append('quant8' + h_ext)
+        elif options.data_type != ModelDataType.FLOAT and options.data_type != ModelDataType.BINARY and options.data_type != ModelDataType.BINARY_FLOAT16:
+            # fixed point files
             project_files.append('fixed'+c_ext)
             project_files.append('fixed'+h_ext)
 

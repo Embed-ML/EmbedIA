@@ -43,6 +43,10 @@
             <Option compilerVar="CC" />
         </Unit>
         <Unit filename="rain_predictor_model.h" />
+        <Unit filename="quant8.c">
+            <Option compilerVar="CC" />
+        </Unit>
+        <Unit filename="quant8.h" />
         <Unit filename="embedia_debug.c">
             <Option compilerVar="CC" />
         </Unit>

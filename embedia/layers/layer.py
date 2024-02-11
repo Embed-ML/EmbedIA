@@ -5,8 +5,6 @@ from embedia.layers.activation.activation_functions import ActivationFunctions
 from embedia.layers.exceptions import UnsupportedFeatureError
 
 
-
-
 class LayerInfo(object):
     """
     This class defines a container for layer information:
@@ -25,7 +23,11 @@ class LayerInfo(object):
     def _update_properties(self):
         k_layer = self.layer.layer
         self.class_name = k_layer.__class__.__name__
-        self.layer_name = k_layer.name
+        if hasattr(k_layer, 'name'):
+            self.layer_name = k_layer.name
+        else:
+            self.layer_name = self.class_name
+
         if hasattr(k_layer, 'activation') and k_layer.activation is not None:
             activation = ActivationFunctions(None, k_layer.activation)
             self.activation = activation.get_function_name()
@@ -34,9 +36,13 @@ class LayerInfo(object):
 
         self.output_shape = self.layer.get_output_shape()
 
-        trainable = int(np.sum([K.count_params(p) for p in k_layer.trainable_weights]))
+        if hasattr(k_layer, 'trainable_weights'):
+            trainable = int(np.sum([K.count_params(p) for p in k_layer.trainable_weights]))
+            non_trainable = int(np.sum([K.count_params(p) for p in k_layer.non_trainable_weights]))
+        else:
+            trainable = 0
+            non_trainable = 0
 
-        non_trainable = int(np.sum([K.count_params(p) for p in k_layer.non_trainable_weights]))
         self.params = (trainable, non_trainable)
 
         self.macs_ops = self.layer.calculate_MAC()
@@ -56,6 +62,7 @@ class Layer(object):
     # these properties must be defined in the constructor of subclass
     input_data_type = ""   # C type of the layer input variable
     output_data_type = ""  # C type of the layer output variable
+    support_quantization = False # support quantized data. Default False
 
     def __init__(self, model, layer, options=None, **kwargs):
         """
@@ -120,6 +127,22 @@ class Layer(object):
         name = re.sub(r'(\d)_d', r'\1d', name)
 
         return name
+
+    def is_data_quantized(self):
+        return self.model.is_data_quantized()
+
+    def is_quantizable(self):
+        return self.support_quantization
+
+    def convert_to_embedia_data(self, data_converter, values, fit=True):
+        if fit:
+            data_converter.fit(values)
+        conv_values = data_converter.transform(values)
+        if self.is_data_quantized():
+            quant_params = f', {{ {data_converter.scale}, {data_converter.zero_pt} }}'
+        else:
+            quant_params = ''
+        return (conv_values, quant_params)
 
     def set_default_layer_types(self):
         """
@@ -299,7 +322,12 @@ class Layer(object):
 
         act_fncs = ActivationFunctions(self.model, self.layer.activation)
 
-        return act_fncs.predict(f'{param}.data', self.get_output_size())
+        if self.is_quantizable() and self.is_data_quantized():
+            qparams = f'{param}.qparam'
+        else:
+            qparams = ''
+
+        return act_fncs.predict(f'{param}.data', self.get_output_size(), qparams)
 
 
     def debug_function(self, param):

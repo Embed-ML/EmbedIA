@@ -48,7 +48,7 @@ options.debug_mode = DebugMode.DATA
 
 (samples, ids) = joblib.load(SAMPLES_FILE)
 
-res = model.predict(samples)
+res = model.predict(samples,,
 
 print( (res*100).astype('int') )
 

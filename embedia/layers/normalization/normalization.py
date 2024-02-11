@@ -48,7 +48,7 @@ class Normalization(DataLayer):
         # As the name generated automatically depends on the class name and the
         # same structure is used for all normalizations, the EmbedIA data type
         # name is forced in this class.
-        self.struct_data_type = 'normalization_t'
+        self.struct_data_type = 'normalization_layer_t'
 
         # Name of EmbedIA normalization function declared in "embedia.h".
         # Subclass must assign the propertly name
@@ -107,6 +107,7 @@ class Normalization(DataLayer):
         n_input = self.get_input_shape()[0]
 
         # neuron structure size
+        print(types_dict)
         sz_struct_t = types_dict[self.struct_data_type]
 
         # base data type in bits: float, fixed (32/16/8)
@@ -120,32 +121,40 @@ class Normalization(DataLayer):
 
     def functions_init(self):
 
-        (data_type, macro_converter) = self.model.get_type_converter()
+        if self.is_data_quantized():
+            (data_type, data_converter) = self.model.get_type_converter(ModelDataType.FLOAT)
+        else:
+            (data_type, data_converter) = self.model.get_type_converter()
         name = self.name
         struct_type = self.struct_data_type
         sub_var_name = 'sub_val'
         div_var_name = 'inv_div_val'
 
-        sub_val = self.sub_values
-        div_val = self.div_values
+        # apply data conversion (fixed, quantized, etc)
+        sub_val = data_converter.fit_transform(self.sub_values)
+        # inverted values in order to multiply instead of divide
+        inv_div_val = data_converter.transform(1/self.div_values)
 
-        # generate values for substraction.
+        macro_converter = lambda x: x
+
         # Params: data type, var name, macro, array/list of values
         o_sub_val = declare_array(f'static const {data_type}', sub_var_name, macro_converter, sub_val)
-
-        # inverted values in order to multiply instead of divide
-        div_val = ['1/%f' % v for v in div_val]
-
         # prepare values for division (multiplication of inverse values)
-        o_div_val = declare_array(f'static const {data_type}', div_var_name, macro_converter, div_val)
+        o_inv_div_val = declare_array(f'static const {data_type}', div_var_name, macro_converter, inv_div_val)
+
+        quant_params = ''
+        if self.is_quantizable() and self.is_data_quantized():
+            (sc, zp) = (data_converter.scale, data_converter.zero_pt)
+            quant_params += f', {{{sc}, {zp}}}'
 
         init_layer = f'''
 {struct_type} init_{name}_data(void){{
-
+    /*{self.sub_values}*/
     {o_sub_val};
-    {o_div_val};
+    /*{1/self.div_values}*/
+    {o_inv_div_val};
 
-    static const {struct_type} norm = {{ {sub_var_name}, {div_var_name} }};
+    static const {struct_type} norm = {{ {sub_var_name}, {div_var_name} {quant_params} }};
     return norm;
 }}
 '''

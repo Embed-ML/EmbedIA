@@ -26,16 +26,21 @@ int main(void){
 
     // make model prediction
     // uncomment corresponding code
-    /*
+
     int prediction = model_predict_class(input, &results);
 
     // print predicted class id
     printf("Prediction class id: %d\n", prediction);
 
-    */
+    printf("   Example class id: %d\n", sample_data_id);
+
+    /*
 
     model_predict(input, &results);
-    printf("prediccion: %5f", results.data[0]);
+
+    printf("prediccion: %.5f", results.data[0]);
+
+    */
 
 
 

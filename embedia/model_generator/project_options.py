@@ -1,7 +1,7 @@
 class ModelDataType:
-    (FLOAT, FIXED32, FIXED16, FIXED8, BINARY, BINARY_FIXED32, BINARY_FLOAT16) = (0, 1, 2, 3, 4, 5, 6)
+    (FLOAT, FIXED32, FIXED16, FIXED8, QUANT8, BINARY, BINARY_FIXED32, BINARY_FLOAT16) = (0, 1, 2, 3, 4, 5, 6, 7)
 
-    SIZES = [32, 32, 16, 8, 32, 32, 16]
+    SIZES = [32, 32, 16, 8, 8, 32, 32, 16]
 
     def get_size(dt):
 

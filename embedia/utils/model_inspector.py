@@ -314,7 +314,8 @@ class ModelInspector(object):
 
         """
         line = margin
-        output = '\n'
+        # output = '\n'
+        output = ''
         for i in range(data.shape[0]):
             value = self._format_value(data[i], col_sz)
             if ln_break <= 0 or len(line) + len(value) < ln_break:

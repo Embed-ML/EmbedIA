@@ -2,6 +2,8 @@ from embedia.utils.binary_helper import BinaryGlobalMask
 
 def declare_array(dt_type, var_name, dt_conv, data_array, limit=80):
 
+    if dt_conv is None:
+        dt_conv = lambda x:x
     if data_array is None:
         val = 'NULL'
     else:

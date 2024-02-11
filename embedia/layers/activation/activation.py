@@ -44,6 +44,12 @@ class Activation(Layer):
             activation = self.layer.activation
         else:
             activation = self.layer
+
+        #if self.is_data_quantized():
+        #    qparams = f'{output_name}.qparam'
+        #else:
+        #    qparams = ''
+        qparams = ''
         act_fncs = ActivationFunctions(self.model, activation)
 
-        return act_fncs.predict(f'{output_name}.data', output_size)
+        return act_fncs.predict(f'{output_name}.data', output_size, qparams)

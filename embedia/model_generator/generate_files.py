@@ -177,9 +177,6 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
                     data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
 
 
-
-
-
             param_in = data_layers_input[-1]['var_name']
             param_out = data_layers_output[-1]['var_name']
             predict += f'{layer.predict(param_in, param_out)}\n'
@@ -200,10 +197,16 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
             # message of unimplemented layer
             predict += '// ' + layer.message + '\n'
 
+
     # indent code
     predict = indent(predict)
+    # improve code in order to include the correct model funcion
     if output_data_type == 'data1d_t':
-        predict_class = 'return argmax(*results);'
+        n_classes = model.identify_target_classes()  # determine model classes, 0=regression, 1=binary, >1=multiclass
+        if n_classes == 1:
+            predict_class = 'return results->data[0] >= 0.5;'
+        else:
+            predict_class = 'return argmax(*results);'
     else:
         predict_class = '''//TO DO: argmax with data2d_t and data3d_t
     return -1; '''
@@ -233,7 +236,7 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
     return (h, c, filename)
 
 
-def generate_embedia_main(embedia_layers, src_folder, filename, options):
+def generate_embedia_main(embedia_layers, src_folder, filename, options, embedia_model):
 
     src_c = os.path.join(src_folder, 'main/main_')
 
@@ -251,12 +254,11 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options):
     includes_c += '#include "'+filename+'.h"\n'
 
     example_var_name = 'sample_data'
+    main_code = ''
 
-    if options.example_data is None:
-        main_code = ''
-    else:
+    if options.example_data is not None:
         includes_c += '#include "example_file.h"\n'
-        main_code = f'''
+        main_code += f'''
     // sample intitialization
     input.data = {example_var_name};
 '''
@@ -272,9 +274,10 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options):
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado no se usa igual por ahora
 
-    # (FLOAT, FIXED32, FIXED16, FIXED8, BINARY) = (0,1,2,3,4)
     if options.data_type == ModelDataType.FLOAT or options.data_type == ModelDataType.BINARY:
         model_data_type = 'float'
+    elif options.data_type == ModelDataType.QUANT8:
+        model_data_type = 'quant8'
     else:
         model_data_type = 'fixed'
 
@@ -286,6 +289,8 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options):
 
     input_data = f'''{input_data_type} input = {{ {input_dim} NULL}};\n'''
     output_data = f'''{output_data_type} results;\n'''
+
+
 
     main_code += '''
 
@@ -334,7 +339,7 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options):
 
     # load and generate data example if it corresponds
     if options.example_data is not None:
-        h = generate_examples(src_folder, example_var_name, options)
+        h = generate_examples(src_folder, example_var_name, options, embedia_model)
     else:
         h = None
 
@@ -374,20 +379,28 @@ def data_to_array_str(data, macro_converter, clip=120):
     return output[:-2]
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
-def generate_examples(src_folder, var_name, options):
+def generate_examples(src_folder, var_name, options, embedia_model):
 
-    if options.data_type == ModelDataType.FLOAT or options.data_type == ModelDataType.BINARY:
-        def conv(s):
-            return s
-        data_type = 'float'
-    elif options.data_type == ModelDataType.BINARY_FLOAT16:
-        def conv(s):
-            return f"half({s})"
-        data_type = 'half'
+
+    # if options.data_type == ModelDataType.FLOAT or options.data_type == ModelDataType.BINARY:
+    #     def conv(s):
+    #         return s
+    #     data_type = 'float'
+    # elif options.data_type == ModelDataType.BINARY_FLOAT16:
+    #     def conv(s):
+    #         return f"half({s})"
+    #     data_type = 'half'
+    # else:
+    #     def conv(s):
+    #         return f"FL2FX({s})"
+    #     data_type = 'fixed'
+
+    if embedia_model.is_data_quantized():
+        (data_type, data_converter) = embedia_model.get_type_converter(ModelDataType.FLOAT)
     else:
-        def conv(s):
-            return f"FL2FX({s})"
-        data_type = 'fixed'
+        (data_type, data_converter) = embedia_model.get_type_converter()
+
+    conv = lambda x: x
 
     src_h = os.path.join(src_folder, 'main/example_file.h')
     smp = options.example_data
@@ -406,13 +419,15 @@ def generate_examples(src_folder, var_name, options):
         smp = np.array(smp)
     for i in range(len(smp)):
         data = smp[i].flatten()
-        # print(data)
-        id = ids[i]
+        new_data = data_converter.fit_transform(data)
+
+        id = int(ids[i])
         examples += f'''#if SELECT_SAMPLE == {i}
+        
 uint16_t {var_name}_id = {id};
 
 static {data_type} {var_name}[]= {{
-{data_to_array_str(data, conv)}
+{data_to_array_str(new_data, conv)}
 }};
 
 #endif

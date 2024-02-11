@@ -61,7 +61,7 @@ sample = samples[s_id]
 inspector.save(f'{model.name}_sample{s_id}.txt', sample, ln_break=-1)
 
 
-res = model.predict(samples)
+res = model.predict(samples,,
 
 print((res*100).astype('int'))
 

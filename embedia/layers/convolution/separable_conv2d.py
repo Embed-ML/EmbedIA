@@ -77,33 +77,44 @@ class SeparableConv2D(DataLayer):
         return mem_size
 
     def functions_init(self):
-        depth_filtros, depth_channels, depth_rows, depth_columns = self.depth_weights.shape  # Getting layer info from it's weights
+        depth_filters, depth_channels, depth_rows, depth_columns = self.depth_weights.shape  # Getting layer info from it's weights
         assert depth_rows == depth_columns  # WORKING WITH SQUARE KERNELS FOR NOW
         depth_kernel_size = depth_rows  # Defining kernel size
 
         point_filters, point_channels, _, _ = self.point_weights.shape  # Getting layer info from it's weights
 
         struct_type = self.struct_data_type
-        (data_type, macro_converter) = self.model.get_type_converter()
+
+        (data_type, data_converter) = self.model.get_type_converter()
+
+        data_converter.fit(np.concatenate((self.depth_weights.ravel(), self.point_weights.ravel())))
+        conv_depth_weights = data_converter.transform(self.depth_weights)
+        conv_point_weights = data_converter.transform(self.point_weights)
+        conv_biases = data_converter.transform(self.biases)
+
+        if self.is_data_quantized():
+            qparams = f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
+        else:
+            qparams = ''
 
         init_conv_layer = f'''
 
-        {struct_type} init_{self.name}_data(void){{
+{struct_type} init_{self.name}_data(void){{
 
         '''
-        o_weights = ""
+        o_weights = '\n'
         for ch in range(depth_channels):
             for f in range(depth_rows):
-                o_weights += '\n    '
+                o_weights += ' '*12
                 for c in range(depth_columns):
-                    o_weights += f'''{macro_converter(self.depth_weights[0,ch,f,c])}, '''
-
-            o_weights += '\n  '
+                    o_weights += f'''{conv_depth_weights[0,ch,f,c]}, '''
+                comm_weights = f'/*{ch},{f},0..{depth_columns - 1} =>{self.depth_weights[0, ch, f, 0:depth_columns]}*/'
+                o_weights += comm_weights + '\n'
 
         o_code = f'''
-        static const {data_type} depth_weights[]={{{o_weights}
+        static {data_type} depth_weights[]={{{o_weights}
         }};
-        static filter_t depth_filter = {{{depth_channels}, {depth_kernel_size}, depth_weights, 0}};
+        static filter_t depth_filter = {{{depth_channels}, {depth_kernel_size}, depth_weights{qparams} }};
 
         static filter_t point_filters[{point_filters}];
         '''
@@ -112,20 +123,22 @@ class SeparableConv2D(DataLayer):
         for i in range(point_filters):
             o_weights = ""
             for ch in range(point_channels):
-                o_weights+=f'''{macro_converter(self.point_weights[i,ch,0,0])}, '''
-
+                o_weights+=f'''{conv_point_weights[i,ch,0,0]}, '''
+            o_weights = o_weights[0:-2] # remove las comma
+            comm_weights = f' /*{i},0..{point_channels-1} =>{self.point_weights[i, ch, 0, 0:point_channels]}*/'
+            comm_bias = f' /*{self.biases[i]}*/'
             o_code = f'''
-        static const {data_type} point_weights{i}[]={{{o_weights}
+        static {data_type} point_weights{i}[]={{{o_weights}{comm_weights}
         }};
-        static filter_t point_filter{i} = {{{point_channels}, 1, point_weights{i}, {macro_converter(self.biases[i])}}};
+        static filter_t point_filter{i} = {{{point_channels}, 1, point_weights{i}, {conv_biases[i]}{comm_bias}}};
         point_filters[{i}] = point_filter{i};
         '''
             init_conv_layer += o_code
 
         init_conv_layer += f'''
-        {struct_type} layer = {{{point_filters}, depth_filter, point_filters}};
+        {struct_type} layer = {{{point_filters}, depth_filter, point_filters{qparams} }};
         return layer;
-        }}
+}}
         '''
 
         return init_conv_layer

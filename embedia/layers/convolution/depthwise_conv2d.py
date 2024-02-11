@@ -77,6 +77,20 @@ class DepthwiseConv2D(DataLayer):
         return mem_size
 
     def functions_init(self):
+
+        (data_type, data_converter) = self.model.get_type_converter()
+
+        conv_weights = data_converter.fit_transform(self.weights)
+        conv_biases = data_converter.transform(self.biases)
+
+        if self.is_data_quantized():
+            qparams = f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
+        else:
+            qparams = ''
+
+        # add original comment values
+        comm_values = self.options.data_type != ModelDataType.FLOAT
+
         depth_filters, depth_channels, depth_rows, depth_columns = self.weights.shape  # Getting layer info from it's weights
         assert depth_rows == depth_columns  # WORKING WITH SQUARE KERNELS FOR NOW
         depth_kernel_size = depth_rows  # Defining kernel size
@@ -84,7 +98,6 @@ class DepthwiseConv2D(DataLayer):
         # point_filters, point_channels, _, _ = self.point_weights.shape  # Getting layer info from it's weights
 
         struct_type = self.struct_data_type
-        (data_type, macro_converter) = self.model.get_type_converter()
 
         init_conv_layer = f'''
 
@@ -94,15 +107,16 @@ class DepthwiseConv2D(DataLayer):
         d_weights = ""
         for ch in range(depth_channels):
             for f in range(depth_rows):
+
                 d_weights += '\n    '
                 for c in range(depth_columns):
-                    d_weights += f'''{macro_converter(self.weights[0,ch,f,c])}, '''
+                    d_weights += f'''{conv_weights[0,ch,f,c]}, '''
 
             d_weights += '\n  '
         b_weights = ""
         for ch in range(depth_channels):
 
-            b_weights += f'''{macro_converter(self.biases[ch])}, '''
+            b_weights += f'''{conv_biases[ch]}, '''
 
             b_weights += '\n  '
 

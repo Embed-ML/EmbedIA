@@ -48,6 +48,7 @@ typedef struct{
     float  bias;
 }filter_t;
 
+
 typedef struct{
     uint16_t channels;
     uint16_t kernel_size;

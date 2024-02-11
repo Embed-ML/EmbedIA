@@ -1,6 +1,7 @@
 from embedia.layers.data_layer import DataLayer
 from embedia.utils.c_helper import declare_array
 from embedia.model_generator.project_options import ModelDataType
+import numpy as np
 
 
 class Dense(DataLayer):
@@ -31,6 +32,7 @@ class Dense(DataLayer):
     account in the implementation of the initialization function in the
     "functions_init" method
     """
+    support_quantization = False  # support quantized data
 
     def __init__(self, model, layer, options=None, **kwargs):
         super().__init__(model, layer, options, **kwargs)
@@ -94,12 +96,11 @@ class Dense(DataLayer):
         str
             C function for data initialization
         """
-
         weights = self.weights
         biases = self.biases
         name = self.name
         struct_type = self.struct_data_type
-        (data_type, macro_converter) = self.model.get_type_converter()
+        (data_type, data_converter) = self.model.get_type_converter()
 
         (n_input, n_neurons) = weights.shape
 
@@ -108,21 +109,26 @@ class Dense(DataLayer):
 
     static neuron_t neurons[{n_neurons}];
 '''
-        o_code = ""
+        o_code = ''
 
         for neuron_id in range(n_neurons):
 
-            o_weights = declare_array(f'static const {data_type}', f'weights{neuron_id}', macro_converter, weights[:, neuron_id])
+            all_weights = np.concatenate([weights[:, neuron_id], [biases[neuron_id]]])
+            (conv_weights, quant_params) = self.convert_to_embedia_data( data_converter, all_weights )
+
+            o_weights = declare_array(f'static const {data_type}', f'weights{neuron_id}', None, conv_weights[:-1])
 
             o_code += f'''
+    /* {weights[:, neuron_id]} {biases[neuron_id]}*/
     {o_weights};
-    static const neuron_t neuron{neuron_id} = {{weights{neuron_id}, {macro_converter(biases[neuron_id])}}};
+    
+    static const neuron_t neuron{neuron_id} = {{weights{neuron_id}, {conv_weights[-1]} {quant_params} }};
     neurons[{neuron_id}]=neuron{neuron_id};
 '''
         init_dense_layer += o_code
 
         init_dense_layer += f'''
-    dense_layer_t layer= {{{n_neurons}, neurons}};
+    dense_layer_t layer= {{ {n_neurons}, neurons}};
     return layer;
 }}
 '''

@@ -109,7 +109,19 @@ class Conv2D(DataLayer):
             C function for data initialization
         """
 
-        (data_type, macro_converter) = self.model.get_type_converter()
+        (data_type, data_converter) = self.model.get_type_converter()
+
+        conv_weights = data_converter.fit_transform(self.weights)
+        conv_biases = data_converter.transform(self.biases)
+
+        if self.is_data_quantized():
+            qparams = f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
+        else:
+            qparams = ''
+
+        # add original comment values
+        comm_values = self.options.data_type != ModelDataType.FLOAT
+
 
         n_filters, n_channels, n_rows, n_cols = self.weights.shape
         if n_rows != n_cols:  # WORKING WITH SQUARE KERNELS FOR NOW
@@ -129,25 +141,32 @@ class Conv2D(DataLayer):
         static filter_t filters[{n_filters}];
         '''
         for i in range(n_filters):
-            o_weights = ""
+            o_weights = ' '*8
             for ch in range(n_channels):
                 for f in range(n_rows):
-                    o_weights += '\n    '
+                    comm_weights = f'//{ch},{f},0..{n_cols-1}=>'
                     for c in range(n_cols):
-                        o_weights += f'''{macro_converter(self.weights[i, ch, f, c])}, '''
-                o_weights += '\n'
+                        o_weights += f'   {conv_weights[i, ch, f, c]}, '
+                        comm_weights += f'  {self.weights[i, ch, f, c]}, '
+                    o_weights += comm_weights + '\n' + ' '*8
 
+            if comm_values:
+                bias_weight = f' //{self.biases[i]}'
+            else:
+                comm_weights = ''
+                bias_weight = ''
             o_code = f'''
-        static const {data_type} weights{i}[]={{ {o_weights}
+        static const {data_type} weights{i}[]={{
+{o_weights}
         }};
-        static filter_t filter{i} = {{{n_channels}, {kernel_size}, weights{i}, {macro_converter(self.biases[i])}}};
+        static filter_t filter{i} = {{{n_channels}, {kernel_size}, weights{i}, {conv_biases[i]}}}; {bias_weight}
         filters[{i}]=filter{i};
             '''
             text += o_code
         text += f'''
-        conv2d_layer_t layer = {{{n_filters}, filters}};
+        conv2d_layer_t layer = {{{n_filters}, filters{qparams} }};
         return layer;
-        }}
+}}
         '''
         ret += text
 
