@@ -21,6 +21,12 @@
     
   - **Agregar soporte para incorporar modelos completos dentro de modelos de TF/Keras**
     - En TF/Keras, un modelo puede tener otro modelo con capas. Es comun en autoencoders o en modelos grandes donde se repiten bloques.
+
+
+## Soporte para funciones de señales, audio y video
+  - **incorporar funciones para imagenes**
+    - agregar algoritmo de componentes conectados, conversión color y escala de imágenes. 
+
     
 ## Otros/Varios
   - **Actualiza documentación**
@@ -57,6 +63,10 @@
     - Tal vez un datatypes.h con todas las definiciones (fixed8, fixed16, fixed8, quant8, binary, etc.)
     - En embedia.h definir estructuras de datos para todos los tipos(aunque no se usen) vector, matriz, tensor, etc. estos tal vez podrían ir en datatypes.h y dejar solo los tipos especificos en embedia ( que luego tendrá su propia version, embedia_nn.h, embedia_svm.h, lo que sea).
     - unificar en carpetas archivos de implementación similar de datos y renombrar los archivos. Ej en "fixed" tendriamos fixed32.h, fixed16.h y fixed8.h
+   
+  - **Incorporar guardas C++ (extern) a los archivos de C**
+   
+  
 
 
             
