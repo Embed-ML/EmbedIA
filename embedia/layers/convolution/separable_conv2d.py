@@ -114,7 +114,7 @@ class SeparableConv2D(DataLayer):
         o_code = f'''
         static {data_type} depth_weights[]={{{o_weights}
         }};
-        static filter_t depth_filter = {{{depth_channels}, {depth_kernel_size}, depth_weights{qparams} }};
+        static filter_t depth_filter = {{{depth_channels}, {depth_kernel_size}, depth_weights }};
 
         static filter_t point_filters[{point_filters}];
         '''

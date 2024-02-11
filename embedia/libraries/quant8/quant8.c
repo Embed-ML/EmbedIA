@@ -3,7 +3,7 @@
 
 
 
-void quantize_param(float* values, int size, qparam* qp) {
+void quantize_param(float* values, int size, qparam_t* qp) {
     float min_val = values[0];
     float max_val = values[0];
 
@@ -31,7 +31,7 @@ void quantize_param(float* values, int size, qparam* qp) {
 }
 
 // Función para convertir un arreglo de valores flotantes en uno cuantizado
-void quantize_vec(float values[], quant8 qvalues[], int size, qparam qp) {
+void quantize_vec(float values[], quant8 qvalues[], int size, qparam_t qp) {
     for (int i = 0; i < size; ++i) {
         // Cuantizar cada valor flotante usando la escala y el punto cero proporcionados
         float quantized_float =  qp.zp + values[i] / qp.sc;
@@ -48,7 +48,7 @@ void quantize_vec(float values[], quant8 qvalues[], int size, qparam qp) {
 }
 
 // Función para descuantizar un arreglo de valores cuantizados
-void dequantize_vec(quant8 qvalues[], float values[], int size, qparam qp) {
+void dequantize_vec(quant8 qvalues[], float values[], int size, qparam_t qp) {
     for (int i = 0; i < size; ++i) {
         // Descuantizar cada valor cuantizado usando la escala y el punto cero proporcionados
         float dequantized_float = qp.sc * (qvalues[i] - qp.zp);
@@ -59,7 +59,7 @@ void dequantize_vec(quant8 qvalues[], float values[], int size, qparam qp) {
 
 
 
-float mul_add_vec(quant8 a[], qparam qa, quant8 b[], qparam qb, int size){
+float mul_add_vec(quant8 a[], qparam_t qa, quant8 b[], qparam_t qb, int size){
     
     int32_t result = 0;
     uint32_t i;

@@ -96,10 +96,12 @@ PROJECT_LIST = [
     (ProjectType.ARDUINO, ModelDataType.FIXED32, 'AR_F32'),
     (ProjectType.ARDUINO, ModelDataType.FIXED16, 'AR_F16'),
     (ProjectType.ARDUINO, ModelDataType.FIXED8, 'AR_F8'),
+    (ProjectType.ARDUINO, ModelDataType.QUANT8, 'AR_Q8'),
     (ProjectType.CODEBLOCK, ModelDataType.FLOAT, 'CB_FLT'),
     (ProjectType.CODEBLOCK, ModelDataType.FIXED32, 'CB_F32'),
     (ProjectType.CODEBLOCK, ModelDataType.FIXED16, 'CB_F16'),
-    (ProjectType.CODEBLOCK, ModelDataType.FIXED8, 'CB_F8')
+    (ProjectType.CODEBLOCK, ModelDataType.FIXED8, 'CB_F8'),
+    (ProjectType.CODEBLOCK, ModelDataType.QUANT8, 'CB_Q8')
     ]
 
 results = []
@@ -107,11 +109,14 @@ for (p_type, d_type, p_name) in PROJECT_LIST:
     options.project_type = p_type
     options.data_type = d_type
 
+    header_text = f' Project {PROJECT_NAME + p_name} exported in {OUTPUT_FOLDER} '
+    print('\n'+'#'*100)
+    print(header_text.center(100, '#'))
+    print('#'*100)
+
     prj_folder = PROJECT_NAME+p_name
     generator = ProjectGenerator(options)
     generator.create_project(OUTPUT_FOLDER, prj_folder, model, options)
-
-    print('Project', PROJECT_NAME+p_name, 'exported in', OUTPUT_FOLDER, '\n')
 
     if p_type == ProjectType.CODEBLOCK:
         # construct the full path to the project file
@@ -129,8 +134,8 @@ for (p_type, d_type, p_name) in PROJECT_LIST:
 
     results.append((prj_folder, result))
 
-    print(result[1].name, end='\n\n')
+    print(result[1].name+'\n')  #+'\n'+'#'*100+'\n')
 
-print('Test Summary:')
+print('\nTest Summary:')
 for (prj_name, result) in results:
     print(prj_name, result[1].name)

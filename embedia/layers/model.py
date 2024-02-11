@@ -117,24 +117,19 @@ class Model(object):
 
     def identify_target_classes(self):
         layer = self.embedia_layers[-1].layer
-
-        # add code to check y last layer is an activation function
-        # if isinstance(layer, tf.keras.layers.Activation):
-        #
-        #     if layer.activation in [tf.sigmoid, tf.tanh]:
-        #         return 1
-        #     if layer.activation == tf.softmax:
-        #         return self.model.outputs[0].shape[1]
-        if layer.activation is not None:
+        act_fn = ''
+        if hasattr(layer, 'activation') and layer.activation is not None:
             act_fn = layer.activation.__name__.lower()
-            if act_fn in ['sigmoid', 'sigmoidal', 'softsign', 'tanh']:
-                return 1
-            if act_fn == 'softmax':
-                return layer.output_shape[-1]
-        else:
-            # TO DO: layer can be an activation layer
-            return 0
-        return 0
+
+        if act_fn == '':
+            act_fn = layer.__class__.__name__.lower()
+
+        if act_fn in ['sigmoid', 'sigmoidal', 'softsign', 'tanh']:
+                return 1 # binary classification
+        if act_fn == 'softmax':
+            return layer.output_shape[-1] # multiclass classification
+
+        return 0 # regression
 
     def is_data_quantized(self):
         return self.options.data_type == ModelDataType.QUANT8
@@ -203,7 +198,7 @@ typedef char fixed;
 typedef char dfixed;
 typedef char half;
 typedef char quant8;
-typedef char qparam;
+typedef char qparam_t;
 """ + embedia_decl
 
         parser = pcp.CParser()
@@ -238,7 +233,7 @@ typedef char qparam;
             'uint64_t': 8,
             'float': 4,
             'quant8': 1,
-            'qparam': 5,
+            'qparam_t': 5,
             'xBITS': bytes_size,
             'fixed': bytes_size2,
             'dfixed': bytes_size3,

@@ -8,6 +8,16 @@ class CompilerResult(Enum):
     SUCCESS = 1
     WARNING = 2
     ERROR = 3
+    def __str__(self):
+        colors = {
+            CompilerResult.UNKNOWN: '\033[0m',  # Reset color
+            CompilerResult.SUCCESS: '\033[92m',  # Green
+            CompilerResult.WARNING: '\033[93m',  # Yellow
+            CompilerResult.ERROR: '\033[91m'  # Red
+        }
+        return f"{colors[self]}{self.name}{colors[CompilerResult.UNKNOWN]}"
+
+
 
 
 def codeblocks_compile(project_name, codeblocks_path=None, target='Release'):
@@ -94,4 +104,5 @@ def get_arduino_result(result):
         return CompilerResult.ERROR
 
     return CompilerResult.SUCCESS
+
 
