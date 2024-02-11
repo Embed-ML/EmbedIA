@@ -1,4 +1,4 @@
-
+from embedia.model_generator.project_options import ModelDataType
 
 class ActivationFunctions:
 
@@ -27,8 +27,13 @@ class ActivationFunctions:
         return self._base_params(output_name, output_size, qparams)
 
     def _leakyrelu_params(self, output_name, output_size, qparams=''):
-        (data_type, macro_converter) = self.model.get_type_converter()
-        extra_param = f', {macro_converter(self.activation.alpha)}'
+        if self.model.is_data_quantized(): # no make sense to use quantization, use float
+            (data_type, data_converter) = self.model.get_type_converter(ModelDataType.FLOAT)
+        else: # default data type converter
+            (data_type, data_converter) = self.model.get_type_converter()
+
+        alpha = data_converter.fit_transform([self.activation.alpha])
+        extra_param = f', {alpha[0]}'
         return self._base_params(output_name, output_size, qparams) + extra_param
 
     def get_params(self, fnc_name, output_name, output_size, qparams=''):

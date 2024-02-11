@@ -41,7 +41,7 @@ void * swap_alloc(size_t s){
  *  delta => positioning of feature_map inside output.data
  */
 
-void conv2d(filter_t filter, qparam qp, data3d_t input, data3d_t * output, uint32_t delta){
+void conv2d(filter_t filter, qparam_t qp, data3d_t input, data3d_t * output, uint32_t delta){
      uint32_t i,j,k,l,c;
      uint8_t fi;
     float suma, value;
@@ -86,7 +86,7 @@ void conv2d(filter_t filter, qparam qp, data3d_t input, data3d_t * output, uint3
 
 }
 
-static void depthwise(filter_t filter, qparam qp, data3d_t input, data3d_t * output){
+static void depthwise(filter_t filter, qparam_t qp, data3d_t input, data3d_t * output){
     uint32_t i,j,k,l,c;
     float suma, value;
 
@@ -106,7 +106,7 @@ static void depthwise(filter_t filter, qparam qp, data3d_t input, data3d_t * out
     }
 }
 
-static void pointwise(filter_t filter, qparam qp, data3d_t input, data3d_t * output, uint32_t delta){
+static void pointwise(filter_t filter, qparam_t qp, data3d_t input, data3d_t * output, uint32_t delta){
     uint32_t i,j,c;
     float suma, value;
 

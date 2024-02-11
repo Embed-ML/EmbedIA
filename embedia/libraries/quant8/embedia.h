@@ -47,7 +47,7 @@ typedef struct{
 typedef struct{
     uint16_t channels;
     uint16_t kernel_size;
-    quant8  * weights;
+    const quant8  * weights;
     quant8  bias;
 }filter_t;
 
@@ -58,7 +58,7 @@ typedef struct{
 typedef struct{
     uint16_t n_filters;
     filter_t * filters;
-    qparam qparam;
+    qparam_t qparam;
 }conv2d_layer_t;
 
 /*
@@ -70,7 +70,7 @@ typedef struct{
     uint16_t channels;
     uint16_t kernel_size;
     filters_t filters;
-    qparam qparam;
+    qparam_t qparam;
 }depthwise_conv2d_layer_t;
 */
 
@@ -85,7 +85,7 @@ typedef struct{
     uint16_t n_filters;
     filter_t depth_filter;
     filter_t * point_filters;
-    qparam qparam;
+    qparam_t qparam;
 }separable_conv2d_layer_t;
 
 /*
@@ -95,7 +95,7 @@ typedef struct{
 typedef struct{
     const quant8  * weights;
     quant8  bias;
-    qparam  qparam;
+    qparam_t  qparam;
 }neuron_t;
 
 /*
@@ -105,7 +105,7 @@ typedef struct{
 typedef struct{
     uint16_t n_neurons;
     neuron_t * neurons;
-    qparam  qparam;
+    qparam_t  qparam;
 }dense_layer_t;
 
 
@@ -142,7 +142,7 @@ typedef struct {
     uint32_t length;
     const quant8 *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
     const quant8 *std_beta;           // = beta - moving_mean * moving_inv_std_dev
-    qparam  qparam;
+    qparam_t  qparam;
 } batch_normalization_layer_t;
 
 

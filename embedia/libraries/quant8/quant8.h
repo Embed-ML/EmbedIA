@@ -8,7 +8,7 @@ typedef uint8_t quant8;
 typedef struct{
     float sc;
     uint8_t zp;
-} qparam;
+} qparam_t;
 
 
 #define Q_MAX 255
@@ -42,14 +42,14 @@ typedef struct{
 
 
 
-void quantize_param(float* values, int size, qparam* qp);
+void quantize_param(float* values, int size, qparam_t* qp);
 
-void quantize_vec(float values[], quant8 qvalues[], int size, qparam qp);
+void quantize_vec(float values[], quant8 qvalues[], int size, qparam_t qp);
 
-void dequantize_vec(quant8 qvalues[], float values[], int size, qparam qp);
+void dequantize_vec(quant8 qvalues[], float values[], int size, qparam_t qp);
 
 
-float mul_add_vec(quant8 a[], qparam qa, quant8 b[], qparam qb, int size);
+float mul_add_vec(quant8 a[], qparam_t qa, quant8 b[], qparam_t qb, int size);
 
 
 #define Q_CUT(qv) ( (qv > Q_MAX)? Q_MAX : ( (qv < 0) ? 0 : (quant8)qv ) )
