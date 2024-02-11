@@ -45,7 +45,6 @@ class Model(object):
             layer = dict_layers[type(obj)](self, obj, self.options)
         except KeyError:
             layer = UnimplementedLayer(self, obj, self.options)
-
         return layer
 
     def get_previous_layer(self, layer):

@@ -9,7 +9,8 @@
 #include <math.h>
 #include "fixed.h"
 
-{includes}
+#include <stdlib.h>
+
 
 #define PRINT_RESULTS 0
 

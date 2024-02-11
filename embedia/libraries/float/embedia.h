@@ -152,6 +152,40 @@ typedef struct {
 } batch_normalization_layer_t;
 
 
+/*
+ * spectrogram_layer_t struct
+ * 
+ * Defines the necessary configuration to generate a spectrogram from an 
+ * audio signal. It groups all the key parameters into a single data type 
+ * to facilitate passing to the processing functions.
+ * 
+ * - convert_to_db: indicates if the output should be converted to decibels.
+ * - n_fft: FFT size.
+ * - n_mels: number of mel bands.
+ * - frame_length: frame length in samples. 
+ * - sample_rate: sampling rate.
+ * - n_blocks: number of frames.
+ * - n_fft_table: 
+ * - noverlap: overlap between frames.
+ * - step: indicates the jump or advance in samples between each frame.
+ * - len_nfft_nmels: length of the range over which the FFT values ​​are averaged to map to each mel band.
+ * - spec_size: total spectrogram size in samples.
+ * - ts_us: time step in microseconds between samples.
+ */
+typedef struct {
+    uint16_t convert_to_db;
+    uint16_t n_fft;
+    uint16_t n_mels;
+    uint16_t frame_length;
+    uint16_t sample_rate;
+    uint16_t n_blocks;
+    uint16_t n_fft_table;
+    uint16_t noverlap;
+    uint16_t step;
+    uint16_t len_nfft_nmels;
+    uint16_t spec_size;
+    uint16_t ts_us;
+} spectrogram_layer_t;
 
 /* LIBRARY FUNCTIONS PROTOTYPES */
 
@@ -298,23 +332,64 @@ void normalization2(normalization_layer_t s, data1d_t input, data1d_t * output);
 
 #define max_abs_norm_layer(norm, input, output) normalization2(norm, input, output)
 
-
+/* Batch normalization */
 void batch_normalization_layer(batch_normalization_layer_t norm, uint32_t length, float *data);
-
 
 void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *data);
 
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data);
 
 
-/* Tranformation Layers
- *
- */
+/* Tranformation Layers */
 
-/* Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
+/*  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
    Usually required for first convolutional layer
 */
 void image_adapt_layer(data3d_t input, data3d_t * output);
 
+
+/* Signal processing */
+
+/* 
+ * void fft(float data_re[], float data_im[], const unsigned int N)
+ * Performs a Fast Fourier Transform (FFT) on the complex data passed as parameters.
+ * Parameters:
+ *   - data_re: Array containing the real part of the complex data.
+ *   - data_im: Array containing the imaginary part of the complex data. 
+ *   - N: Amount of samples to perform the FFT over.
+ */
+void fft(float data_re[], float data_im[],const unsigned int N);
+
+/*
+ * void rearrange(float data_re[], float data_im[], const unsigned int N)   
+ * Performs the necessary reordering of the data before applying the FFT.
+ * Parameters:
+ *   - data_re: Array containing the real part of the complex data.
+ *   - data_im: Array containing the imaginary part of the complex data. 
+ *   - N: Amount of samples to perform the FFT over.
+ */
+void rearrange(float data_re[],float data_im[],const unsigned int N);
+
+/*
+ * void compute(float data_re[], float data_im[], const unsigned int N)
+ * Contains the FFT calculation core, applying the Fourier transforms for 
+ * each recursive step.
+ * Parameters: 
+ *   - data_re: Array containing the real part of the complex data.
+ *   - data_im: Array containing the imaginary part of the complex data. 
+ *   - N: Amount of samples to perform the FFT over.
+ */
+void compute(float data_re[],float data_im[],const unsigned int N);
+
+/*
+ * void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t *output)
+ * Generates the spectrogram from the input signal by applying FFTs
+ * and further processing.
+ * Parameters:
+ *   - config: Spectrogram layer configuration
+ *   - input:  1D input signal  
+ *   - output: 3D output spectrogram (W = n_mels, H = b_blocks, Ch = 1)
+ */
+void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t * output);
 
 #endif

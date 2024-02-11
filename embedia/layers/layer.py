@@ -20,13 +20,37 @@ class LayerInfo(object):
 
         self._update_properties()
 
+    # def _update_properties(self):
+    #     k_layer = self.layer.layer
+    #     self.class_name = k_layer.__class__.__name__
+    #     self.layer_name = k_layer.name
+    #     if hasattr(k_layer, 'activation') and k_layer.activation is not None:
+    #         activation = ActivationFunctions(None, k_layer.activation)
+    #         self.activation = activation.get_function_name()
+    #     else:
+    #         self.activation = None
+
+    #     self.output_shape = self.layer.get_output_shape()
+
+    #     trainable = int(np.sum([K.count_params(p) for p in k_layer.trainable_weights]))
+
+    #     non_trainable = int(np.sum([K.count_params(p) for p in k_layer.non_trainable_weights]))
+    #     self.params = (trainable, non_trainable)
+
+    #     self.macs_ops = self.layer.calculate_MAC()
+
+    #     self.memory = self.layer.calculate_memory(self.types_dict)
+
+    # 
     def _update_properties(self):
         k_layer = self.layer.layer
+
         self.class_name = k_layer.__class__.__name__
         if hasattr(k_layer, 'name'):
             self.layer_name = k_layer.name
         else:
             self.layer_name = self.class_name
+
 
         if hasattr(k_layer, 'activation') and k_layer.activation is not None:
             activation = ActivationFunctions(None, k_layer.activation)

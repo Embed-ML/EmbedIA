@@ -51,8 +51,7 @@ static void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t 
             for(c=0; c<filter.channels; c++){
                 for(k=0; k<filter.kernel_size; k++){
                     for(l=0; l<filter.kernel_size; l++){
-                        suma += (filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l]
-                                * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
+                        suma += (filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l] * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
                     }
                 }
             }
@@ -684,15 +683,15 @@ void compute(float data_re[], float data_im[], const unsigned int N){
   }
 }
 
-/*
- * void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t *output)
- * Generates the spectrogram from the input signal by applying FFTs
- * and further processing.
- * Parameters:
- *   - config: Spectrogram layer configuration
- *   - input:  1D input signal  
- *   - output: 3D output spectrogram (W = n_mels, H = b_blocks, Ch = 1)
- */
+ /*
+  * void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t *output)
+  * Generates the spectrogram from the input signal by applying FFTs
+  * and further processing.
+  * Parameters:
+  *   - config: Spectrogram layer configuration
+  *   - input:  1D input signal  
+  *   - output: 3D output spectrogram (W = n_mels, H = b_blocks, Ch = 1)
+  */
 void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t * output){
     register int i,j,k;
     float aux;

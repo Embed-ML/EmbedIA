@@ -51,8 +51,7 @@ static void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t 
             for(c=0; c<filter.channels; c++){
                 for(k=0; k<filter.kernel_size; k++){
                     for(l=0; l<filter.kernel_size; l++){
-                        suma += (filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l]
-                                * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
+                        suma += (filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l] * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
                     }
                 }
             }
@@ -599,29 +598,11 @@ void image_adapt_layer(data3d_t input, data3d_t * output){
 
 
 /* ------------------------------ Spectrogram ------------------------------ */
-
-/* 
- * void fft(float data_re[], float data_im[], const unsigned int N)
- * Performs a Fast Fourier Transform (FFT) on the complex data passed as parameters.
- * Parameters:
- *   - data_re: Array containing the real part of the complex data.
- *   - data_im: Array containing the imaginary part of the complex data. 
- *   - N: Amount of samples to perform the FFT over.
- * First performs a reordering of the data and then applies the FFT calculations.
- */
 void fft(float data_re[], float data_im[], const unsigned int N){
     rearrange(data_re, data_im, N);
     compute(data_re, data_im, N);
 }
 
-/*
- * void rearrange(float data_re[], float data_im[], const unsigned int N)   
- * Performs the necessary reordering of the data before applying the FFT.
- * Parameters:
- *   - data_re: Array containing the real part of the complex data.
- *   - data_im: Array containing the imaginary part of the complex data. 
- *   - N: Amount of samples to perform the FFT over.
- */
 void rearrange(float data_re[], float data_im[], const unsigned int N){
   register unsigned int position;
   unsigned int target = 0;
@@ -642,15 +623,6 @@ void rearrange(float data_re[], float data_im[], const unsigned int N){
     }
 }
 
-/*
- * void compute(float data_re[], float data_im[], const unsigned int N)
- * Contains the FFT calculation core, applying the Fourier transforms for 
- * each recursive step.
- * Parameters: 
- *   - data_re: Array containing the real part of the complex data.
- *   - data_im: Array containing the imaginary part of the complex data. 
- *   - N: Amount of samples to perform the FFT over.
- */
 void compute(float data_re[], float data_im[], const unsigned int N){
   const float pi = -3.14159265358979323846;
   register unsigned int step,group,pair;
@@ -684,15 +656,6 @@ void compute(float data_re[], float data_im[], const unsigned int N){
   }
 }
 
-/*
- * void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t *output)
- * Generates the spectrogram from the input signal by applying FFTs
- * and further processing.
- * Parameters:
- *   - config: Spectrogram layer configuration
- *   - input:  1D input signal  
- *   - output: 3D output spectrogram (W = n_mels, H = b_blocks, Ch = 1)
- */
 void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t * output){
     register int i,j,k;
     float aux;
@@ -706,24 +669,24 @@ void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t * o
     output->data     = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
     
     for(i=0;i<config.n_blocks;i++){
-        // Copy the values ​​to the input of the fft
+        // Copiar los valores a la entrada de la fft
         const unsigned int start = i*config.step;
         for(j=0;j<config.n_fft;j++){
             data_re[j] = input.data[start+j];
             data_im[j] = 0;
         }
 
-        // Calculate fft
+        // Realizar fft
         fft(data_re,data_im,config.n_fft);
 
-        // Get the module of the fft
+        // Calcular el modulo de la fft
         for(j=0;j<config.n_fft;j++){
             const float aux_re = data_re[j];
             const float aux_im = data_im[j];
             data_re[j] = sqrt(aux_re*aux_re + aux_im*aux_im);
         }
 
-        // N_MELS processing
+        // Procesamiento de N_MELS
         const unsigned int start2 = i*config.n_mels;
         for(j=0;j<config.n_mels;j++){
             const unsigned int start3 = j*config.len_nfft_nmels;
