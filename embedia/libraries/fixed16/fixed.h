@@ -3,11 +3,11 @@
 
 #include <stdint.h>
 
-typedef int16_t fixed;
-typedef int32_t dfixed;
+typedef int8_t fixed;
+typedef int16_t dfixed;
 
-#define FIX_SIZE 16
-#define FIX_FRC_SZ 9
+#define FIX_SIZE 8
+#define FIX_FRC_SZ 3
 #define FIX_INT_SZ (FIX_SIZE - FIX_FRC_SZ)
 #define FIX_FRC_MSK  (((fixed)1 << FIX_FRC_SZ) - 1)
 
@@ -17,9 +17,9 @@ typedef int32_t dfixed;
 #define FIX_ZERO 0
 #define FIX_ONE ((fixed)((fixed)1 << FIX_FRC_SZ))
 #define FIX_TWO (FIX_ONE + FIX_ONE)
-// FIX_EXP_MAX = ln(FIX_MAX), recalculate if FIX_FRC_SZ change
-#define FIX_EXP_MAX FLOAT_TO_FIXED(4.15888308336)
 #define FIX_E  FLOAT_TO_FIXED(2.7182818284590452354)
+// FIX_EXP_MAX = ln(FIX_MAX), recalculate if FIX_FRC_SZ change
+#define FIX_EXP_MAX FLOAT_TO_FIXED(2.77258872224)
 #define FIX_PI FLOAT_TO_FIXED(3.14159265358979323846)
 #define FIX_MAX (fixed)(((dfixed)1 << (FIX_SIZE-1)) -1)
 #define FIX_MIN (-FIX_MAX)

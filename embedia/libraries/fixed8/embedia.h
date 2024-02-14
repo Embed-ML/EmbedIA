@@ -61,6 +61,17 @@ typedef struct{
 }conv2d_layer_t;
 
 /*
+ * Structure that models a depthwise convolutional 2d layer.
+ * Specifies the number of channels, kernel size, vector of weights and bias.
+ */
+typedef struct{
+    uint16_t channels;
+    uint16_t kernel_size;
+    const fixed  * weights;
+    const fixed  * bias;
+}depthwise_conv2d_layer_t;
+
+/*
  * Structure that models a separable layer...
  * Specifies the number of filters (uint16_t n_filters,
  * a filter of the specified size (filter_t depth_filter) 
@@ -197,6 +208,16 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
  */
 void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
+/*
+ * depthwise_conv2d_layer()
+ *  Function in charge of applying the depthwise of a filter layer with bias (depthwise_conv2d_layer_t) on a given input data set.
+ * Parameters:
+ *  layer => depthwise layer with loaded filters.
+ *  input => input data of type data3d_t
+ *  *output => pointer to the data3d_t structure where the result will be saved.
+ */
+
+void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
 /* 
  * dense_layer()
@@ -308,10 +329,14 @@ void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *da
  *
  */
 
-/* Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
-   Usually required for first convolutional layer
-*/
-void image_adapt_layer(data3d_t input, data3d_t * output);
+/* channel_adapt_layer()
+ *  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
+ *  Usually required for first convolutional layer
+ * Parameters:
+ *  input   => input data of type data3d_t.
+ *  *output => pointer to the data3d_t structure where the result will be stored.
+ */
+void channel_adapt_layer(data3d_t input, data3d_t * output);
 
 /* Signal processing */
 
@@ -356,6 +381,5 @@ void compute(float data_re[],float data_im[],const unsigned int N);
  *   - output: 3D output spectrogram (W = n_mels, H = b_blocks, Ch = 1)
  */
 void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t * output);
-
 
 #endif

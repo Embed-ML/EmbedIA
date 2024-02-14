@@ -54,7 +54,7 @@ typedef struct{
     uint16_t kernel_size;
     const float  * weights;
     const float  * bias;
-}filters_t;
+}dw_filter_t;
 
 /*
  * Structure that models a convolutional layer.
@@ -76,13 +76,14 @@ typedef struct{
 }conv2d_layer_t;
 
 /*
- * Structure that models a convolutional layer.
- * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters).
+ * Structure that models a depthwise convolutional 2d layer.
+ * Specifies the number of channels, kernel size, vector of weights and bias.
  */
 typedef struct{
     uint16_t channels;
     uint16_t kernel_size;
-    filters_t filters;
+    const float  * weights;
+    const float  * bias;
 }depthwise_conv2d_layer_t;
 
 /*
@@ -225,7 +226,7 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
 
 /*
  * depthwise_conv2d_layer()
- *  Function in charge of applying the depthwise of a filter layer (conv_layer_t) on a given input data set.
+ *  Function in charge of applying the depthwise of a filter layer with bias (depthwise_conv2d_layer_t) on a given input data set.
  * Parameters:
  *  layer => depthwise layer with loaded filters.
  *  input => input data of type data3d_t
@@ -345,7 +346,7 @@ void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *da
 /*  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
    Usually required for first convolutional layer
 */
-void image_adapt_layer(data3d_t input, data3d_t * output);
+void channel_adapt_layer(data3d_t input, data3d_t * output);
 
 
 /* Signal processing */

@@ -871,7 +871,7 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
    Usually required for first convolutional layer
 */
 
-/* image_adapt_layer()
+/* channel_adapt_layer()
  *  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
  *  Usually required for first convolutional layer
  * Parameters:
@@ -879,7 +879,7 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
  *  *output => pointer to the data3d_t structure where the result will be stored.
  */
 
-void image_adapt_layer(data3d_t input, data3d_t * output){
+void channel_adapt_layer(data3d_t input, data3d_t * output){
 
     uint32_t i, j, c, l;
 

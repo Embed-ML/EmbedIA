@@ -97,6 +97,8 @@ class SeparableConv2D(DataLayer):
         else:
             qparams = ''
 
+        comm_values = self.options.data_type != ModelDataType.FLOAT # add original values as comment?
+        identation = ' ' * 12
         init_conv_layer = f'''
 
 {struct_type} init_{self.name}_data(void){{
@@ -104,12 +106,16 @@ class SeparableConv2D(DataLayer):
         '''
         o_weights = '\n'
         for ch in range(depth_channels):
-            for f in range(depth_rows):
-                o_weights += ' '*12
+            for r in range(depth_rows):
+                o_weights += identation
                 for c in range(depth_columns):
-                    o_weights += f'''{conv_depth_weights[0,ch,f,c]}, '''
-                comm_weights = f'/*{ch},{f},0..{depth_columns - 1} =>{self.depth_weights[0, ch, f, 0:depth_columns]}*/'
-                o_weights += comm_weights + '\n'
+                    o_weights += f'''{conv_depth_weights[0,ch,r,c]}, '''
+                if comm_values:
+                    o_weights += f'/* {self.depth_weights[0, ch, r, 0:depth_columns]} */'
+                o_weights += '\n'
+
+        id = o_weights.rfind(',')
+        o_weights = o_weights[0:id] + o_weights[id + 1:]  # remove last comma
 
         o_code = f'''
         static {data_type} depth_weights[]={{{o_weights}
@@ -123,10 +129,15 @@ class SeparableConv2D(DataLayer):
         for i in range(point_filters):
             o_weights = ""
             for ch in range(point_channels):
-                o_weights+=f'''{conv_point_weights[i,ch,0,0]}, '''
-            o_weights = o_weights[0:-2] # remove las comma
-            comm_weights = f' /*{i},0..{point_channels-1} =>{self.point_weights[i, ch, 0, 0:point_channels]}*/'
-            comm_bias = f' /*{self.biases[i]}*/'
+                o_weights+= f'''{conv_point_weights[i,ch,0,0]}, '''
+            # o_weights = o_weights[0:-2] # remove las comma
+            if comm_values:
+                comm_weights = f' /* {self.point_weights[i, ch, 0, 0:point_channels]} */'
+                comm_bias = f' /* {self.biases[i]} */'
+            else:
+                comm_weights = ''
+                comm_bias = ''
+
             o_code = f'''
         static {data_type} point_weights{i}[]={{{o_weights}{comm_weights}
         }};
@@ -169,14 +180,4 @@ class SeparableConv2D(DataLayer):
             processing of the layer in the file "embedia.c".
 
         """
-        code = ''
-        if (self.layer.data_format == 'channels_last' and
-                # len(self.get_input_shape()) >= 3 and
-                self.get_input_shape()[-1] >= 2 and
-                self.model.firstLayerOfItsclass(self)):
-            code += f'''// convert image for first EmbedIA Conv2d layer
-image_adapt_layer({input_name}, &{output_name});
-{input_name} = {output_name};
-
-'''
-        return code + f'''separable_conv2d_layer({self.name}_data, {input_name}, &{output_name});'''
+        return f'''separable_conv2d_layer({self.name}_data, {input_name}, &{output_name});'''

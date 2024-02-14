@@ -1,4 +1,5 @@
 from embedia.model_generator.project_options import ModelDataType
+import re
 
 class ActivationFunctions:
 
@@ -44,7 +45,9 @@ class ActivationFunctions:
     def get_function_name(self):
         # activation functions may be objects or functions
         if hasattr(self.activation, '__name__'):
-            return self.activation.__name__.lower()
+            name = self.activation.__name__.lower()
+            name = re.sub(r'_[^_]*$', '', name) # delete text after underscore. Ej: softmax_v2 => softmax
+            return name
         return self.activation.__class__.__name__.lower()
 
     def predict(self, output_name, var_output_size, qparams=''):

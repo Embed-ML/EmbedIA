@@ -80,13 +80,20 @@ class DepthwiseConv2D(DataLayer):
 
         (data_type, data_converter) = self.model.get_type_converter()
 
-        conv_weights = data_converter.fit_transform(self.weights)
-        conv_biases = data_converter.transform(self.biases)
+        # data_converter.fit(np.concatenate((self.weights.ravel(), self.biases.ravel())))
+        #
+        # conv_weights = data_converter.transform(self.weights)
+        # conv_biases = data_converter.transform(self.biases)
 
+        qparams = ''
+
+        conv_weights = data_converter.fit_transform(self.weights)
         if self.is_data_quantized():
-            qparams = f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
-        else:
-            qparams = ''
+            qparams += f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
+        conv_biases = data_converter.fit_transform(self.biases)
+        if self.is_data_quantized():
+            qparams += f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
+
 
         # add original comment values
         comm_values = self.options.data_type != ModelDataType.FLOAT
@@ -99,44 +106,48 @@ class DepthwiseConv2D(DataLayer):
 
         struct_type = self.struct_data_type
 
+        comm_values = self.options.data_type != ModelDataType.FLOAT  # add original values as comment?
+        identation = ' '*8
+
         init_conv_layer = f'''
-
 {struct_type} init_{self.name}_data(void){{
-
-        '''
-        d_weights = ""
+'''
+        d_weights = ''
         for ch in range(depth_channels):
-            for f in range(depth_rows):
-
-                d_weights += '\n    '
+            for r in range(depth_rows):
+                d_weights += '\n' + identation
                 for c in range(depth_columns):
-                    d_weights += f'''{conv_weights[0,ch,f,c]}, '''
+                    d_weights += f'''{conv_weights[0,ch,r,c]}, '''
+                if comm_values:
+                    d_weights += f'/* {self.weights[0, ch, r, 0:depth_columns]} */'
+            d_weights += '\n'
 
-            d_weights += '\n  '
-        b_weights = ""
+        if comm_values:
+            id = d_weights.rfind(',')
+            d_weights = d_weights[0:id] + d_weights[id+1:] # remove last comma
+
+        b_weights = '\n'
         for ch in range(depth_channels):
-
-            b_weights += f'''{conv_biases[ch]}, '''
-
-            b_weights += '\n  '
+            b_weights += identation + f'{conv_biases[ch]}, '
+            if comm_values:
+                b_weights += f'/* {self.biases[ch]} */'
+            b_weights += '\n'
+        id = b_weights.rfind(',')
+        b_weights = b_weights[0:id] + b_weights[id+1:] # remove last comma
 
         o_code = f'''
-        static const {data_type} weights[]={{{d_weights}
-        }};
-        static const {data_type} biases[]={{{b_weights}
-        }};
-
-        static filters_t depth_filter = {{{depth_channels}, {depth_kernel_size}, weights, biases}};
-
-        '''
+    static const {data_type} weights[]={{{d_weights}    }};
+    static const {data_type} biases[]={{{b_weights}    }};
+'''
         init_conv_layer += o_code
 
         # analizar lo que sigue
         init_conv_layer += f'''
-        {struct_type} layer = {{ depth_filter }};
-        return layer;
-        }}
-        '''
+    {struct_type} layer = {{{depth_channels}, {depth_kernel_size}, weights, biases{qparams} }};
+        
+    return layer;
+}}
+'''
 
         return init_conv_layer
 
@@ -166,14 +177,5 @@ class DepthwiseConv2D(DataLayer):
             processing of the layer in the file "embedia.c".
 
         """
-        code = ''
-        if (self.layer.data_format == 'channels_last' and
-                # len(self.get_input_shape()) >= 3 and
-                self.get_input_shape()[-1] >= 2 and
-                self.model.firstLayerOfItsclass(self)):
-            code += f'''// convert image for first EmbedIA Conv2d layer
-image_adapt_layer({input_name}, &{output_name});
-{input_name} = {output_name};
 
-'''
-        return code + f'''depthwise_conv2d_layer({self.name}_data, {input_name}, &{output_name});'''
+        return f'''depthwise_conv2d_layer({self.name}_data, {input_name}, &{output_name});'''

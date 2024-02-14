@@ -319,14 +319,7 @@ class QuantConv2D(DataLayer):
 
         """
 
-        if len(self.get_input_shape()) >= 3 and self.model.firstLayerOfItsclass(self):
-            code = f'''    // convert image for first EmbedIA Conv2d layer
-    image_adapt_layer({input_name}, &{output_name});
-    {input_name} = {output_name};
-
- '''
-        else:
-            code = ''
+        code = ''
 
         if self.tipo_conv == 0:
             # conv normal
