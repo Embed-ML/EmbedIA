@@ -22,7 +22,6 @@
   - **Agregar soporte para incorporar modelos completos dentro de modelos de TF/Keras**
     - En TF/Keras, un modelo puede tener otro modelo con capas. Es comun en autoencoders o en modelos grandes donde se repiten bloques.
 
-
 ## Soporte para funciones de señales, audio y video
   - **incorporar funciones para imagenes**
     - agregar algoritmo de componentes conectados, conversión color y escala de imágenes. 

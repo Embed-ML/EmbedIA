@@ -43,6 +43,10 @@
             <Option compilerVar="CC" />
         </Unit>
         <Unit filename="mnist_model.h" />
+        <Unit filename="fixed.c">
+            <Option compilerVar="CC" />
+        </Unit>
+        <Unit filename="fixed.h" />
         <Unit filename="embedia_debug.c">
             <Option compilerVar="CC" />
         </Unit>

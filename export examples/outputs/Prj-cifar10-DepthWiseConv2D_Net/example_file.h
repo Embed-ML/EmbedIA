@@ -10,6 +10,7 @@
 #define SELECT_SAMPLE 0
 
 #if SELECT_SAMPLE == 0
+        
 uint16_t sample_data_id = 3;
 
 static float sample_data[]= {
@@ -88,6 +89,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 1
+        
 uint16_t sample_data_id = 8;
 
 static float sample_data[]= {
@@ -166,6 +168,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 2
+        
 uint16_t sample_data_id = 8;
 
 static float sample_data[]= {
@@ -244,6 +247,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 3
+        
 uint16_t sample_data_id = 0;
 
 static float sample_data[]= {
@@ -322,6 +326,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 4
+        
 uint16_t sample_data_id = 6;
 
 static float sample_data[]= {
@@ -400,6 +405,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 5
+        
 uint16_t sample_data_id = 6;
 
 static float sample_data[]= {
@@ -478,6 +484,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 6
+        
 uint16_t sample_data_id = 1;
 
 static float sample_data[]= {
@@ -559,6 +566,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 7
+        
 uint16_t sample_data_id = 6;
 
 static float sample_data[]= {
@@ -637,6 +645,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 8
+        
 uint16_t sample_data_id = 3;
 
 static float sample_data[]= {
@@ -714,6 +723,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 9
+        
 uint16_t sample_data_id = 1;
 
 static float sample_data[]= {
@@ -791,6 +801,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 10
+        
 uint16_t sample_data_id = 0;
 
 static float sample_data[]= {
@@ -867,6 +878,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 11
+        
 uint16_t sample_data_id = 9;
 
 static float sample_data[]= {
@@ -944,6 +956,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 12
+        
 uint16_t sample_data_id = 5;
 
 static float sample_data[]= {
@@ -1023,6 +1036,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 13
+        
 uint16_t sample_data_id = 7;
 
 static float sample_data[]= {
@@ -1104,6 +1118,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 14
+        
 uint16_t sample_data_id = 9;
 
 static float sample_data[]= {
@@ -1182,6 +1197,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 15
+        
 uint16_t sample_data_id = 8;
 
 static float sample_data[]= {
@@ -1260,6 +1276,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 16
+        
 uint16_t sample_data_id = 5;
 
 static float sample_data[]= {
@@ -1338,6 +1355,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 17
+        
 uint16_t sample_data_id = 7;
 
 static float sample_data[]= {
@@ -1415,6 +1433,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 18
+        
 uint16_t sample_data_id = 8;
 
 static float sample_data[]= {
@@ -1494,6 +1513,7 @@ static float sample_data[]= {
 
 #endif
 #if SELECT_SAMPLE == 19
+        
 uint16_t sample_data_id = 6;
 
 static float sample_data[]= {

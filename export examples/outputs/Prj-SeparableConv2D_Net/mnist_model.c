@@ -27,7 +27,7 @@ void model_predict(data3d_t input, data1d_t * output){
   
     prepare_buffers();
     
-    //*************** LAYER 0 **************//
+    //******************** LAYER 0 *******************//
     // Layer name: separable_conv2d
     data3d_t output0;
     separable_conv2d_layer(separable_conv2d_data, input, &output0);
@@ -36,7 +36,7 @@ void model_predict(data3d_t input, data1d_t * output){
     // Debug function for layer separable_conv2d
     print_data3d_t("separable_conv2d", output0);
     
-    //*************** LAYER 1 **************//
+    //******************** LAYER 1 *******************//
     // Layer name: separable_conv2d_1
     input = output0;
     separable_conv2d_layer(separable_conv2d_1_data, input, &output0);
@@ -45,7 +45,7 @@ void model_predict(data3d_t input, data1d_t * output){
     // Debug function for layer separable_conv2d_1
     print_data3d_t("separable_conv2d_1", output0);
     
-    //*************** LAYER 2 **************//
+    //******************** LAYER 2 *******************//
     // Layer name: max_pooling2d
     input = output0;
     static const pooling2d_layer_t max_pooling2d_data = { 3, 3 };
@@ -53,7 +53,7 @@ void model_predict(data3d_t input, data1d_t * output){
     // Debug function for layer max_pooling2d
     print_data3d_t("max_pooling2d", output0);
     
-    //*************** LAYER 3 **************//
+    //******************** LAYER 3 *******************//
     // Layer name: flatten
     input = output0;
     data1d_t output1;
@@ -61,7 +61,7 @@ void model_predict(data3d_t input, data1d_t * output){
     // Debug function for layer flatten
     print_data1d_t("flatten", output1);
     
-    //*************** LAYER 4 **************//
+    //******************** LAYER 4 *******************//
     // Layer name: dense
     data1d_t input1;
     input1 = output1;
@@ -72,7 +72,7 @@ void model_predict(data3d_t input, data1d_t * output){
     // Debug function for layer dense
     print_data1d_t("dense", output1);
     
-    //*************** LAYER 5 **************//
+    //******************** LAYER 5 *******************//
     // Layer name: dense_1
     input1 = output1;
     dense_layer(dense_1_data, input1, &output1);
@@ -105,53 +105,53 @@ separable_conv2d_layer_t init_separable_conv2d_data(void){
 
         
         static quant8 depth_weights[]={
-            203, 203, 237, /*0,0,0..2 =>[0.83190644 0.83000493 1.17986286]*/
-            162, 199, 161, /*0,1,0..2 =>[0.41264829 0.79389781 0.3996104 ]*/
-            154, 58, 55, /*0,2,0..2 =>[ 0.32384062 -0.6520049  -0.68586105]*/
+            203, 203, 237, /* [0.83190644 0.83000493 1.17986286] */
+            162, 199, 161, /* [0.41264829 0.79389781 0.3996104 ] */
+            154, 58, 55 /* [ 0.32384062 -0.6520049  -0.68586105] */
 
         };
-        static filter_t depth_filter = {1, 3, depth_weights,{ 0.01025700849645278, 122 } };
+        static filter_t depth_filter = {1, 3, depth_weights };
 
         static filter_t point_filters[8];
         
-        static quant8 point_weights0[]={58 /*0,0..0 =>[-0.65324301]*/
+        static quant8 point_weights0[]={58,  /* [-0.65324301] */
         };
-        static filter_t point_filter0 = {1, 1, point_weights0, 165 /*0.43785345554351807*/};
+        static filter_t point_filter0 = {1, 1, point_weights0, 165 /* 0.43785345554351807 */};
         point_filters[0] = point_filter0;
         
-        static quant8 point_weights1[]={177 /*1,0..0 =>[0.56669021]*/
+        static quant8 point_weights1[]={177,  /* [0.56669021] */
         };
-        static filter_t point_filter1 = {1, 1, point_weights1, 122 /*-0.001160576706752181*/};
+        static filter_t point_filter1 = {1, 1, point_weights1, 122 /* -0.001160576706752181 */};
         point_filters[1] = point_filter1;
         
-        static quant8 point_weights2[]={255 /*2,0..0 =>[1.36080086]*/
+        static quant8 point_weights2[]={255,  /* [1.36080086] */
         };
-        static filter_t point_filter2 = {1, 1, point_weights2, 191 /*0.7038905620574951*/};
+        static filter_t point_filter2 = {1, 1, point_weights2, 191 /* 0.7038905620574951 */};
         point_filters[2] = point_filter2;
         
-        static quant8 point_weights3[]={22 /*3,0..0 =>[-1.02675223]*/
+        static quant8 point_weights3[]={22,  /* [-1.02675223] */
         };
-        static filter_t point_filter3 = {1, 1, point_weights3, 172 /*0.5100281238555908*/};
+        static filter_t point_filter3 = {1, 1, point_weights3, 172 /* 0.5100281238555908 */};
         point_filters[3] = point_filter3;
         
-        static quant8 point_weights4[]={11 /*4,0..0 =>[-1.14361799]*/
+        static quant8 point_weights4[]={11,  /* [-1.14361799] */
         };
-        static filter_t point_filter4 = {1, 1, point_weights4, 176 /*0.5507919192314148*/};
+        static filter_t point_filter4 = {1, 1, point_weights4, 176 /* 0.5507919192314148 */};
         point_filters[4] = point_filter4;
         
-        static quant8 point_weights5[]={229 /*5,0..0 =>[1.09591758]*/
+        static quant8 point_weights5[]={229,  /* [1.09591758] */
         };
-        static filter_t point_filter5 = {1, 1, point_weights5, 130 /*0.07805261015892029*/};
+        static filter_t point_filter5 = {1, 1, point_weights5, 130 /* 0.07805261015892029 */};
         point_filters[5] = point_filter5;
         
-        static quant8 point_weights6[]={0 /*6,0..0 =>[-1.2547363]*/
+        static quant8 point_weights6[]={0,  /* [-1.2547363] */
         };
-        static filter_t point_filter6 = {1, 1, point_weights6, 148 /*0.26225149631500244*/};
+        static filter_t point_filter6 = {1, 1, point_weights6, 148 /* 0.26225149631500244 */};
         point_filters[6] = point_filter6;
         
-        static quant8 point_weights7[]={181 /*7,0..0 =>[0.60078889]*/
+        static quant8 point_weights7[]={181,  /* [0.60078889] */
         };
-        static filter_t point_filter7 = {1, 1, point_weights7, 134 /*0.12709321081638336*/};
+        static filter_t point_filter7 = {1, 1, point_weights7, 134 /* 0.12709321081638336 */};
         point_filters[7] = point_filter7;
         
         separable_conv2d_layer_t layer = {8, depth_filter, point_filters,{ 0.01025700849645278, 122 } };
@@ -163,74 +163,74 @@ separable_conv2d_layer_t init_separable_conv2d_1_data(void){
 
         
         static quant8 depth_weights[]={
-            149, 189, 137, /*0,0,0..2 =>[0.34120661 0.82084858 0.19893692]*/
-            130, 202, 93, /*0,1,0..2 =>[ 0.121149    0.97967374 -0.32696566]*/
-            213, 135, 137, /*0,2,0..2 =>[1.11254287 0.17682569 0.20230146]*/
-            94, 92, 117, /*1,0,0..2 =>[-0.30999798 -0.33382654 -0.0374228 ]*/
-            114, 114, 129, /*1,1,0..2 =>[-0.07638337 -0.0734017   0.10372803]*/
-            92, 94, 76, /*1,2,0..2 =>[-0.33138749 -0.3098934  -0.53016078]*/
-            116, 119, 97, /*2,0,0..2 =>[-0.04586065 -0.01621587 -0.2772235 ]*/
-            154, 97, 47, /*2,1,0..2 =>[ 0.40268517 -0.27670592 -0.86656117]*/
-            146, 174, 143, /*2,2,0..2 =>[0.30533233 0.64027309 0.27671447]*/
-            96, 153, 87, /*3,0,0..2 =>[-0.28335297  0.39419654 -0.38974792]*/
-            129, 175, 76, /*3,1,0..2 =>[ 0.11019144  0.65366358 -0.53074056]*/
-            166, 102, 74, /*3,2,0..2 =>[ 0.55256402 -0.21429011 -0.54964691]*/
-            109, 56, 50, /*4,0,0..2 =>[-0.13633886 -0.76526988 -0.82962853]*/
-            185, 103, 102, /*4,1,0..2 =>[ 0.7769872  -0.20815429 -0.21081735]*/
-            202, 188, 174, /*4,2,0..2 =>[0.9733851  0.8065539  0.64081144]*/
-            113, 75, 110, /*5,0,0..2 =>[-0.08656051 -0.53275192 -0.11675746]*/
-            107, 75, 147, /*5,1,0..2 =>[-0.15818664 -0.53490388  0.32519004]*/
-            116, 145, 162, /*5,2,0..2 =>[-0.05007145  0.30384803  0.50246572]*/
-            64, 36, 111, /*6,0,0..2 =>[-0.67092204 -1.0026772  -0.1061589 ]*/
-            99, 137, 124, /*6,1,0..2 =>[-0.2494131   0.20172969  0.04646485]*/
-            156, 111, 93, /*6,2,0..2 =>[ 0.42419338 -0.10394001 -0.32060131]*/
-            98, 75, 143, /*7,0,0..2 =>[-0.25923517 -0.53396648  0.27659822]*/
-            132, 97, 79, /*7,1,0..2 =>[ 0.1441136  -0.27145508 -0.48570681]*/
-            80, 45, 89, /*7,2,0..2 =>[-0.48015803 -0.89710563 -0.36905095]*/
+            149, 189, 137, /* [0.34120661 0.82084858 0.19893692] */
+            130, 202, 93, /* [ 0.121149    0.97967374 -0.32696566] */
+            213, 135, 137, /* [1.11254287 0.17682569 0.20230146] */
+            94, 92, 117, /* [-0.30999798 -0.33382654 -0.0374228 ] */
+            114, 114, 129, /* [-0.07638337 -0.0734017   0.10372803] */
+            92, 94, 76, /* [-0.33138749 -0.3098934  -0.53016078] */
+            116, 119, 97, /* [-0.04586065 -0.01621587 -0.2772235 ] */
+            154, 97, 47, /* [ 0.40268517 -0.27670592 -0.86656117] */
+            146, 174, 143, /* [0.30533233 0.64027309 0.27671447] */
+            96, 153, 87, /* [-0.28335297  0.39419654 -0.38974792] */
+            129, 175, 76, /* [ 0.11019144  0.65366358 -0.53074056] */
+            166, 102, 74, /* [ 0.55256402 -0.21429011 -0.54964691] */
+            109, 56, 50, /* [-0.13633886 -0.76526988 -0.82962853] */
+            185, 103, 102, /* [ 0.7769872  -0.20815429 -0.21081735] */
+            202, 188, 174, /* [0.9733851  0.8065539  0.64081144] */
+            113, 75, 110, /* [-0.08656051 -0.53275192 -0.11675746] */
+            107, 75, 147, /* [-0.15818664 -0.53490388  0.32519004] */
+            116, 145, 162, /* [-0.05007145  0.30384803  0.50246572] */
+            64, 36, 111, /* [-0.67092204 -1.0026772  -0.1061589 ] */
+            99, 137, 124, /* [-0.2494131   0.20172969  0.04646485] */
+            156, 111, 93, /* [ 0.42419338 -0.10394001 -0.32060131] */
+            98, 75, 143, /* [-0.25923517 -0.53396648  0.27659822] */
+            132, 97, 79, /* [ 0.1441136  -0.27145508 -0.48570681] */
+            80, 45, 89 /* [-0.48015803 -0.89710563 -0.36905095] */
 
         };
-        static filter_t depth_filter = {8, 3, depth_weights,{ 0.0119338264652327, 120 } };
+        static filter_t depth_filter = {8, 3, depth_weights };
 
         static filter_t point_filters[8];
         
-        static quant8 point_weights0[]={0, 107, 204, 52, 63, 80, 224, 88 /*0,0..7 =>[-0.38434017]*/
+        static quant8 point_weights0[]={0, 107, 204, 52, 63, 80, 224, 88,  /* [-0.38434017] */
         };
-        static filter_t point_filter0 = {8, 1, point_weights0, 145 /*0.29766690731048584*/};
+        static filter_t point_filter0 = {8, 1, point_weights0, 145 /* 0.29766690731048584 */};
         point_filters[0] = point_filter0;
         
-        static quant8 point_weights1[]={128, 77, 103, 148, 154, 177, 179, 55 /*1,0..7 =>[-0.77710879]*/
+        static quant8 point_weights1[]={128, 77, 103, 148, 154, 177, 179, 55,  /* [-0.77710879] */
         };
-        static filter_t point_filter1 = {8, 1, point_weights1, 113 /*-0.08043133467435837*/};
+        static filter_t point_filter1 = {8, 1, point_weights1, 113 /* -0.08043133467435837 */};
         point_filters[1] = point_filter1;
         
-        static quant8 point_weights2[]={130, 132, 69, 129, 255, 62, 231, 211 /*2,0..7 =>[1.0814563]*/
+        static quant8 point_weights2[]={130, 132, 69, 129, 255, 62, 231, 211,  /* [1.0814563] */
         };
-        static filter_t point_filter2 = {8, 1, point_weights2, 111 /*-0.10242316126823425*/};
+        static filter_t point_filter2 = {8, 1, point_weights2, 111 /* -0.10242316126823425 */};
         point_filters[2] = point_filter2;
         
-        static quant8 point_weights3[]={96, 92, 223, 131, 82, 177, 187, 108 /*3,0..7 =>[-0.14760529]*/
+        static quant8 point_weights3[]={96, 92, 223, 131, 82, 177, 187, 108,  /* [-0.14760529] */
         };
-        static filter_t point_filter3 = {8, 1, point_weights3, 125 /*0.0638975203037262*/};
+        static filter_t point_filter3 = {8, 1, point_weights3, 125 /* 0.0638975203037262 */};
         point_filters[3] = point_filter3;
         
-        static quant8 point_weights4[]={200, 126, 81, 236, 73, 204, 117, 109 /*4,0..7 =>[-0.12978181]*/
+        static quant8 point_weights4[]={200, 126, 81, 236, 73, 204, 117, 109,  /* [-0.12978181] */
         };
-        static filter_t point_filter4 = {8, 1, point_weights4, 140 /*0.23450154066085815*/};
+        static filter_t point_filter4 = {8, 1, point_weights4, 140 /* 0.23450154066085815 */};
         point_filters[4] = point_filter4;
         
-        static quant8 point_weights5[]={81, 46, 120, 176, 180, 87, 93, 70 /*5,0..7 =>[-0.59852546]*/
+        static quant8 point_weights5[]={81, 46, 120, 176, 180, 87, 93, 70,  /* [-0.59852546] */
         };
-        static filter_t point_filter5 = {8, 1, point_weights5, 121 /*0.007488416042178869*/};
+        static filter_t point_filter5 = {8, 1, point_weights5, 121 /* 0.007488416042178869 */};
         point_filters[5] = point_filter5;
         
-        static quant8 point_weights6[]={77, 79, 123, 99, 138, 74, 62, 66 /*6,0..7 =>[-0.64592165]*/
+        static quant8 point_weights6[]={77, 79, 123, 99, 138, 74, 62, 66,  /* [-0.64592165] */
         };
-        static filter_t point_filter6 = {8, 1, point_weights6, 112 /*-0.09032130241394043*/};
+        static filter_t point_filter6 = {8, 1, point_weights6, 112 /* -0.09032130241394043 */};
         point_filters[6] = point_filter6;
         
-        static quant8 point_weights7[]={78, 102, 41, 85, 83, 57, 7, 109 /*7,0..7 =>[-0.1334151]*/
+        static quant8 point_weights7[]={78, 102, 41, 85, 83, 57, 7, 109,  /* [-0.1334151] */
         };
-        static filter_t point_filter7 = {8, 1, point_weights7, 112 /*-0.09998927265405655*/};
+        static filter_t point_filter7 = {8, 1, point_weights7, 112 /* -0.09998927265405655 */};
         point_filters[7] = point_filter7;
         
         separable_conv2d_layer_t layer = {8, depth_filter, point_filters,{ 0.0119338264652327, 120 } };

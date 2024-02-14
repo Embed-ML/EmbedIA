@@ -1,0 +1,43 @@
+# depslib dependency file v1.0
+1707884118 source:c:\users\cesar\documents\gitlab\embedia-dev\export examples\outputs\prj-cifar10-depthwiseconv2d_net_micro_q8\cifar10_model_dpw_micro_model.c
+	"cifar10_model_dpw_micro_model.h"
+	"embedia_debug.h"
+
+1707884118 c:\users\cesar\documents\gitlab\embedia-dev\export examples\outputs\prj-cifar10-depthwiseconv2d_net_micro_q8\cifar10_model_dpw_micro_model.h
+	"embedia.h"
+
+1707884118 c:\users\cesar\documents\gitlab\embedia-dev\export examples\outputs\prj-cifar10-depthwiseconv2d_net_micro_q8\embedia.h
+	<stdint.h>
+	<math.h>
+	"quant8.h"
+	<stdlib.h>
+
+1707884118 c:\users\cesar\documents\gitlab\embedia-dev\export examples\outputs\prj-cifar10-depthwiseconv2d_net_micro_q8\quant8.h
+	<stdint.h>
+
+1707884118 c:\users\cesar\documents\gitlab\embedia-dev\export examples\outputs\prj-cifar10-depthwiseconv2d_net_micro_q8\embedia_debug.h
+	"embedia.h"
+
+1707884118 source:c:\users\cesar\documents\gitlab\embedia-dev\export examples\outputs\prj-cifar10-depthwiseconv2d_net_micro_q8\embedia.c
+	"embedia.h"
+
+1707884118 source:c:\users\cesar\documents\gitlab\embedia-dev\export examples\outputs\prj-cifar10-depthwiseconv2d_net_micro_q8\embedia_debug.c
+	"embedia_debug.h"
+	"embedia_debug_def.h"
+
+1707884118 c:\users\cesar\documents\gitlab\embedia-dev\export examples\outputs\prj-cifar10-depthwiseconv2d_net_micro_q8\embedia_debug_def.h
+	<stdio.h>
+
+1707884118 source:c:\users\cesar\documents\gitlab\embedia-dev\export examples\outputs\prj-cifar10-depthwiseconv2d_net_micro_q8\main.c
+	<stdio.h>
+	"embedia.h"
+	"cifar10_model_dpw_micro_model.h"
+	"example_file.h"
+
+1707884118 c:\users\cesar\documents\gitlab\embedia-dev\export examples\outputs\prj-cifar10-depthwiseconv2d_net_micro_q8\example_file.h
+	"embedia.h"
+
+1707884118 source:c:\users\cesar\documents\gitlab\embedia-dev\export examples\outputs\prj-cifar10-depthwiseconv2d_net_micro_q8\quant8.c
+	<math.h>
+	"quant8.h"
+

@@ -45,7 +45,7 @@ void model_predict(data3d_t input, data1d_t * output){
     // Layer name: conv2d_5
     data3d_t output0;
     // convert image for first EmbedIA Conv2d layer
-    image_adapt_layer(input, &output0);
+    channel_adapt_layer(input, &output0);
     input = output0;
     
      conv2d_layer(conv2d_5_data, input, &output0);
@@ -69,7 +69,7 @@ void model_predict(data3d_t input, data1d_t * output){
     // Layer name: separable_conv2d_9
     input = output0;
     // convert image for first EmbedIA Conv2d layer
-    image_adapt_layer(input, &output0);
+    channel_adapt_layer(input, &output0);
     input = output0;
     
     separable_conv2d_layer(separable_conv2d_9_data, input, &output0);

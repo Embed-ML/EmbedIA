@@ -1,6 +1,7 @@
 import regex as re
 import numpy as np
 import tensorflow.keras.backend as K
+from tensorflow.keras import layers
 from embedia.layers.activation.activation_functions import ActivationFunctions
 from embedia.layers.exceptions import UnsupportedFeatureError
 
@@ -83,10 +84,13 @@ class Layer(object):
     functions, debugging function and invocation of the C function associated
     to the layer/element.
     """
+    model = None # TF/Keras model
+    layer = None # TF/Keras layer
     # these properties must be defined in the constructor of subclass
     input_data_type = ""   # C type of the layer input variable
     output_data_type = ""  # C type of the layer output variable
     support_quantization = False # support quantized data. Default False
+    inplace_output = False
 
     def __init__(self, model, layer, options=None, **kwargs):
         """
@@ -112,7 +116,7 @@ class Layer(object):
         self.layer = layer
 
         # assign layer name from layer/element associated, if it's possible
-        self.name = model.get_unique_name(layer)
+        self.name = model.get_unique_name(self)
 
         self.options = options  # Configuration options
 

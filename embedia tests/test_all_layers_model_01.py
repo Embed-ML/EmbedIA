@@ -35,7 +35,7 @@ import compilers
 
 OUTPUT_FOLDER = 'outputs/'
 PROJECT_NAME = 'Prj_Test_'
-SAMPLES_FILE = 'samples/MNIST_20samples_12x12.sav'
+SAMPLES_FILE = 'samples/FASHION_MNIST_28x28_samples.sav'
 
 model = build_all_layers_model()
 

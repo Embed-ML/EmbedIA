@@ -48,7 +48,7 @@ typedef struct{
 typedef struct{
     uint16_t channels;
     uint16_t kernel_size;
-    quant8  * weights;
+    const quant8  * weights;
     quant8  bias;
 }filter_t;
 
@@ -59,22 +59,21 @@ typedef struct{
 typedef struct{
     uint16_t n_filters;
     filter_t * filters;
-    qparam qparam;
+    qparam_t qparam;
 }conv2d_layer_t;
 
 /*
- * Structure that models a convolutional layer.
- * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters).
+ * Structure that models a depthwise convolutional 2d layer.
+ * Specifies the number of channels, kernel size, vector of weights and bias.
  */
- /* TO DO: DepthWise layer
 typedef struct{
     uint16_t channels;
     uint16_t kernel_size;
-    filters_t filters;
-    qparam qparam;
+    const quant8  * weights;
+    const quant8  * bias;
+    qparam_t w_qparam;
+    qparam_t b_qparam;
 }depthwise_conv2d_layer_t;
-*/
-
 
 /*
  * Structure that models a separable layer...
@@ -86,7 +85,7 @@ typedef struct{
     uint16_t n_filters;
     filter_t depth_filter;
     filter_t * point_filters;
-    qparam qparam;
+    qparam_t qparam;
 }separable_conv2d_layer_t;
 
 /*
@@ -96,7 +95,7 @@ typedef struct{
 typedef struct{
     const quant8  * weights;
     quant8  bias;
-    qparam  qparam;
+    qparam_t  qparam;
 }neuron_t;
 
 /*
@@ -106,7 +105,7 @@ typedef struct{
 typedef struct{
     uint16_t n_neurons;
     neuron_t * neurons;
-    qparam  qparam;
+    qparam_t  qparam;
 }dense_layer_t;
 
 
@@ -143,7 +142,7 @@ typedef struct {
     uint32_t length;
     const quant8 *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
     const quant8 *std_beta;           // = beta - moving_mean * moving_inv_std_dev
-    qparam  qparam;
+    qparam_t  qparam;
 } batch_normalization_layer_t;
 
 
@@ -183,6 +182,16 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
  */
 void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
+/*
+ * depthwise_conv2d_layer()
+ *  Function in charge of applying the depthwise of a filter layer with bias (depthwise_conv2d_layer_t) on a given input data set.
+ * Parameters:
+ *  layer => depthwise layer with loaded filters.
+ *  input => input data of type data3d_t
+ *  *output => pointer to the data3d_t structure where the result will be saved.
+ */
+
+void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
 /* 
  * dense_layer()
@@ -298,7 +307,7 @@ void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *da
 /* Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
    Usually required for first convolutional layer
 */
-void image_adapt_layer(data3d_t input, data3d_t * output);
+void channel_adapt_layer(data3d_t input, data3d_t * output);
 
 
 #endif

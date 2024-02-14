@@ -23,7 +23,7 @@ void prepare_buffers(){
 void * swap_alloc(size_t s){
 
     last_buff = (last_buff==&buffer1) ? &buffer2 : &buffer1;
-    
+
     if (last_buff->size < s){
         last_buff->data = realloc(last_buff->data, s);
         last_buff->size = s;
@@ -45,13 +45,14 @@ static void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t 
     uint32_t i,j,k,l,c;
     float suma;
 
-    for (i=0; i<output->height; i++){
-        for (j=0; j<output->width; j++){
+    for(i=0; i<output->height; i++){
+        for(j=0; j<output->width; j++){
             suma = 0;
-            for (c=0; c<filter.channels; c++){
-                for (k=0; k<filter.kernel_size; k++){
-                    for (l=0; l<filter.kernel_size; l++){
-                        suma += (filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l] * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
+            for(c=0; c<filter.channels; c++){
+                for(k=0; k<filter.kernel_size; k++){
+                    for(l=0; l<filter.kernel_size; l++){
+                        suma += (filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l]
+                                * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
                     }
                 }
             }
@@ -71,14 +72,14 @@ static void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t 
  */
 
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
-    uint32_t delta;
+    uint32_t delta, i;
 
     output->channels = layer.n_filters; //cantidad de filtros
     output->height   = input.height - layer.filters[0].kernel_size + 1;
     output->width    = input.width - layer.filters[0].kernel_size + 1;
     output->data     = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
 
-    for(uint32_t i=0; i<layer.n_filters; i++){
+    for(i=0; i<layer.n_filters; i++){
         delta = i*(output->height)*(output->width);
         conv2d(layer.filters[i],input,output,delta);
     }
@@ -89,12 +90,12 @@ static void depthwise(filter_t filter, data3d_t input, data3d_t * output){
     uint32_t i,j,k,l,c;
     float suma;
 
-    for (i=0; i<output->height; i++){
-        for (j=0; j<output->width; j++){
-            for (c=0; c<filter.channels; c++){
+    for(i=0; i<output->height; i++){
+        for(j=0; j<output->width; j++){
+            for(c=0; c<filter.channels; c++){
                 suma=0;
-                for (k=0; k<filter.kernel_size; k++){
-                    for (l=0; l<filter.kernel_size; l++){
+                for(k=0; k<filter.kernel_size; k++){
+                    for(l=0; l<filter.kernel_size; l++){
                         suma += (filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l] * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
                     }
                 }
@@ -108,10 +109,10 @@ static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32
     uint32_t i,j,c;
     float suma;
 
-    for (i=0; i<output->height; i++){
-        for (j=0; j<output->width; j++){
+    for(i=0; i<output->height; i++){
+        for(j=0; j<output->width; j++){
             suma = 0;
-            for (c=0; c<filter.channels; c++){
+            for(c=0; c<filter.channels; c++){
                 suma += (filter.weights[c] * input.data[(c*input.height*input.width)+i*input.width+j]);
             }
             output->data[delta + i*output->width + j] = suma + filter.bias;
@@ -119,7 +120,7 @@ static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32
     }
 }
 
-/* 
+/*
  * separable_conv2d_layer()
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
  * Parameters:
@@ -129,7 +130,7 @@ static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32
  */
 
 void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output){
-    uint32_t delta;
+    uint32_t delta, i;
     data3d_t depth_output;
 
     depth_output.channels = input.channels; //cantidad de canales
@@ -144,14 +145,14 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
     output->width    = depth_output.width;
     output->data     = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
 
-    for(uint32_t i=0; i<layer.n_filters; i++){
+    for(i=0; i<layer.n_filters; i++){
         delta = i*(output->height)*(output->width);
         pointwise(layer.point_filters[i],depth_output,output,delta);
     }
 }
 
 
-static void depthwise_new(filters_t filters, data3d_t input, data3d_t * output){
+/*static void depthwise_bias(depthwise_conv2d_layer_t filters, data3d_t input, data3d_t * output){
     uint32_t i,j,k,l,c;
     float suma;
 
@@ -169,8 +170,31 @@ static void depthwise_new(filters_t filters, data3d_t input, data3d_t * output){
         }
     }
 }
+*/
 
-/* 
+static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
+    int i, j, k, l, c, inp_idx, out_idx, w_idx;
+    float sum;
+
+    for(i=0; i<output->height; i++){
+        for(j=0; j<output->width; j++){
+            for(c=0; c<layer.channels; c++){
+                out_idx = c*output->width*output->height + i*output->width + j;
+                sum=0;
+                for(k=0; k<layer.kernel_size; k++){
+                    for(l=0; l<layer.kernel_size; l++){
+                        w_idx = (c*layer.kernel_size*layer.kernel_size)+k*layer.kernel_size+l;
+                        inp_idx = (c*input.height*input.width)+(i+k)*input.width+(j+l);
+                        sum += (layer.weights[w_idx] * input.data[inp_idx]);
+                    }
+                }
+                output->data[out_idx]= sum + layer.bias[c];
+            }
+        }
+    }
+}
+
+/*
  * depthwise_conv2d_layer()
  *  Function in charge of applying the depthwise of a filter layer (conv_layer_t) on a given input data set.
  * Parameters:
@@ -181,12 +205,12 @@ static void depthwise_new(filters_t filters, data3d_t input, data3d_t * output){
 
 void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
 
-    output->channels = input.channels; //cantidad de canales
-    output->height   = input.height - layer.filters.kernel_size + 1;
-    output->width    = input.width - layer.filters.kernel_size + 1;
+    output->channels = layer.channels; //cantidad de canales
+    output->height   = input.height - layer.kernel_size + 1;
+    output->width    = input.width - layer.kernel_size + 1;
     output->data     = (float*)swap_alloc( sizeof(float)*output->height*output->width*output->channels );
 
-    depthwise_new(layer.filters, input, output);
+    depthwise_bias(layer, input, output);
 }
 
 /*
@@ -196,7 +220,7 @@ void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data
  *  neuron_t neuron => neuron with its weights and bias loaded.
  *  flatten_data_t input => input data in vector form (flatten_data_t).
  * Returns:
- *  float => result of the operation         
+ *  float => result of the operation
  */
 
 static float neuron_forward(neuron_t neuron, data1d_t input){
@@ -252,17 +276,17 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
     output->channels = input.channels;
     output->data = (float*)swap_alloc(sizeof(float)*(output->channels)*(output->height)*(output->width));
 
-    for (c=0; c<output->channels; c++){
-        for (i=0; i<output->height; i++){
-            for (j=0; j<output->width; j++){
+    for(c=0; c<output->channels; c++){
+        for(i=0; i<output->height; i++){
+            for(j=0; j<output->width; j++){
 
                 max = -INFINITY;
 
                 for(aux1=0; aux1<pool.size; aux1++){
                         for(aux2=0; aux2<pool.size; aux2++){
-                        
+
                         num = input.data[c*input.width*input.height + (i*pool.strides + aux1)*input.width + j*pool.strides + aux2];
-                        
+
                         if(num>max){
                             max = num;
                         }
@@ -271,7 +295,7 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
 
                 output->data[c*output->width*output->height + i*output->width + j] = max;
             }
-        }    
+        }
     }
 }
 
@@ -298,9 +322,9 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
     output->channels = input.channels;
     output->data = (float*)swap_alloc(sizeof(float)*(output->channels)*(output->height)*(output->width));
 
-    for (c=0; c<output->channels; c++){
-        for (i=0; i<output->height; i++){
-            for (j=0; j<output->width; j++){
+    for(c=0; c<output->channels; c++){
+        for(i=0; i<output->height; i++){
+            for(j=0; j<output->width; j++){
 
                 avg = 0;
 
@@ -308,12 +332,12 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
                     for(aux2=0; aux2<pool.size; aux2++){
                         num = input.data[c*input.width*input.height + (i*pool.strides + aux1)*input.width + j*pool.strides + aux2];
                         avg += num;
-                    }                  
+                    }
                 }
 
                 output->data[c*output->width*output->height + i*output->width + j] = avg/cant;
             }
-        }    
+        }
     }
 }
 
@@ -324,20 +348,21 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  *  length => numbers of values to update
  */
 void softmax_activation(float *data, uint32_t length){
+    uint32_t i;
     float m = -INFINITY;
-    for (size_t i = 0; i < length; i++) {
+    for(i = 0; i < length; i++) {
         if (data[i] > m) {
             m = data[i];
         }
     }
 
     float sum = (0.0);
-    for (size_t i = 0; i < length; i++) {
+    for(i = 0; i < length; i++) {
         sum += exp(data[i] - m);
     }
 
     float offset = m + log(sum);
-    for (size_t i = 0; i < length; i++) {
+    for(i = 0; i < length; i++) {
         data[i] = exp(data[i] - offset);
     }
 }
@@ -352,7 +377,7 @@ void softmax_activation(float *data, uint32_t length){
 void relu_activation(float *data, uint32_t length){
     uint32_t i;
 
-    for (i=0;i<(length);i++){
+    for(i=0;i<(length);i++){
         data[i] = data[i] < 0 ? 0 : data[i];
     }
 }
@@ -367,7 +392,7 @@ void relu_activation(float *data, uint32_t length){
 void leakyrelu_activation(float *data, uint32_t length, float alpha){
     uint32_t i;
 
-    for (i=0;i<(length);i++){
+    for(i=0;i<(length);i++){
         data[i] = data[i] < 0 ? alpha*data[i] : data[i];
     }
 }
@@ -382,7 +407,7 @@ void leakyrelu_activation(float *data, uint32_t length, float alpha){
 void tanh_activation(float *data, uint32_t length){
     uint32_t i;
 
-    for (i=0;i<length;i++){
+    for(i=0;i<length;i++){
         // data.data[i] = tanh(data.data[i]);
         data[i] = 2/(1+exp(-2*data[i])) - 1;
     }
@@ -397,7 +422,7 @@ void tanh_activation(float *data, uint32_t length){
 void sigmoid_activation(float *data, uint32_t length){
     uint32_t i;
 
-    for (i=0;i<length;i++){
+    for(i=0;i<length;i++){
         data[i] = 1 / (1 + exp(-data[i]));
     }
 }
@@ -411,7 +436,7 @@ void sigmoid_activation(float *data, uint32_t length){
 void softsign_activation(float *data, uint32_t length){
     uint32_t i;
 
-    for (i=0;i<length;i++){
+    for(i=0;i<length;i++){
         data[i] = data[i] / (abs(data[i])+1);
     }
 }
@@ -425,7 +450,7 @@ void softsign_activation(float *data, uint32_t length){
 void softplus_activation(float *data, uint32_t length){
     uint32_t i;
 
-    for (i=0;i<length;i++){
+    for(i=0;i<length;i++){
         data[i] = log( exp(data[i])+1 );
     }
 }
@@ -468,9 +493,9 @@ void softplus_activation(float *data, uint32_t length){
 
 uint32_t argmax(data1d_t data){
     float max = data.data[0];
-    uint32_t pos = 0;
+    uint32_t i, pos = 0;
 
-    for(uint32_t i=1;i<data.length;i++){
+    for(i=1;i<data.length;i++){
         if(data.data[i]>max){
             max = data.data[i];
             pos = i;
@@ -519,7 +544,7 @@ void normalization2(normalization_layer_t n, data1d_t input, data1d_t * output){
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data) {
     uint32_t i;
 
-    for (i = 0; i < data->length; i++) {
+    for(i = 0; i < data->length; i++) {
         data->data[i] = data->data[i] * layer.moving_inv_std_dev[i] + layer.std_beta[i];
     }
 }
@@ -529,22 +554,22 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
     uint32_t i, j, ilen = 0;
     uint32_t length = data->height * data->width;
 
-    for (i = 0; i < data->channels; i++, ilen += length) {
-        for (j = 0; j < length; j++) {
+    for(i = 0; i < data->channels; i++, ilen += length) {
+        for(j = 0; j < length; j++) {
             data->data[ilen+j] = data->data[ilen+j] * layer.moving_inv_std_dev[i] + layer.std_beta[i];
         }
     }
 }
 
 
-/* image_adapt_layer()
+/* channel_adapt_layer()
  *  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
  *  Usually required for first convolutional layer
  * Parameters:
  *  input   => input data of type data3d_t.
  *  *output => pointer to the data3d_t structure where the result will be stored.
  */
-void image_adapt_layer(data3d_t input, data3d_t * output){
+void channel_adapt_layer(data3d_t input, data3d_t * output){
 
     uint32_t i, j, c, l;
 
@@ -553,11 +578,157 @@ void image_adapt_layer(data3d_t input, data3d_t * output){
     output->width    = input.width;
     output->data     = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
 
-    for (c=0, l=0; c < input.channels; c++){
-        for (i=0; i < input.height; i++) {
-            for (j=0; j < input.width; j++, l++ ){
+    for(c=0, l=0; c < input.channels; c++){
+        for(i=0; i < input.height; i++) {
+            for(j=0; j < input.width; j++, l++ ){
                 output->data[l] = input.data[i*input.channels*input.width+input.channels*j+c];
             }
         }
     }
  }
+
+
+
+
+/* ------------------------------ Spectrogram ------------------------------ */
+
+/*
+ * void fft(float data_re[], float data_im[], const unsigned int N)
+ * Performs a Fast Fourier Transform (FFT) on the complex data passed as parameters.
+ * Parameters:
+ *   - data_re: Array containing the real part of the complex data.
+ *   - data_im: Array containing the imaginary part of the complex data.
+ *   - N: Amount of samples to perform the FFT over.
+ * First performs a reordering of the data and then applies the FFT calculations.
+ */
+void fft(float data_re[], float data_im[], const unsigned int N){
+    rearrange(data_re, data_im, N);
+    compute(data_re, data_im, N);
+}
+
+/*
+ * void rearrange(float data_re[], float data_im[], const unsigned int N)
+ * Performs the necessary reordering of the data before applying the FFT.
+ * Parameters:
+ *   - data_re: Array containing the real part of the complex data.
+ *   - data_im: Array containing the imaginary part of the complex data.
+ *   - N: Amount of samples to perform the FFT over.
+ */
+void rearrange(float data_re[], float data_im[], const unsigned int N){
+  register unsigned int position;
+  unsigned int target = 0;
+
+  for(position=0; position<N;position++){
+      if(target>position) {
+        const float temp_re = data_re[target];
+        const float temp_im = data_im[target];
+        data_re[target] = data_re[position];
+        data_im[target] = data_im[position];
+        data_re[position] = temp_re;
+        data_im[position] = temp_im;
+      }
+      unsigned int mask = N;
+      while(target & (mask >>=1))
+        target &= ~mask;
+      target |= mask;
+    }
+}
+
+/*
+ * void compute(float data_re[], float data_im[], const unsigned int N)
+ * Contains the FFT calculation core, applying the Fourier transforms for
+ * each recursive step.
+ * Parameters:
+ *   - data_re: Array containing the real part of the complex data.
+ *   - data_im: Array containing the imaginary part of the complex data.
+ *   - N: Amount of samples to perform the FFT over.
+ */
+void compute(float data_re[], float data_im[], const unsigned int N){
+  const float pi = -3.14159265358979323846;
+  register unsigned int step,group,pair;
+
+  for(step=1; step<N; step <<=1) {
+    const unsigned int jump = step << 1;
+    const float step_d = (float) step;
+    float twiddle_re = 1.0;
+    float twiddle_im = 0.0;
+    for(group=0; group<step; group++){
+        for(pair=group; pair<N; pair+=jump){
+            const unsigned int match = pair + step;
+            const float product_re = twiddle_re*data_re[match]-twiddle_im*data_im[match];
+            const float product_im = twiddle_im*data_re[match]+twiddle_re*data_im[match];
+            data_re[match] = data_re[pair]-product_re;
+            data_im[match] = data_im[pair]-product_im;
+            data_re[pair] += product_re;
+            data_im[pair] += product_im;
+        }
+
+        // we need the factors below for the next iteration
+        // if we don't iterate then don't compute
+        if(group+1 == step){
+            continue;
+        }
+
+        float angle = pi*((float) group+1)/step_d;
+        twiddle_re = cos(angle);
+        twiddle_im = sin(angle);
+    }
+  }
+}
+
+/*
+ * void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t *output)
+ * Generates the spectrogram from the input signal by applying FFTs
+ * and further processing.
+ * Parameters:
+ *   - config: Spectrogram layer configuration
+ *   - input:  1D input signal
+ *   - output: 3D output spectrogram (W = n_mels, H = b_blocks, Ch = 1)
+ */
+void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t * output){
+    register int i,j,k;
+    float aux;
+
+    float data_re[config.n_fft];
+    float data_im[config.n_fft];
+
+    output->width    = config.n_mels;
+    output->height   = config.n_blocks;
+    output->channels = 1;
+    output->data     = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
+
+    for(i=0;i<config.n_blocks;i++){
+        // Copy the values ​​to the input of the fft
+        const unsigned int start = i*config.step;
+        for(j=0;j<config.n_fft;j++){
+            data_re[j] = input.data[start+j];
+            data_im[j] = 0;
+        }
+
+        // Calculate fft
+        fft(data_re,data_im,config.n_fft);
+
+        // Get the module of the fft
+        for(j=0;j<config.n_fft;j++){
+            const float aux_re = data_re[j];
+            const float aux_im = data_im[j];
+            data_re[j] = sqrt(aux_re*aux_re + aux_im*aux_im);
+        }
+
+        // N_MELS processing
+        const unsigned int start2 = i*config.n_mels;
+        for(j=0;j<config.n_mels;j++){
+            const unsigned int start3 = j*config.len_nfft_nmels;
+            aux = 0;
+            for(k=0;k<config.len_nfft_nmels;k++){
+                aux += data_re[start3+k];
+            }
+            aux /= config.len_nfft_nmels;
+            if(config.convert_to_db){
+                output->data[start2+j] = 10*log10(aux);
+            }else{
+                output->data[start2+j] = aux;
+            }
+        }
+    }
+}

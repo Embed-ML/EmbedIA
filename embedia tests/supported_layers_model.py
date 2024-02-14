@@ -5,6 +5,7 @@ from tensorflow.keras.layers import (
     Dense,
     Conv2D,
     SeparableConv2D,
+    DepthwiseConv2D,
     Flatten,
     BatchNormalization,
     # Activation,
@@ -22,26 +23,26 @@ def build_all_layers_model():
     model._name = "EmbedIA_all_layers"
 
     model.add(
-        Conv2D(8, kernel_size=(3, 3), input_shape=(28, 28, 1),
+        Conv2D(8, kernel_size=(2, 2), input_shape=(28, 28, 1),
                activation='LeakyReLU', name='Conv2D_1')
         )
+    model.add(DepthwiseConv2D(8, (2, 2), activation='linear', name='DepthwiseConv2D_1'))
+
     model.add(MaxPooling2D(pool_size=(2, 2), name='MaxPool_1'))
     #model.add(BatchNormalization(name='Batch_1'))
 
     model.add(
-        Conv2D(12, kernel_size=(3, 3), activation='ReLU', name='Conv2D_2')
+        Conv2D(12, kernel_size=(2, 2), activation='ReLU', name='Conv2D_2')
         )
     model.add(AveragePooling2D(pool_size=(2, 2), name='AvgPool_2'))
     model.add(ReLU(name='ReLU_2'))
 
     model.add(
-        SeparableConv2D(15, kernel_size=(3, 3), activation='sigmoid',
+        SeparableConv2D(15, kernel_size=(2, 2), activation='sigmoid',
                         name='SepConv2D_3')
         )
 
-
-
-    model.add(AveragePooling2D(pool_size=(2, 2), name='AvgPool_3'))
+    # model.add(AveragePooling2D(pool_size=(2, 2), name='AvgPool_3'))
 
     model.add(Flatten(name='Flatten_4'))
     model.add(Dense(32, name='Dense_4', activation='tanh'))
@@ -72,8 +73,9 @@ def build_all_layers_model():
     # Entrena el modelo
     model.fit(x_train, y_train, batch_size=64, epochs=1, validation_data=(x_test, y_test))
 
-    print(model.layers[-6].get_weights()[0].shape)
-    print(model.layers[-6].get_weights()[1].shape)
-    print(model.layers[-6].get_weights()[2].shape)
-    print(model.layers[-6].get_weights()[2])
+    idx =-5
+    # print(model.layers[idx].get_weights()[0].shape)
+    # print(model.layers[idx].get_weights()[1].shape)
+    # print(model.layers[idx].get_weights()[2].shape)
+    # print(model.layers[idx].get_weights()[2])
     return model
