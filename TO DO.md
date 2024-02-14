@@ -30,6 +30,8 @@
 ## Otros/Varios
   - **Actualiza documentación**
     - agregar propiedad project_files en documentacion
+    - agregar el paper de smart-tech como referencia como manera de "citar embedia"
+    - licencia de software? MIT?
        
   - **Hacer un paquete auto/instalable**
     - Armar un paquete de instalación
