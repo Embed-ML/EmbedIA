@@ -4,7 +4,8 @@
  */
 
 #include "embedia.h"
-
+#include <stdlib.h>
+#include <math.h>
 
 typedef struct{
     size_t  size;

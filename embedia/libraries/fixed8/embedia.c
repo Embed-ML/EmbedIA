@@ -4,6 +4,9 @@
  */
 
 #include "embedia.h"
+#include <stdlib.h>
+#include <math.h>
+
 
 
 typedef struct{
@@ -428,8 +431,9 @@ void sigmoid_activation(fixed *data, uint32_t length){
     uint32_t i;
 
     for(i=0;i<length;i++){
-        data[i] = 1 / (1 + fixed_exp(-data[i]));
+        data[i] = FIXED_DIV(FIX_ONE, FIX_ONE + fixed_exp(-data[i]));
     }
+
 }
 
 /*

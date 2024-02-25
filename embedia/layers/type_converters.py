@@ -109,6 +109,8 @@ class QuantizedTypeConverter(TypeConverter):
             self.min_val = np.min(values)
             self.max_val = np.max(values)
         self.scale = (self.max_val - self.min_val) / self.max_qint;
+        if self.scale == 0:
+            self.scale = 1
         self.zero_pt= -self.min_val / self.scale
         if self.zero_pt < 0:
             self.zero_pt = 0

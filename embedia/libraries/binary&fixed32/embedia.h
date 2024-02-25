@@ -6,9 +6,8 @@
 #define _EMBEDIA_H
 
 #include <stdint.h>
-#include <math.h>
 #include "fixed.h"
-{includes}
+//{includes}
 
 
 

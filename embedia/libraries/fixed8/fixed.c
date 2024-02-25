@@ -86,7 +86,7 @@
     }
 
     fixed fixed_exp(fixed fp){
-        #define MAX_EXP_IT 14
+        #define MAX_EXP_IT 10
 
         if(fp == FIX_ZERO) return FIX_ONE;
         if(fp == FIX_ONE) return FIX_E;

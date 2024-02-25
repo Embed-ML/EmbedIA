@@ -4,6 +4,8 @@
  */
 
 #include "embedia.h"
+#include <stdlib.h>
+#include <math.h>
 
 
 typedef struct{
@@ -207,7 +209,7 @@ static fixed neuron_forward(neuron_t neuron, data1d_t input){
     fixed result = 0;
 
     for(i=0;i<input.length;i++){
-        result += FIXED_MUL(input.data[i],neuron.weights[i]);
+        result += FIXED_MUL(input.data[i], neuron.weights[i]);
     }
 
     return result + neuron.bias;
@@ -403,7 +405,7 @@ void sigmoid_activation(fixed *data, uint32_t length){
     uint32_t i;
 
     for(i=0;i<length;i++){
-        data[i] = 1 / (1 + fixed_exp(-data[i]));
+        data[i] = FIXED_DIV(FIX_ONE, FIX_ONE + fixed_exp(-data[i]));
     }
 }
 
@@ -417,7 +419,7 @@ void softsign_activation(fixed *data, uint32_t length){
     uint32_t i;
 
     for(i=0;i<length;i++){
-        data[i] = FIXED_DIV(data[i],(fixed_abs(data[i])+1));
+        data[i] = FIXED_DIV(data[i],(fixed_abs(data[i])+FIX_ONE));
     }
 }
 

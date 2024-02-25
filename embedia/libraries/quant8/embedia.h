@@ -6,10 +6,9 @@
 #define _EMBEDIA_H
 
 #include <stdint.h>
-#include <math.h>
 #include "quant8.h"
 
-{includes}
+//{includes}
 
 #define PRINT_RESULTS 0
 

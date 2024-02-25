@@ -6,10 +6,9 @@
 #define _EMBEDIA_H
 
 #include <stdint.h>
-#include <math.h>
 #include "half.hpp"
 using half_float::half;
-{includes}
+//{includes}
 
 
 

@@ -4,7 +4,8 @@
  */
 
 #include "embedia.h"
-
+#include <stdlib.h>
+#include <math.h>
 
 typedef struct{
     size_t  size;
@@ -414,7 +415,7 @@ void softsign_activation(float *data, uint32_t length){
     uint32_t i;
 
     for(i=0;i<length;i++){
-        data[i] = data[i] / (abs(data[i])+1);
+        data[i] = data[i] / (fabs(data[i])+1);
     }
 }
 

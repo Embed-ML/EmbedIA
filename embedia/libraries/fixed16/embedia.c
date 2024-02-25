@@ -4,7 +4,8 @@
  */
 
 #include "embedia.h"
-
+#include <stdlib.h>
+#include <math.h>
 
 typedef struct{
     size_t  size;
@@ -428,8 +429,9 @@ void sigmoid_activation(fixed *data, uint32_t length){
     uint32_t i;
 
     for(i=0;i<length;i++){
-        data[i] = 1 / (1 + fixed_exp(-data[i]));
+        data[i] = FIXED_DIV(FIX_ONE, FIX_ONE + fixed_exp(-data[i]));
     }
+
 }
 
 /*
@@ -442,7 +444,7 @@ void softsign_activation(fixed *data, uint32_t length){
     uint32_t i;
 
     for(i=0;i<length;i++){
-        data[i] = FIXED_DIV(data[i],(fixed_abs(data[i])+1));
+        data[i] = FIXED_DIV(data[i],(fixed_abs(data[i])+FIX_ONE));
     }
 }
 
