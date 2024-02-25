@@ -1,6 +1,6 @@
 import sys
 # add parent folder to path in order to find EmbedIA folder
-sys.path.insert(0, '..')
+sys.path.insert(0, '../..')
 
 import joblib
 from tensorflow.keras.models import load_model
@@ -63,7 +63,7 @@ options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}
 
-# if True, remove output folder and start a clean export
+# if True, remove playground folder and start a clean export
 options.clean_output = True
 
 

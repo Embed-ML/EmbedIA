@@ -32,7 +32,7 @@ class Pooling(Layer):
         self.dimensions = len(layer.pool_size)
         dim = self.dimensions
 
-        # the input/output data types depends on the numbers of dimensions
+        # the input/playground data types depends on the numbers of dimensions
         self.input_data_type = f'data{dim+1}d_t'
         self.output_data_type = f'data{dim+1}d_t'
 
@@ -77,7 +77,7 @@ class Pooling(Layer):
             name of the input variable to be used in the invocation of the C
             function that implements the layer.
         output_name : str
-            name of the output variable to be used in the invocation of the C
+            name of the playground variable to be used in the invocation of the C
             function that implements the layer.
 
         Returns

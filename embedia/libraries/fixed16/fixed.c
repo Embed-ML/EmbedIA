@@ -85,8 +85,10 @@
         return (l);
     }
 
-    fixed fixed_exp(fixed fp){
-        #define MAX_EXP_IT 14
+ fixed fixed_exp(fixed fp){
+        const fixed AUX[9] = {FL2FX(1.0/2), FL2FX(1.0/3), FL2FX(1.0/4), FL2FX(1.0/5), FL2FX(1.0/6), FL2FX(1.0/7), FL2FX(1.0/8), FL2FX(1.0/9), FL2FX(1.0/10)};
+
+        #define MAX_EXP_IT 8
 
         if(fp == FIX_ZERO) return FIX_ONE;
         if(fp == FIX_ONE) return FIX_E;
@@ -99,10 +101,10 @@
 
         fixed result = fp + FIX_ONE;
         fixed term = fp;
-        for (i = 2; i < MAX_EXP_IT; i++){
-            term = FIXED_MUL(term, FIXED_DIV(fp, INT_TO_FIXED(i)));
+        for (i = 0; i <= MAX_EXP_IT; i++){
+            term = FIXED_MUL(term, FIXED_MUL(fp, AUX[i]));
             result += term;
-            if (term < 20)
+            if (term < 100)
                 break;
         }
 

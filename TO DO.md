@@ -13,9 +13,45 @@
   - **Incorporar modelos (livianos) populares**
   
   - **agregar capas TF/Keras**
-    - Convoluciones, Deconvoluciones, UpSample, Capas de Transformación
+    - Capas Convolucionales/Deconvoluciones:
+      - SeparableConv1D, Conv1D, Conv3D, Conv1DTranspose, Conv2DTranspose, Conv3DTranspose, DepthwiseConv1D
+      
+    - Capas Orientadas a Elementos:
+      - Add, Average, Dot, Substract, Maximum?, Minimum?, Multiply, 
+    - Capas de Transformación:
+      - Agregar soporte para Capas de especiales que existen solo en entrenamiento:
+      - Capas Estandar:
+        - Reescaling, Reshape, Resizing, CenterCrop, Concatenate, UpSampling1D, UpSampling2D, UpSampling3D, ZeroPadding1D, ZeroPadding2D, ZeroPadding3D 
+        
+    - Capas de Pooling:
+      - revisar soporte de capas para Average, max y min pooling con 1D, 2D y 3D
+      - Agregar Capas MaxGlobal y AverageGlobal para !D, 2D y 3D
+    - Capas de Activación:
+      - softplus(x) = log(exp(x) + 1)
+      - swish(x) = x * sigmoid(x).
+      - selu(x) = 
+         if x > 0: return scale * x
+         if x < 0: return scale * alpha * (exp(x) - 1)
+      - mish(x) = x * tanh(softplus(x))
+      - hardsigmoid(x) =
+         if x < -2.5: return 0
+         if x >  2.5: return 1
+         if -2.5 <= x <= 2.5: return 0.2 * x + 0.5 
+      - gelu(x, approximate) = 
+         0.5 * x * (1 + tanh(sqrt(2 / pi) * (x + 0.044715 * x^3))) if approximate is True 
+         x * P(X <= x) = 0.5 * x * (1 + erf(x / sqrt(2))), where P(X) ~ N(0, 1), if approximate is False. 
+      - exponential(x) = exp(x). 
+      - elu(x) = 
+         x if x > 0
+         alpha * (exp(x) - 1) if x < 0. 
+    - Capas Especiales:
+      - GroupNormalization
+      - Lambda: aplica funcion en python a elementos
+      
     
-  - **agregar padding en capas convolucionales**
+  - **agregar padding y stride en capas convolucionales**
+  - **agregar soporte para channel_last/first**
+    - agregar versiones de versiones con la variante channel_first y channel_last (embedia trabaja con channel first y adapta la entrada para trabajar de esa manera). Considerar usar el mismo orden que tensorflow por simplicidad (mucho refactoring)
   
   - **Pensar alternativas y posibilidades de modelos no secuenciales**
     
@@ -43,7 +79,7 @@
   - **Generar modelos robustos para tareas específicas**
     - Analizar problemas, conseguir datos y generar modelos para señales, imagenes y sonido.
      
-  - **Refactoring para que cada "capa"/elemento de EmbedIA indique los archivos C/C++ que requiere**
+  - **Refactoring para que cada "capa"/elemento/modelo de EmbedIA indique los archivos C/C++ que requiere**
     - las capas especializadas como de procesamiento general podrían requerir de archivos especiales que deberían ser incluídos. Esto debería delegarse a la capa.
         
   - **Incorporar Microcontroladores**
@@ -68,7 +104,10 @@
   - **Incorporar guardas C++ (extern) a los archivos de C**
    
   
-
+## BUGS
+- **Cantidad de bits para tipos de datos fixed**
+  - la clase model crea los conversores de float a otro tipo de datos. En particular para los tipos de datos fixed, podria haber problemas si no es consistente con los valores declarados en el archivo fixed.h. 
+    - Posible solución: asignar estos valores en los archivos fixed.h al general el proyecto embedia 
 
             
       

@@ -4,7 +4,8 @@
  */
 
 #include "embedia.h"
-
+#include <stdlib.h>
+#include <math.h>
 
 typedef struct{
     size_t  size;
@@ -411,7 +412,7 @@ void softsign_activation(float *data, uint32_t length){
     uint32_t i;
 
     for(i=0;i<length;i++){
-        data[i] = data[i] / (abs(data[i])+1);
+        data[i] = data[i] / (fabs(data[i])+1);
     }
 }
 
@@ -496,15 +497,14 @@ void normalization1(normalization_layer_t n, data1d_t input, data1d_t * output){
 
 void normalization2(normalization_layer_t n, data1d_t input, data1d_t * output){
 
-  /*  uint32_t i;
+    uint32_t i;
 
     output->length = input.length;
-    output->data = (fixed*)swap_alloc(sizeof(fixed)*output->length);
+    output->data = (float*)swap_alloc(sizeof(float)*output->length);
 
     for(i=0; i<input.length; i++){
-        output->data[i] = FIXED_MUL(input.data[i],n.inv_div_val[i]);
+        output->data[i] = input.data[i]*n.inv_div_val[i];
     }
-    */
 }
 
 /*

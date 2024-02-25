@@ -9,7 +9,7 @@ from embedia.layers.exceptions import UnsupportedFeatureError
 class LayerInfo(object):
     """
     This class defines a container for layer information:
-        name, type name, activation function name, #params, MACs, output shape
+        name, type name, activation function name, #params, MACs, playground shape
     """
 
     def __init__(self, embedia_layer, types_dict):
@@ -88,7 +88,7 @@ class Layer(object):
     layer = None # TF/Keras layer
     # these properties must be defined in the constructor of subclass
     input_data_type = ""   # C type of the layer input variable
-    output_data_type = ""  # C type of the layer output variable
+    output_data_type = ""  # C type of the layer playground variable
     support_quantization = False # support quantized data. Default False
     inplace_output = False
 
@@ -121,7 +121,7 @@ class Layer(object):
         self.options = options  # Configuration options
 
         # When the value of this property is "true" it indicates that the
-        # layer/element can process the output result on the same input
+        # layer/element can process the playground result on the same input
         # parameter. A typical case are layers that perform normalization
         # or activation functions.
         self.inplace_output = False
@@ -174,7 +174,7 @@ class Layer(object):
 
     def set_default_layer_types(self):
         """
-        generates de default EmbedIA data type names for input and output
+        generates de default EmbedIA data type names for input and playground
         parameters of the layer/element object and then sets to the
         corresponding properties
         Returns
@@ -197,11 +197,11 @@ class Layer(object):
 
     def get_output_data_type(self):
         """
-        get the C data type used as output by the EmbedIA layer/element.
+        get the C data type used as playground by the EmbedIA layer/element.
         Returns
         -------
         str
-            type name of the output for layer/element
+            type name of the playground for layer/element
         """
         return self.output_data_type
 
@@ -225,11 +225,11 @@ class Layer(object):
 
     def get_output_shape(self):
         """
-        get the shape of the output of the EmbedIA layer/element.
+        get the shape of the playground of the EmbedIA layer/element.
         Returns
         -------
         n-tuple
-            returns the output shape of the layer/element.
+            returns the playground shape of the layer/element.
         """
         if self.inplace_output:
             prev_layer = self.model.get_previous_layer(self)
@@ -258,12 +258,12 @@ class Layer(object):
 
     def get_output_size(self):
         """
-        obtains the number of output elements  of the EmbedIA layer/element,
+        obtains the number of playground elements  of the EmbedIA layer/element,
         regardless of the shape.
         Returns
         -------
         int
-            number of output elements
+            number of playground elements
         """
 
         s = 1
@@ -300,7 +300,7 @@ class Layer(object):
         Returns
         -------
         LayerInfo object
-            information of layer: name, type name, #params, MACs, output shape,
+            information of layer: name, type name, #params, MACs, playground shape,
             activation function name
 
         """
@@ -320,7 +320,7 @@ class Layer(object):
             name of the input variable to be used in the invocation of the C
             function that implements the layer.
         output_name : str
-            name of the output variable to be used in the invocation of the C
+            name of the playground variable to be used in the invocation of the C
             function that implements the layer.
         Returns
         -------
@@ -360,7 +360,7 @@ class Layer(object):
 
     def debug_function(self, param):
         """
-        generates C code with the debug function invocation with the output
+        generates C code with the debug function invocation with the playground
         result of the layer to be implemented in the file "embedia_debug.c".
         The default behavior generates an invocation to a function whose name
         is composed of "print_"+"type of data to print" (data1d_t, data2d_t or

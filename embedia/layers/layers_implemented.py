@@ -22,7 +22,24 @@ from embedia.layers.normalization.robust_scaler import RobustNormalization
 from embedia.layers.signal_processing.spectrogram import Spectrogram
 
 dict_layers = {
-    keras.layers.Dropout: DummyLayer,        # No porpose in inference
+    # Layers with No porpose in inference
+    keras.layers.InputLayer: DummyLayer,
+    keras.layers.Dropout: DummyLayer,
+    keras.layers.SpatialDropout1D: DummyLayer,
+    keras.layers.SpatialDropout2D: DummyLayer,
+    keras.layers.SpatialDropout3D: DummyLayer,
+    keras.layers.GaussianDropout: DummyLayer,
+    keras.layers.AlphaDropout: DummyLayer,
+    keras.layers.GaussianNoise: DummyLayer,
+    keras.layers.RandomBrightness: DummyLayer,
+    keras.layers.RandomContrast: DummyLayer,
+    keras.layers.RandomCrop: DummyLayer,
+    keras.layers.RandomFlip: DummyLayer,
+    keras.layers.RandomHeight: DummyLayer,
+    keras.layers.RandomRotation: DummyLayer,
+    keras.layers.RandomTranslation: DummyLayer,
+    keras.layers.RandomWidth: DummyLayer,
+    keras.layers.RandomZoom: DummyLayer,
     lq.layers.QuantConv2D: QuantConv2D,
     lq.layers.QuantDense: QuantDense,
     lq.layers.QuantSeparableConv2D: QuantSeparableConv2D,
@@ -43,7 +60,7 @@ dict_layers = {
     keras.layers.MaxPooling1D: Pooling,      # not yet implemented in C
     keras.layers.MaxPooling2D: Pooling,
     keras.layers.MaxPooling3D: Pooling,      # not yet implemented in C
-    # normalization layers
+    # normalization layers from SKLearn
     preprocessing.StandardScaler: StandardNormalization,
     preprocessing.MinMaxScaler: MinMaxNormalization,
     preprocessing.MaxAbsScaler: MaxAbsNormalization,

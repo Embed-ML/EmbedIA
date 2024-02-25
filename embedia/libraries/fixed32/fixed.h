@@ -7,7 +7,7 @@ typedef int32_t fixed;
 typedef int64_t dfixed;
 
 #define FIX_SIZE 32
-#define FIX_FRC_SZ 18
+#define FIX_FRC_SZ 17
 #define FIX_INT_SZ (FIX_SIZE - FIX_FRC_SZ)
 #define FIX_FRC_MSK  (((fixed)1 << FIX_FRC_SZ) - 1)
 
@@ -17,6 +17,8 @@ typedef int64_t dfixed;
 #define FIX_ZERO 0
 #define FIX_ONE ((fixed)((fixed)1 << FIX_FRC_SZ))
 #define FIX_TWO (FIX_ONE + FIX_ONE)
+// FIX_EXP_MAX = ln(FIX_MAX), recalculate if FIX_FRC_SZ change
+#define FIX_EXP_MAX FL2FX(9.7132951013616)
 #define FIX_E  FLOAT_TO_FIXED(2.7182818284590452354)
 #define FIX_PI FLOAT_TO_FIXED(3.14159265358979323846)
 #define FIX_MAX (fixed)(((dfixed)1 << (FIX_SIZE-1)) -1)

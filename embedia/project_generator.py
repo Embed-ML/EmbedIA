@@ -148,7 +148,7 @@ class ProjectGenerator:
         return 'float/'
 
     def _prepare_folders(self, output_folder, project_name, options):
-        # create output folder if doesnt exists
+        # create playground folder if doesnt exists
         if output_folder[-1] != '/':
             output_folder += '/'
 

@@ -1,7 +1,7 @@
 
 import sys
 # add parent folder to path in order to find EmbedIA folder
-sys.path.insert(0, '..')
+sys.path.insert(0, '../..')
 
 import os
 from embedia.project_generator import ProjectGenerator
@@ -54,7 +54,7 @@ except Exception:
 options = ProjectOptions()
 
 # set location of EmbedIA folder
-options.embedia_folder = '../embedia/'
+options.embedia_folder = '../../embedia/'
 
 
 options.project_type = ProjectType.ARDUINO
@@ -82,7 +82,7 @@ options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}
 
-# if True, remove output folder and start a clean export
+# if True, remove playground folder and start a clean export
 options.clean_output = True
 
 # ############ Generate project and test project #############

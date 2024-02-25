@@ -55,84 +55,84 @@ dense_layer_t init_dense_data(void){
 
     static neuron_t neurons[10];
 
-    /* [-0.39257756] 0.0*/
+    /* [-0.72187537] 0.0*/
     static const quant8 weights0[] ={
     0
     };
     
-    static const neuron_t neuron0 = {weights0, 255 , { 0.001539519838258332, 255 } };
+    static const neuron_t neuron0 = {weights0, 255 , { 0.0028308838021521474, 255 } };
     neurons[0]=neuron0;
 
-    /* [0.06460512] 0.0*/
+    /* [-0.42844707] 0.0*/
     static const quant8 weights1[] ={
+    0
+    };
+    
+    static const neuron_t neuron1 = {weights1, 255 , { 0.0016801845793630562, 255 } };
+    neurons[1]=neuron1;
+
+    /* [0.07904649] 0.0*/
+    static const quant8 weights2[] ={
     255
     };
     
-    static const neuron_t neuron1 = {weights1, 0 , { 0.0002533533993889304, 0 } };
-    neurons[1]=neuron1;
-
-    /* [-0.5471277] 0.0*/
-    static const quant8 weights2[] ={
-    0
-    };
-    
-    static const neuron_t neuron2 = {weights2, 255 , { 0.0021455989164464616, 255 } };
+    static const neuron_t neuron2 = {weights2, 0 , { 0.00030998622669893154, 0 } };
     neurons[2]=neuron2;
 
-    /* [-0.61707383] 0.0*/
+    /* [0.70283955] 0.0*/
     static const quant8 weights3[] ={
-    0
+    255
     };
     
-    static const neuron_t neuron3 = {weights3, 255 , { 0.0024198973880094642, 255 } };
+    static const neuron_t neuron3 = {weights3, 0 , { 0.0027562335425732184, 0 } };
     neurons[3]=neuron3;
 
-    /* [-0.47769684] 0.0*/
+    /* [-0.5449411] 0.0*/
     static const quant8 weights4[] ={
     0
     };
     
-    static const neuron_t neuron4 = {weights4, 255 , { 0.001873320925469492, 255 } };
+    static const neuron_t neuron4 = {weights4, 255 , { 0.00213702402862848, 255 } };
     neurons[4]=neuron4;
 
-    /* [-0.47027737] 0.0*/
+    /* [0.218938] 0.0*/
     static const quant8 weights5[] ={
-    0
-    };
-    
-    static const neuron_t neuron5 = {weights5, 255 , { 0.0018442249765583112, 255 } };
-    neurons[5]=neuron5;
-
-    /* [0.6207257] 0.0*/
-    static const quant8 weights6[] ={
     255
     };
     
-    static const neuron_t neuron6 = {weights6, 0 , { 0.002434218397327498, 0 } };
+    static const neuron_t neuron5 = {weights5, 0 , { 0.0008585803649004768, 0 } };
+    neurons[5]=neuron5;
+
+    /* [-0.26778328] 0.0*/
+    static const quant8 weights6[] ={
+    0
+    };
+    
+    static const neuron_t neuron6 = {weights6, 255 , { 0.0010501305262247721, 255 } };
     neurons[6]=neuron6;
 
-    /* [-0.47601646] 0.0*/
+    /* [-0.29534268] 0.0*/
     static const quant8 weights7[] ={
     0
     };
     
-    static const neuron_t neuron7 = {weights7, 255 , { 0.0018667312229380887, 255 } };
+    static const neuron_t neuron7 = {weights7, 255 , { 0.0011582066031063305, 255 } };
     neurons[7]=neuron7;
 
-    /* [-0.7361061] 0.0*/
+    /* [-0.28201368] 0.0*/
     static const quant8 weights8[] ={
     0
     };
     
-    static const neuron_t neuron8 = {weights8, 255 , { 0.002886690579208673, 255 } };
+    static const neuron_t neuron8 = {weights8, 255 , { 0.0011059360176909204, 255 } };
     neurons[8]=neuron8;
 
-    /* [-0.17727464] 0.0*/
+    /* [0.42903394] 0.0*/
     static const quant8 weights9[] ={
-    0
+    255
     };
     
-    static const neuron_t neuron9 = {weights9, 255 , { 0.000695194683822931, 255 } };
+    static const neuron_t neuron9 = {weights9, 0 , { 0.0016824860198825014, 0 } };
     neurons[9]=neuron9;
 
     dense_layer_t layer= { 10, neurons};

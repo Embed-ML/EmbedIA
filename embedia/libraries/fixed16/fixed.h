@@ -3,11 +3,11 @@
 
 #include <stdint.h>
 
-typedef int8_t fixed;
-typedef int16_t dfixed;
+typedef int16_t fixed;
+typedef int32_t dfixed;
 
-#define FIX_SIZE 8
-#define FIX_FRC_SZ 3
+#define FIX_SIZE 16
+#define FIX_FRC_SZ 8
 #define FIX_INT_SZ (FIX_SIZE - FIX_FRC_SZ)
 #define FIX_FRC_MSK  (((fixed)1 << FIX_FRC_SZ) - 1)
 
@@ -17,9 +17,9 @@ typedef int16_t dfixed;
 #define FIX_ZERO 0
 #define FIX_ONE ((fixed)((fixed)1 << FIX_FRC_SZ))
 #define FIX_TWO (FIX_ONE + FIX_ONE)
-#define FIX_E  FLOAT_TO_FIXED(2.7182818284590452354)
 // FIX_EXP_MAX = ln(FIX_MAX), recalculate if FIX_FRC_SZ change
-#define FIX_EXP_MAX FLOAT_TO_FIXED(2.77258872224)
+#define FIX_EXP_MAX FLOAT_TO_FIXED(4.15888308336)
+#define FIX_E  FLOAT_TO_FIXED(2.7182818284590452354)
 #define FIX_PI FLOAT_TO_FIXED(3.14159265358979323846)
 #define FIX_MAX (fixed)(((dfixed)1 << (FIX_SIZE-1)) -1)
 #define FIX_MIN (-FIX_MAX)
@@ -68,23 +68,23 @@ typedef int16_t dfixed;
 #define FIXED_FLOOR(A) ( FIXED_INT(A) )
 
 //////////////////////////////////// funciones de conversion de tipos ////////////////////////////////////
+		
+	// Devuelve un numero en punto fijo a partir de uno en punto flotante
+	fixed float_to_fixed(float f);
+ 
+	// Devuelve un numero en punto fijo a partir de un entero
+	fixed int_to_fixed(int32_t i);
+ 
+	// Devuelve la representacion en punto flotante de doble precision de un numero en punto fijo
+	double fixed_to_double(fixed f);
+	
+	// Devuelve la representacion en punto flotante de un numero en punto fijo
+	float fixed_to_float(fixed f);
+	
+	// Devuelve el entero a partir de un numero en punto fijo
+	int32_t fixed_to_int(fixed f);
 
-    // Devuelve un numero en punto fijo a partir de uno en punto flotante
-    fixed float_to_fixed(float f);
-
-    // Devuelve un numero en punto fijo a partir de un entero
-    fixed int_to_fixed(int32_t i);
-
-    // Devuelve la representacion en punto flotante de doble precision de un numero en punto fijo
-    double fixed_to_double(fixed f);
-
-    // Devuelve la representacion en punto flotante de un numero en punto fijo
-    float fixed_to_float(fixed f);
-
-    // Devuelve el entero a partir de un numero en punto fijo
-    int32_t fixed_to_int(fixed f);
-
-
+	
 //////////////////////////////////// funciones aritmeticas ////////////////////////////////////
 
     // Devuelve la suma en punto fijo entre a y b
@@ -126,15 +126,15 @@ typedef int16_t dfixed;
 
 
 //////////////////////////////////// funciones adicionales ////////////////////////////////////
+ 
+	// Devuelve el valor absoluto de a
+	fixed fixed_abs(fixed a);
 
-    // Devuelve el valor absoluto de a
-    fixed fixed_abs(fixed a);
+	// Devuelve el entero menor x tal que  x >= a
+	fixed fixed_ceil(fixed a);
 
-    // Devuelve el entero menor x tal que  x >= a
-    fixed fixed_ceil(fixed a);
-
-    // Devuelve el entero mayor x tal que  x <= a
-    fixed fixed_floor(fixed a);
+	// Devuelve el entero mayor x tal que  x <= a
+	fixed fixed_floor(fixed a);
 
 
 #endif

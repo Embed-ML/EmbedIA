@@ -11,7 +11,7 @@ class ChannelsAdapter(Layer):
     To avoid overlapping names, both the function name and the variable name
     are automatically generated using the layer name.
 """
-    _shape = None # input/output shape
+    _shape = None # input/playground shape
 
     # Constructor receives sklearn normalization object (Scaler) in layer
     def __init__(self, model, shape, options=None, **kwargs):
@@ -35,11 +35,11 @@ class ChannelsAdapter(Layer):
 
     def get_output_shape(self):
         """
-        get the shape of the output of the EmbedIA layer/element.
+        get the shape of the playground of the EmbedIA layer/element.
         Returns
         -------
         n-tuple
-            returns the output shape of the layer/element.
+            returns the playground shape of the layer/element.
         """
         return self._shape
 

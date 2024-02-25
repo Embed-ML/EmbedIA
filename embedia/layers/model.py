@@ -31,6 +31,7 @@ class Model(object):
     def _get_input_adapter(self):
         if self.model is None:
             return None
+
         inp_shape = self.model.input_shape
         if len(inp_shape)==4 and inp_shape[-1]>=2: # image => check format channels
             if self.model.layers[0].data_format == 'channels_last':
@@ -133,11 +134,11 @@ class Model(object):
             elif data_type == ModelDataType.QUANT8:
                 return ('quant8', QuantizedTypeConverter(8, False))
             elif data_type == ModelDataType.FIXED32:
-                return ('fixed', FixedTypeConverter(17, 15))
+                return ('fixed', FixedTypeConverter(15, 17))
             elif data_type == ModelDataType.FIXED16:
-                return ('fixed', FixedTypeConverter(9, 7))
+                return ('fixed', FixedTypeConverter(8, 8))
             elif data_type == ModelDataType.FIXED8:
-                return ('fixed', FixedTypeConverter(4, 4))
+                return ('fixed', FixedTypeConverter(5, 3))
             else:
                 raise UnsupportedFeatureError(data_type, 'Data type converter not supported')
 
