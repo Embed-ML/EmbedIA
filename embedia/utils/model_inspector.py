@@ -11,8 +11,8 @@ import numpy as np
 
 class ModelInspector(object):
     """
-    This class obtains the playground of each layer of a model from a given input
-    data. It allows retrieving the layer information with its playground,
+    This class obtains the output of each layer of a model from a given input
+    data. It allows retrieving the layer information with its output,
     converting it to a string or saving it to disk.
     """
 
@@ -51,7 +51,7 @@ class ModelInspector(object):
 
     def inspect(self, inp_data):
         """
-        Obtains information from each layer along with its playground from a
+        Obtains information from each layer along with its output from a
         specified data input.
 
         Parameters
@@ -78,7 +78,7 @@ class ModelInspector(object):
 
     def as_string(self, inp_data, col_sz=10, margin='  ', ln_break=80):
         """
-        Constructs a string with the playground data of each layer of the model
+        Constructs a string with the output data of each layer of the model
         from a specified input data.
 
         Parameters
@@ -86,10 +86,10 @@ class ModelInspector(object):
         inp_data : array with input data
             Array with input data.
         col_sz : int, optional
-            Size in characters of the column into which each playground value must
+            Size in characters of the column into which each output value must
             fit. The default is 10.
         margin : String, optional
-            String to indent each line of the playground data. The default is '  '.
+            String to indent each line of the output data. The default is '  '.
         ln_break : int, optional
             Maximum length of each line of text. Lines are broken if adding a
             new value exceeds this limit. If a value of 0 is specified, the
@@ -98,10 +98,10 @@ class ModelInspector(object):
         Returns
         -------
         String
-            String with the playground data of each layer of the model. For each
+            String with the output data of each layer of the model. For each
             layer is provided:
-            - a header with the name and type of the layer and its playground form.
-            - the sequence of playground values.
+            - a header with the name and type of the layer and its output form.
+            - the sequence of output values.
 
         """
 
@@ -113,7 +113,7 @@ class ModelInspector(object):
 
     def print(self, inp_data, col_sz=10, margin='  ', ln_break=80):
         """
-        prints the playground data of each layer of the model from a specified
+        prints the output data of each layer of the model from a specified
         input data.
 
         Parameters
@@ -121,10 +121,10 @@ class ModelInspector(object):
         inp_data : array with input data
             Array with input data.
         col_sz : int, optional
-            Size in characters of the column into which each playground value must
+            Size in characters of the column into which each output value must
             fit. The default is 10.
         margin : String, optional
-            String to indent each line of the playground data. The default is '  '.
+            String to indent each line of the output data. The default is '  '.
         ln_break : int, optional
             Maximum length of each line of text. Lines are broken if adding a
             new value exceeds this limit. If a value of 0 is specified, the
@@ -139,7 +139,7 @@ class ModelInspector(object):
 
     def save(self, filename ,inp_data, col_sz=10, margin='  ', ln_break=80):
         """
-        saves the playground data of each layer of the model from a specified input
+        saves the output data of each layer of the model from a specified input
         data.
 
         Parameters
@@ -149,10 +149,10 @@ class ModelInspector(object):
         inp_data : array with input data
             Array with input data.
         col_sz : int, optional
-            Size in characters of the column into which each playground value must
+            Size in characters of the column into which each output value must
             fit. The default is 10.
         margin : String, optional
-            String to indent each line of the playground data. The default is '  '.
+            String to indent each line of the output data. The default is '  '.
         ln_break : int, optional
             Maximum length of each line of text. Lines are broken if adding a
             new value exceeds this limit. If a value of 0 is specified, the
@@ -199,10 +199,10 @@ class ModelInspector(object):
         data : array
             Array of values. Input data for input layer.
         col_sz : int, optional
-            Size in characters of the column into which each playground value must
+            Size in characters of the column into which each output value must
             fit. The default is 10.
         margin : String, optional
-            String to indent each line of the playground data. The default is '  '.
+            String to indent each line of the output data. The default is '  '.
         ln_break : int, optional
             Maximum length of each line of text. Lines are broken if adding a
             new value exceeds this limit. If a value of 0 is specified, the
@@ -234,10 +234,10 @@ class ModelInspector(object):
         data : array
             3D array of values. Input data for input layer.
         col_sz : int, optional
-            Size in characters of the column into which each playground value must
+            Size in characters of the column into which each output value must
             fit. The default is 10.
         margin : String, optional
-            String to indent each line of the playground data. The default is '  '.
+            String to indent each line of the output data. The default is '  '.
         ln_break : int, optional
             Maximum length of each line of text. Lines are broken if adding a
             new value exceeds this limit. If a value of 0 is specified, the
@@ -266,10 +266,10 @@ class ModelInspector(object):
         data : array
             2D array of values. Input data for input layer.
         col_sz : int, optional
-            Size in characters of the column into which each playground value must
+            Size in characters of the column into which each output value must
             fit. The default is 10.
         margin : String, optional
-            String to indent each line of the playground data. The default is '  '.
+            String to indent each line of the output data. The default is '  '.
         ln_break : int, optional
             Maximum length of each line of text. Lines are broken if adding a
             new value exceeds this limit. If a value of 0 is specified, the
@@ -297,10 +297,10 @@ class ModelInspector(object):
         data : array
             1D array of values. Input data for input layer.
         col_sz : int, optional
-            Size in characters of the column into which each playground value must
+            Size in characters of the column into which each output value must
             fit. The default is 10.
         margin : String, optional
-            String to indent each line of the playground data. The default is '  '.
+            String to indent each line of the output data. The default is '  '.
         ln_break : int, optional
             Maximum length of each line of text. Lines are broken if adding a
             new value exceeds this limit. If a value of 0 is specified, the
@@ -314,7 +314,7 @@ class ModelInspector(object):
 
         """
         line = margin
-        # playground = '\n'
+        # output = '\n'
         output = ''
         for i in range(data.shape[0]):
             value = self._format_value(data[i], col_sz)
@@ -354,17 +354,17 @@ class ModelInspector(object):
 
     def _layers_to_string(self, layers_outputs, col_sz, margin, ln_break):
         """
-        Constructs a formatted string with the layer's playground data of the model
+        Constructs a formatted string with the layer's output data of the model
 
         Parameters
         ----------
         layers_outputs : array
             array of layer's outputs.
         col_sz : int, optional
-            Size in characters of the column into which each playground value must
+            Size in characters of the column into which each output value must
             fit. The default is 10.
         margin : String, optional
-            String to indent each line of the playground data. The default is '  '.
+            String to indent each line of the output data. The default is '  '.
         ln_break : int, optional
             Maximum length of each line of text. Lines are broken if adding a
             new value exceeds this limit. If a value of 0 is specified, the
@@ -372,7 +372,7 @@ class ModelInspector(object):
 
         Returns
         -------
-        playground : String
+        output : String
             Returns a string formatted from the layer's outputs of the model.
 
         """

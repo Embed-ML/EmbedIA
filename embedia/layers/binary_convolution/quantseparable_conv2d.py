@@ -304,7 +304,7 @@ class QuantSeparableConv2D(DataLayer):
             name of the input variable to be used in the invocation of the C
             function that implements the layer.
         output_name : str
-            name of the playground variable to be used in the invocation of the C
+            name of the output variable to be used in the invocation of the C
             function that implements the layer.
 
         Returns

@@ -45,7 +45,7 @@ class SystemPlatformProvider:
             command (str): The command to execute.
 
         Returns:
-            tuple: A tuple containing the return code and the playground (stdout or stderr) of the command execution.
+            tuple: A tuple containing the return code and the output (stdout or stderr) of the command execution.
         """
         try:
             result = subprocess.run(command, shell=True, capture_output=True, text=True)

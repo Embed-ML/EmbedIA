@@ -12,7 +12,7 @@ class Activation(Layer):
     def __init__(self, model, layer, options=None, **kwargs):
         super().__init__(model, layer, options, **kwargs)
 
-        # saves playground into playground of previous layer
+        # saves output into output of previous layer
         self.inplace_output = True
 
     def predict(self, input_name, output_name):
@@ -30,7 +30,7 @@ class Activation(Layer):
             function that implements the layer. Not used in activation
             functions since the output_name variable is directly modified
         output_name : str
-            name of the playground variable to be used in the invocation of the C
+            name of the output variable to be used in the invocation of the C
             function that implements the layer.
         Returns
         -------

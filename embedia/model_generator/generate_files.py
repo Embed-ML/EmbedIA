@@ -271,7 +271,7 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options, embedia
     model_init();
 '''
 
-    # prepare data for model input and playground
+    # prepare data for model input and output
     input_data_type = embedia_layers[0].get_input_data_type()
     output_data_type = embedia_layers[-1].get_output_data_type()
 

@@ -12,4 +12,4 @@ embedia tests/project tests/outputs
 .idea/
 mini_speech_commands/
 /embedia tests/functions tests/outputs/
-/embedia tests/playground/
+/embedia tests/output/

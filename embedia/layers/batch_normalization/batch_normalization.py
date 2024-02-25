@@ -53,7 +53,7 @@ class BatchNormalization(DataLayer):
         # name is forced in this class.
         self.struct_data_type = 'batch_normalization_layer_t'
 
-        # EmbedIA function saves playground into input
+        # EmbedIA function saves output into input
         self.inplace_output = True
 
     def calculate_memory(self, types_dict):

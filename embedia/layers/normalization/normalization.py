@@ -71,12 +71,12 @@ class Normalization(DataLayer):
 
     def get_output_shape(self):
         """
-        Returns the shape of the playground data.
+        Returns the shape of the output data.
 
         Returns
         -------
         n-tuple
-            shape of the playground data
+            shape of the output data
         """
         return self.get_input_shape()
 

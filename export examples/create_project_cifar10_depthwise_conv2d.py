@@ -73,7 +73,7 @@ options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}
 
-# if True, remove playground folder and start a clean export
+# if True, remove output folder and start a clean export
 options.clean_output = True
 
 ############# Generate project #############

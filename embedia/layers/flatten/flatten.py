@@ -15,7 +15,7 @@ class Flatten(Layer):
         super().__init__(model, layer, options, **kwargs)
 
         dims = len(self.get_input_shape())
-        # define C data types of input/playground data. Note that the data type of
+        # define C data types of input/output data. Note that the data type of
         # the input depends on the dimensions of the input.
         self.input_data_type = f'data{dims}d_t'
         self.output_data_type = 'data1d_t'
@@ -36,7 +36,7 @@ class Flatten(Layer):
             name of the input variable to be used in the invocation of the C
             function that implements the layer.
         output_name : str
-            name of the playground variable to be used in the invocation of the C
+            name of the output variable to be used in the invocation of the C
             function that implements the layer.
 
         Returns

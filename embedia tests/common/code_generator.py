@@ -154,8 +154,8 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float err){{
         predict = "\n"
 
         data_layers_input = [{'type': input_data_type, 'var_name': 'input'}, ]
-        data_layers_output = [{'type': output_data_type, 'var_name': 'playground'}]
-        var_output = 'playground'
+        data_layers_output = [{'type': output_data_type, 'var_name': 'output'}]
+        var_output = 'output'
         layer_id = -1
         first_layer = True
 
@@ -187,7 +187,7 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float err){{
 
                 output_layer_type = layer.get_output_data_type()
                 if data_layers_output == [] or data_layers_output[-1]['type'] != output_layer_type:
-                    var_output = f'playground{len(data_layers_output)}'
+                    var_output = f'output{len(data_layers_output)}'
                     predict += f'    {output_layer_type} {var_output};\n'
                     data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
             elif first_layer:  # layer section of predict function
@@ -207,7 +207,7 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float err){{
 
         return (proto_decl, var_decl, data_init, func_impl, predict)
 
-    # def _generate_main_code_old_casi_ok(self, embedia_model, input, playground, error_bound):
+    # def _generate_main_code_old_casi_ok(self, embedia_model, input, output, error_bound):
     #
     #     test_layer = embedia_model.embedia_layers[-1]
     #     input_data_type = test_layer.get_input_data_type()
@@ -232,26 +232,26 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float err){{
     #
     #     input_var = self._generate_data_structure(input_data_type, 'input', data_type, data_converter, input) + '\n'
     #     output_var = self._generate_data_structure(output_data_type, 'real_output', data_type, data_converter,
-    #                                                playground) + '\n'
+    #                                                output) + '\n'
     #     # for test
     #     if self._embedia_type in [ModelDataType.FIXED32, ModelDataType.FIXED16, ModelDataType.FIXED8]:
-    #         compare = 'FX2FL(real_output.data[i]) - FX2FL(playground.data[i])'
+    #         compare = 'FX2FL(real_output.data[i]) - FX2FL(output.data[i])'
     #     else:
-    #         compare = 'real_output.data[i] - playground.data[i]'
+    #         compare = 'real_output.data[i] - output.data[i]'
     #
-    #     # total of playground values, regards the shape
-    #     output_count = np.prod(playground.shape)
+    #     # total of output values, regards the shape
+    #     output_count = np.prod(output.shape)
     #
     #     main_code += input_var + ';\n'
     #     main_code += output_var + ';\n'
-    #     main_code += output_data_type + ' playground;\n\n'
+    #     main_code += output_data_type + ' output;\n\n'
     #     main_code += f'# define ERROR_BOUND {error_bound}\n'
     #     main_code += 'int main(){\n\n'  # main code start
     #     main_code += test_layer.init() + '\n'  # call to layer/element initizalization function
-    #     main_code += '    ' + test_layer.predict('input', 'playground') + '\n'
+    #     main_code += '    ' + test_layer.predict('input', 'output') + '\n'
     #
     #     main_code += f'''
-    #     printf("Test result: %6.3f %%\\n", measure_error(real_output, playground, ERROR_BOUND));
+    #     printf("Test result: %6.3f %%\\n", measure_error(real_output, output, ERROR_BOUND));
     #
     # '''
     #     main_code += '    return 0;\n}'
@@ -285,21 +285,21 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float err){{
         output_var = self._generate_data_structure(output_data_type, 'real_output', data_type, data_converter, output)
         # for test
         if self._embedia_type in [ModelDataType.FIXED32, ModelDataType.FIXED16, ModelDataType.FIXED8]:
-            compare = 'FX2FL(real_output.data[i]) - FX2FL(playground.data[i])'
+            compare = 'FX2FL(real_output.data[i]) - FX2FL(output.data[i])'
         else:
-            compare = 'real_output.data[i] - playground.data[i]'
+            compare = 'real_output.data[i] - output.data[i]'
 
 
         main_code += input_var + ';\n\n'
         main_code += output_var + ';\n\n'
         main_code += var_decl+'\n'  # layer/element/module variable declaration
-        main_code += output_data_type + ' playground;\n\n'  # playground var declaration
+        main_code += output_data_type + ' output;\n\n'  # output var declaration
         main_code += f'# define ERROR_BOUND {error_bound}\n\n'
         main_code += 'int main(){\n\n'  # main code start
         main_code += data_init # call to layer/element/module initizalization function
         main_code += '    ' + predict
 
-        main_code += f'    printf("Test result: %6.3f %%\\n", measure_error(real_output, playground, ERROR_BOUND));\n\n'
+        main_code += f'    printf("Test result: %6.3f %%\\n", measure_error(real_output, output, ERROR_BOUND));\n\n'
         main_code += '    return 0;\n}'
 
         return main_code

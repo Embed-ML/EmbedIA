@@ -17,6 +17,6 @@ for filename in test_file_lists:  # Iterate through the files
         if hasattr(module, 'TESTS_LIST'): # variable for tests in file
             all_tests_list.extend(module.TESTS_LIST)  # Add the tests from the module to the list
 
-results = tester.run_tests(all_tests_list, verbose=True) # Run all the collected tests with verbose playground
+results = tester.run_tests(all_tests_list, verbose=True) # Run all the collected tests with verbose output
 
 print(TestSummary(results))

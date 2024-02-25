@@ -32,7 +32,7 @@ try:
         # Create a temporary file for the TensorFlow model
         with tempfile.NamedTemporaryFile(suffix='.pb') as tmp_file:
             # Export the PyTorch model to TensorFlow format
-            torch.onnx.export(pt_model, torch.randn(1, *pt_model.input_shape[1:]), tmp_file.name, input_names=["input"], output_names=["playground"])
+            torch.onnx.export(pt_model, torch.randn(1, *pt_model.input_shape[1:]), tmp_file.name, input_names=["input"], output_names=["output"])
 
             # Load the TensorFlow model
             model = tf.keras.models.load_model(tmp_file.name, compile=False)
