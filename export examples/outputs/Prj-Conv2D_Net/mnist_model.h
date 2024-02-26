@@ -4,19 +4,24 @@
 
 /*
 
-+-------------------+---------------+------------+-------------+-------+------------+
-| Layer(activation) | Name          | #Param(NT) |    Shape    |  MACs | Size (KiB) |
-+-------------------+---------------+------------+-------------+-------+------------+
-| Conv2D(relu)      | conv2d        |         40 | (13, 13, 8) |  5408 |     0.219  |
-| Conv2D(relu)      | conv2d_1      |        264 | (12, 12, 8) | 36864 |     1.094  |
-| MaxPooling2D      | max_pooling2d |          0 |  (3, 3, 8)  |     0 |     0.000  |
-| Flatten           | flatten       |          0 |    (72,)    |     0 |     0.000  |
-| Dense(relu)       | dense         |       1168 |    (16,)    |  1152 |     4.625  |
-| Dense(softmax)    | dense_1       |        170 |    (10,)    |   160 |     0.703  |
-+-------------------+---------------+------------+-------------+-------+------------+
-Total params (NT)....: 1642
-Total size in KiB....: 6.641
-Total MACs operations: 43584
++---------------------+-------------------+------------+-------------+-------+------------+
+| Layer(activation)   | Name              | #Param(NT) |    Shape    |  MACs | Size (KiB) |
++---------------------+-------------------+------------+-------------+-------+------------+
+| Conv2D(linear)      | conv_2d_1         |        208 | (10, 10, 8) | 20000 |     0.875  |
+| LeakyReLU           | leaky_relu_1      |          0 | (10, 10, 8) |     0 |     0.000  |
+| MaxPooling2D        | max_pool_2d_1     |          0 |  (5, 5, 8)  |     0 |     0.000  |
+| Conv2D(linear)      | conv_2d_2         |       1168 |  (3, 3, 16) | 10368 |     4.688  |
+| LeakyReLU           | leaky_relu_2      |          0 |  (3, 3, 16) |     0 |     0.000  |
+| MaxPooling2D        | max_pool_2d_2     |          0 |  (1, 1, 16) |     0 |     0.000  |
+| Flatten             | reshape_1         |          0 |    (16,)    |     0 |     0.000  |
+| Dense(linear)       | fully_connected_1 |        272 |    (16,)    |   256 |     1.125  |
+| LeakyReLU           | leaky_relu_3      |          0 |    (16,)    |     0 |     0.000  |
+| Dense(linear)       | fully_connected_2 |        170 |    (10,)    |   160 |     0.703  |
+| Activation(softmax) | softmax_1         |          0 |    (10,)    |     0 |     0.000  |
++---------------------+-------------------+------------+-------------+-------+------------+
+Total params (NT)....: 1818
+Total size in KiB....: 7.391
+Total MACs operations: 30784
 
 */
 

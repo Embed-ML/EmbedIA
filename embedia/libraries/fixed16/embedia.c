@@ -4,7 +4,8 @@
  */
 
 #include "embedia.h"
-
+#include <stdlib.h>
+#include <math.h>
 
 typedef struct{
     size_t  size;
@@ -170,6 +171,45 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
         delta = i*(output->height)*(output->width);
         pointwise(layer.point_filters[i],depth_output,output,delta);
     }
+}
+
+static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
+    int i, j, k, l, c;
+    float sum;
+
+    for(i=0; i<output->height; i++){
+        for(j=0; j<output->width; j++){
+            for(c=0; c<layer.channels; c++){
+                sum=0;
+                for(k=0; k<layer.kernel_size; k++){
+                    for(l=0; l<layer.kernel_size; l++){
+                        sum += FIXED_MUL(layer.weights[(c*layer.kernel_size*layer.kernel_size)+k*layer.kernel_size+l],
+                         input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
+                    }
+                }
+                output->data[c*output->width*output->height + i*output->width + j]= sum + layer.bias[c];
+            }
+        }
+    }
+}
+
+/*
+ * depthwise_conv2d_layer()
+ *  Function in charge of applying the depthwise of a filter layer (conv_layer_t) on a given input data set.
+ * Parameters:
+ *  layer => depthwise layer with loaded filters.
+ *  input => input data of type data3d_t
+ *  *output => pointer to the data3d_t structure where the result will be saved.
+ */
+
+void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
+
+    output->channels = layer.channels; //cantidad de canales
+    output->height   = input.height - layer.kernel_size + 1;
+    output->width    = input.width - layer.kernel_size + 1;
+    output->data     = (fixed*)swap_alloc( sizeof(fixed)*output->height*output->width*output->channels );
+
+    depthwise_bias(layer, input, output);
 }
 
 /*
@@ -389,8 +429,9 @@ void sigmoid_activation(fixed *data, uint32_t length){
     uint32_t i;
 
     for(i=0;i<length;i++){
-        data[i] = 1 / (1 + fixed_exp(-data[i]));
+        data[i] = FIXED_DIV(FIX_ONE, FIX_ONE + fixed_exp(-data[i]));
     }
+
 }
 
 /*
@@ -403,7 +444,7 @@ void softsign_activation(fixed *data, uint32_t length){
     uint32_t i;
 
     for(i=0;i<length;i++){
-        data[i] = FIXED_DIV(data[i],(fixed_abs(data[i])+1));
+        data[i] = FIXED_DIV(data[i],(fixed_abs(data[i])+FIX_ONE));
     }
 }
 
@@ -548,14 +589,14 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
 }
 
 
-/* image_adapt_layer()
+/* channel_adapt_layer()
  *  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
  *  Usually required for first convolutional layer
  * Parameters:
  *  input   => input data of type data3d_t.
  *  *output => pointer to the data3d_t structure where the result will be stored.
  */
-void image_adapt_layer(data3d_t input, data3d_t * output){
+void channel_adapt_layer(data3d_t input, data3d_t * output){
 
     uint32_t i, j, c, l;
 

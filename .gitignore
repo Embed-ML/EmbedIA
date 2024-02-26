@@ -1,7 +1,7 @@
 .ipynb_checkpoints/
 *.pyc
 outputs/prueba_definitiva/
-embedia tests/outputs
+embedia tests/project tests/outputs
 *.bak
 *.pyc
 *.o
@@ -11,5 +11,6 @@ embedia tests/outputs
 .vscode/
 .idea/
 mini_speech_commands/
-/embedia tests/
+/embedia tests/functions tests/outputs/
+/embedia tests/output/
 mini_speech_commands.zip

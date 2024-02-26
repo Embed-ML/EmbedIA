@@ -54,7 +54,10 @@ class ProjectGenerator:
     def create_project(self, output_folder, project_name, model, options):
 
         embedia_model = EmbediaModel(options)
-        layers_embedia = embedia_model.set_layers(model.layers)
+
+        embedia_model.set_model(model)
+        embedia_layers = embedia_model.embedia_layers
+
 
         # prepare folders and extension of files to copy/create
         self._prepare_folders(output_folder, project_name, options)
@@ -65,7 +68,7 @@ class ProjectGenerator:
 
         # copy library files
         if ProjectFiles.LIBRARY in options.files:
-            embedia_files = generate_embedia_library(layers_embedia, self._datatype_folder, options)
+            embedia_files = generate_embedia_library(embedia_layers, self._datatype_folder, options)
 
             for filename in embedia_files:
                 content = embedia_files[filename]
@@ -109,7 +112,7 @@ class ProjectGenerator:
 
         # create main file with an example
         if ProjectFiles.MAIN in options.files:
-            (text_example_h, text_main_c) = generate_embedia_main(layers_embedia, self._lib_folder, filename, options, embedia_model)
+            (text_example_h, text_main_c) = generate_embedia_main(embedia_layers, self._lib_folder, filename, options, embedia_model)
             if options.project_type == ProjectType.ARDUINO:
                 filename = project_name
                 c_ext = '.ino'

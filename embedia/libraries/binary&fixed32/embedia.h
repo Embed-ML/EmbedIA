@@ -6,9 +6,8 @@
 #define _EMBEDIA_H
 
 #include <stdint.h>
-#include <math.h>
 #include "fixed.h"
-{includes}
+//{includes}
 
 
 
@@ -441,7 +440,7 @@ static inline xBITS XNOR(register xBITS a,register xBITS b);
 /* Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
    Usually required for first convolutional layer
 */
-void image_adapt_layer(data3d_t input, data3d_t * output);
+void channel_adapt_layer(data3d_t input, data3d_t * output);
 
 #endif
 

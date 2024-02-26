@@ -45,7 +45,7 @@ void model_predict(data3d_t input, data1d_t * output){
     // Layer name: quant_conv2d_3
     data3d_t output0;
         // convert image for first EmbedIA Conv2d layer
-        image_adapt_layer(input, &output0);
+        channel_adapt_layer(input, &output0);
         input = output0;
     
      quantconv2d_input_not_binary_layer(quant_conv2d_3_data, input, &output0);

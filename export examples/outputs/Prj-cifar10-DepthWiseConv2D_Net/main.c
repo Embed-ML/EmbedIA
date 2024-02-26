@@ -37,7 +37,9 @@ int main(void){
     /*
 
     model_predict(input, &results);
-    printf("prediccion: %5f", results.data[0]);
+
+    printf("prediccion: %.5f", results.data[0]);
+
     */
 
 

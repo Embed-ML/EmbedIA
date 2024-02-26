@@ -130,15 +130,19 @@ class Normalization(DataLayer):
         sub_var_name = 'sub_val'
         div_var_name = 'inv_div_val'
 
-        # apply data conversion (fixed, quantized, etc)
-        sub_val = data_converter.fit_transform(self.sub_values)
-        # inverted values in order to multiply instead of divide
-        inv_div_val = data_converter.transform(1/self.div_values)
-
         macro_converter = lambda x: x
 
-        # Params: data type, var name, macro, array/list of values
-        o_sub_val = declare_array(f'static const {data_type}', sub_var_name, macro_converter, sub_val)
+        if self.sub_values is not None:
+            # apply data conversion (fixed, quantized, etc)
+            sub_val = data_converter.fit_transform(self.sub_values)
+            # Params: data type, var name, macro, array/list of values
+            o_sub_val = declare_array(f'static const {data_type}', sub_var_name, macro_converter, sub_val)
+        else:
+            o_sub_val = ''
+            sub_var_name = 'NULL'
+
+        # inverted values in order to multiply instead of divide
+        inv_div_val = data_converter.transform(1/self.div_values)
         # prepare values for division (multiplication of inverse values)
         o_inv_div_val = declare_array(f'static const {data_type}', div_var_name, macro_converter, inv_div_val)
 

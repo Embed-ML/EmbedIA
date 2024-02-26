@@ -45,10 +45,6 @@ class Activation(Layer):
         else:
             activation = self.layer
 
-        #if self.is_data_quantized():
-        #    qparams = f'{output_name}.qparam'
-        #else:
-        #    qparams = ''
         qparams = ''
         act_fncs = ActivationFunctions(self.model, activation)
 

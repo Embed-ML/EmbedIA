@@ -4,7 +4,7 @@
  */
 
 #include "embedia.h"
-
+#include <stdlib.h>
 
 typedef struct{
     size_t  size;
@@ -868,7 +868,7 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
 /* Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
    Usually required for first convolutional layer
 */
-void image_adapt_layer(data3d_t input, data3d_t * output){
+void channel_adapt_layer(data3d_t input, data3d_t * output){
 
     int i, j, c, l;
 

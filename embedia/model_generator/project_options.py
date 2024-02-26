@@ -2,10 +2,12 @@ class ModelDataType:
     (FLOAT, FIXED32, FIXED16, FIXED8, QUANT8, BINARY, BINARY_FIXED32, BINARY_FLOAT16) = (0, 1, 2, 3, 4, 5, 6, 7)
 
     SIZES = [32, 32, 16, 8, 8, 32, 32, 16]
-
+    NAMES = ['float', 'fixed32', 'fixed16', 'fixed8', 'quant8', 'binary', 'binary_fixed32', 'binary_fixed16']
     def get_size(dt):
-
         return ModelDataType.SIZES[dt]
+
+    def get_name(dt):
+        return ModelDataType.NAMES[dt]
 
 
 class ProjectType:

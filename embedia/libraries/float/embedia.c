@@ -4,7 +4,8 @@
  */
 
 #include "embedia.h"
-
+#include <stdlib.h>
+#include <math.h>
 
 typedef struct{
     size_t  size;
@@ -152,51 +153,20 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
 }
 
 
-/*static void depthwise_new(depthwise_conv2d_layer_t filters, data3d_t input, data3d_t * output){
-    uint32_t i,j,k,l,c;
-    float suma;
+static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
+    int i, j, k, l, c;
+    float sum;
 
-    for (i=0; i<output->height; i++){
-        for (j=0; j<output->width; j++){
-            for (c=0; c<filters.channels; c++){
-                suma=filters.bias[c];
-                for (k=0; k<filters.kernel_size; k++){
-                    for (l=0; l<filters.kernel_size; l++){
-                        suma += (filters.weights[(c*filters.kernel_size*filters.kernel_size)+k*filters.kernel_size+l] * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
+    for(i=0; i<output->height; i++){
+        for(j=0; j<output->width; j++){
+            for(c=0; c<layer.channels; c++){
+                sum=0;
+                for(k=0; k<layer.kernel_size; k++){
+                    for(l=0; l<layer.kernel_size; l++){
+                        sum += (layer.weights[(c*layer.kernel_size*layer.kernel_size)+k*layer.kernel_size+l] * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
                     }
                 }
-                output->data[c*output->width*output->height + i*output->width + j] = suma;
-            }
-        }
-    }
-}
-*/
-
-static void depthwise_new(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
-    int i, j, k, l, m, n, o;
-    int kernel_size = layer.filters.kernel_size;
-    int output_height = output->height;
-    int output_width = output->width;
-    int output_channels = output->channels;
-    int input_channels = input.channels;
-    float *output_data = output->data;
-    float *input_data = input.data;
-    const float *weights = layer.filters.weights;
-    const float *bias = layer.filters.bias; // agregado *bias ya que es un vector - solución error de compilación
-
-    for (i = 0; i < output_channels; i++) {
-        for (j = 0; j < output_height; j++) {
-            for (k = 0; k < output_width; k++) {
-                float sum = 0.0;
-                for (l = 0; l < input_channels; l++) {
-                    for (m = 0; m < kernel_size; m++) {
-                        for (n = 0; n < kernel_size; n++) {
-                            o = l * input.width * input.height + (j + m) * input.width + (k + n);
-                            sum += input_data[o] * weights[i * input_channels * kernel_size * kernel_size + l * kernel_size * kernel_size + m * kernel_size + n];
-                        }
-                    }
-                }
-                output_data[i * output_width * output_height + j * output_width + k] = sum + bias[l]; //[l] bias correspondiente al canal? a revisar!!! - solución error de compilación
+                output->data[c*output->width*output->height + i*output->width + j]= sum + layer.bias[c];
             }
         }
     }
@@ -204,7 +174,7 @@ static void depthwise_new(depthwise_conv2d_layer_t layer, data3d_t input, data3d
 
 /*
  * depthwise_conv2d_layer()
- *  Function in charge of applying the depthwise of a filter layer (conv_layer_t) on a given input data set.
+ *  Function in charge of applying the depthwise of a filter layer with bias (depthwise_conv2d_layer_t) on a given input data set.
  * Parameters:
  *  layer => depthwise layer with loaded filters.
  *  input => input data of type data3d_t
@@ -214,11 +184,11 @@ static void depthwise_new(depthwise_conv2d_layer_t layer, data3d_t input, data3d
 void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
 
     output->channels = layer.channels; //cantidad de canales
-    output->height   = input.height - layer.filters.kernel_size + 1;
-    output->width    = input.width - layer.filters.kernel_size + 1;
+    output->height   = input.height - layer.kernel_size + 1;
+    output->width    = input.width - layer.kernel_size + 1;
     output->data     = (float*)swap_alloc( sizeof(float)*output->height*output->width*output->channels );
 
-    depthwise_new(layer, input, output);
+    depthwise_bias(layer, input, output);
 }
 
 /*
@@ -445,7 +415,7 @@ void softsign_activation(float *data, uint32_t length){
     uint32_t i;
 
     for(i=0;i<length;i++){
-        data[i] = data[i] / (abs(data[i])+1);
+        data[i] = data[i] / (fabs(data[i])+1);
     }
 }
 
@@ -570,14 +540,14 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
 }
 
 
-/* image_adapt_layer()
+/* channel_adapt_layer()
  *  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
  *  Usually required for first convolutional layer
  * Parameters:
  *  input   => input data of type data3d_t.
  *  *output => pointer to the data3d_t structure where the result will be stored.
  */
-void image_adapt_layer(data3d_t input, data3d_t * output){
+void channel_adapt_layer(data3d_t input, data3d_t * output){
 
     uint32_t i, j, c, l;
 

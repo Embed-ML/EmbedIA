@@ -8,39 +8,62 @@ from embedia.model_generator.project_options import BinaryBlockSize
 from embedia.layers.unimplemented_layer import UnimplementedLayer
 from embedia.layers.type_converters import *
 from embedia.layers.exceptions import *
+from embedia.layers.transformation.channels_adapter import ChannelsAdapter
+
 import tensorflow as tf
 
 
 
 class Model(object):
     types_dict = {}
+    model = None
+    embedia_layers = []
 
     def __init__(self, options):
         self.options = options
         self.clear_names()
 
 
-    def set_layers(self, layers, options_array=None):
+    def set_model(self, tfk_model):
+        self.model = tfk_model
+        self._update_layers()
+
+    def _get_input_adapter(self):
+        if self.model is None:
+            return None
+
+        inp_shape = self.model.input_shape
+        if len(inp_shape)==4 and inp_shape[-1]>=2: # image => check format channels
+            if self.model.layers[0].data_format == 'channels_last':
+                return ChannelsAdapter(model=self, shape=inp_shape, options=self.options)
+            return None
+        return None
+    def _update_layers(self, options_array=None):
         # options es la generica del proyecto
         # options_array es un vector con opciones para cada clase
 
         embedia_layers = []
 
-        # external normalizar to the model? => add as first layer
+        # add adapter if its required
+        input_adapter = self._get_input_adapter()
+        if input_adapter is not None:
+            embedia_layers.append(input_adapter)
+
+        # external normalizer to the model? => add as first layer
         if self.options.normalizer is not None:
             obj = self.options.normalizer
-            ly = self.create_embedia_layer(obj)
+            ly = self._create_embedia_layer(obj)
             embedia_layers.append(ly)
 
-        for layer in layers:
+        for layer in self.model.layers: # TF/Keras layers
             obj = layer
-            ly = self.create_embedia_layer(layer)
+            ly = self._create_embedia_layer(layer)
             embedia_layers.append(ly)
 
         self.embedia_layers = embedia_layers
         return embedia_layers
 
-    def create_embedia_layer(self, obj):
+    def _create_embedia_layer(self, obj):
         try:
             layer = dict_layers[type(obj)](self, obj, self.options)
         except KeyError:
@@ -61,10 +84,14 @@ class Model(object):
         self.names = defaultdict(lambda: 0)
 
     def get_unique_name(self, obj):
-        if hasattr(obj, "name"):
-            name = obj.name
-        elif hasattr(obj, "__name__"):
-            name = obj.__name__
+        if hasattr(obj, "layer") and obj.layer is not None:
+            obj = obj.layer
+            if hasattr(obj, "name"):
+                name = obj.name
+            elif hasattr(obj, "__name__"):
+                name = obj.__name__
+            else:
+                name = obj.__class__.__name__
         else:
             name = obj.__class__.__name__
 
@@ -107,11 +134,11 @@ class Model(object):
             elif data_type == ModelDataType.QUANT8:
                 return ('quant8', QuantizedTypeConverter(8, False))
             elif data_type == ModelDataType.FIXED32:
-                return ('fixed', FixedTypeConverter(17, 15))
+                return ('fixed', FixedTypeConverter(15, 17))
             elif data_type == ModelDataType.FIXED16:
-                return ('fixed', FixedTypeConverter(9, 7))
+                return ('fixed', FixedTypeConverter(8, 8))
             elif data_type == ModelDataType.FIXED8:
-                return ('fixed', FixedTypeConverter(4, 4))
+                return ('fixed', FixedTypeConverter(5, 3))
             else:
                 raise UnsupportedFeatureError(data_type, 'Data type converter not supported')
 

@@ -1,6 +1,6 @@
 import sys
 # add parent folder to path in order to find EmbedIA folder
-sys.path.insert(0, '..')
+sys.path.insert(0, '../..')
 from tflite_convertion import *
 
 
