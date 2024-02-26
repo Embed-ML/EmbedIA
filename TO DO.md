@@ -3,7 +3,7 @@
 ## Modelos de Aprendizaje Automático
   - **Refactoring de EmbedIA para soportar modelos de SkLearn**
     - reestructurar carpetas pensando en los tipos de algoritmos por ejemplo embedia/nn/ o embedia/ml o embedia/svm
-    - refactoring de propiedades asociadas a TF/Keras para generalizacion. Ej: en general usamos layer como elemento que contiene parte del modelo, podría utilizarse componente, elemento, etc.
+    - refactoring de propiedades asociadas a TF/Keras para generalizacion. Ej: en general usamos layer como elemento que contiene parte del modelo, podría utilizarse component, element, block, module, etc.
     
 - **Incorporar modelos de aprendizaje automático basado en ML (Sklearn)**
   - Crear una arquitectura de clases para incorporar Modelos ML de Sklearn a EmbedIA.
