@@ -1,6 +1,7 @@
 import sys, os, importlib
 
 sys.path.append('..')   # Add the parent directory, base folder for test modules
+sys.path.append('../..')   # Add the parent directory, base folder for test modules
 
 from common.tester import Tester, TestSummary
 

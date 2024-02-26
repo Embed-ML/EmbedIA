@@ -3,6 +3,7 @@ import os
 from enum import Enum
 import subprocess
 
+from os import system
 
 class OperatingSystem(Enum):
     WINDOWS = 1
@@ -112,10 +113,17 @@ class GccCompiler(SystemPlatformProvider):
         if os_type == OperatingSystem.WINDOWS:
             # Check if GCC is installed in the default location on Windows
             # TO DO: implement autodetection
-            for mingw_folder in ["MinGW64", "MinGW32", "MinGW"]:
-                default_path = os.path.join("C:", os.sep, mingw_folder, "bin", "gcc.exe")
-                if os.path.exists(default_path):
-                    return default_path
+            # for mingw_folder in ["MinGW64", "MinGW32", "MinGW"]:
+            #     default_path = os.path.join("C:", os.sep, mingw_folder, "bin", "gcc.exe")
+            #     if os.path.exists(default_path):
+            #         return default_path
+            
+            try:
+                result = self._run_command('where gcc')
+                return('"'+result[1][0:-1]+'"')
+            except Exception as e:
+                print(f"Error finding GCC path: {e}")
+
         elif os_type in (OperatingSystem.LINUX, OperatingSystem.MACOS):
             # Use the 'which' command to find the GCC path on Linux and macOS
             try:

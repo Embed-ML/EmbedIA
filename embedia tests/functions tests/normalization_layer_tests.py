@@ -27,7 +27,8 @@ TESTS_LIST = [
 
 if __name__ == '__main__':
     import sys
-    sys.path.append('..')  # embedia root folder
+    sys.path.append('..')  # embedia test folder
+    sys.path.append('../..')  # embedia root folder
 
     from common.tester import Tester, TestSummary
 
