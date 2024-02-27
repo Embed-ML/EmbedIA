@@ -6,9 +6,9 @@
 #define _EMBEDIA_H
 
 #include <stdint.h>
-//{includes}
+//#include <stdlib.h>
 
-#define PRINT_RESULTS 0
+
 
 /* STRUCTURE DEFINITION */
 
@@ -35,11 +35,6 @@ typedef struct{
     float  * data;
 }data1d_t;
 
-typedef struct{
-    uint16_t h;
-    uint16_t w;
-} size2d_t;
-
 /*
  * Structure that stores the weights of a filter.
  Specifies the number of channels (uint16_t channels), their size (uint16_t kernel_size), the weights (float * weights) and the bias (float bias),
@@ -52,6 +47,13 @@ typedef struct{
     float  bias;
 }filter_t;
 
+
+typedef struct{
+    uint16_t channels;
+    uint16_t kernel_size;
+    const float  * weights;
+    const float  * bias;
+}dw_filter_t;
 
 /*
  * Structure that models a convolutional layer.
@@ -70,8 +72,6 @@ typedef struct{
 typedef struct{
     uint16_t n_filters;
     filter_t * filters;
-    size2d_t pad;
-    size2d_t stride;
 }conv2d_layer_t;
 
 /*
@@ -152,6 +152,7 @@ typedef struct {
 } batch_normalization_layer_t;
 
 
+
 /*
  * spectrogram_layer_t struct
  * 
@@ -186,6 +187,8 @@ typedef struct {
     uint16_t spec_size;
     uint16_t ts_us;
 } spectrogram_layer_t;
+
+
 
 
 /* LIBRARY FUNCTIONS PROTOTYPES */
@@ -234,6 +237,7 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
  */
 
 void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output);
+
 
 /*
  * dense_layer()
@@ -340,24 +344,13 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data);
 
 
-/* Rashaping Layers */
 
-/* void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t *output)
- * Applies zero-padding to a 2D input data array.
- * Parameters:
- *   - pad_h: Number of zero-padding rows to add at the top and bottom.
- *   - pad_w: Number of zero-padding columns to add at the left and right.
- *   - input: 3D data structure representing the input data.
- *   - output: Pointer to a 3D data structure where the zero-padded output will be stored.
- * Description:
- *   This function performs zero-padding on a 2D input data array. It adds the specified
- *   number of zero rows at the top and bottom (pad_h) and zero columns at the left and right (pad_w).
- *   The result is stored in the output data structure.
- */
+/* Tranformation Layers */
+
+
 void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t *output);
 
 
-/* Tranformation Layers */
 
 /*  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
    Usually required for first convolutional layer
@@ -367,7 +360,8 @@ void channel_adapt_layer(data3d_t input, data3d_t * output);
 
 /* Signal processing */
 
-/* void fft(float data_re[], float data_im[], const unsigned int N)
+/* 
+ * void fft(float data_re[], float data_im[], const unsigned int N)
  * Performs a Fast Fourier Transform (FFT) on the complex data passed as parameters.
  * Parameters:
  *   - data_re: Array containing the real part of the complex data.

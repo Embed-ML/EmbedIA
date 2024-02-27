@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-
 typedef struct{
     size_t  size;
     void  * data;
@@ -25,7 +24,7 @@ void prepare_buffers(){
 void * swap_alloc(size_t s){
 
     last_buff = (last_buff==&buffer1) ? &buffer2 : &buffer1;
-    
+
     if (last_buff->size < s){
         last_buff->data = realloc(last_buff->data, s);
         last_buff->size = s;
@@ -43,7 +42,7 @@ void * swap_alloc(size_t s){
  *  delta => positioning of feature_map inside output.data
  */
 
-void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t delta){
+static void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t delta){
     uint32_t i,j,k,l,c;
     fixed suma;
 
@@ -57,7 +56,6 @@ void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t delta){
                     }
                 }
             }
-            
             output->data[delta + i*output->width + j] = suma + filter.bias;
         }
     }
@@ -121,7 +119,7 @@ static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32
     }
 }
 
-/* 
+/*
  * separable_conv2d_layer()
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
  * Parameters:
@@ -145,7 +143,7 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
     output->height   = depth_output.height;
     output->width    = depth_output.width;
     output->data     = (fixed*)swap_alloc( sizeof(fixed)*output->channels*output->height*output->width );
-    
+
     for(i=0; i<layer.n_filters; i++){
         delta = i*(output->height)*(output->width);
         pointwise(layer.point_filters[i],depth_output,output,delta);
@@ -173,10 +171,9 @@ static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3
     }
 }
 
-
 /*
  * depthwise_conv2d_layer()
- *  Function in charge of applying the depthwise of a filter layer (conv_layer_t) on a given input data set.
+ *  Function in charge of applying the depthwise of a filter layer with bias (depthwise_conv2d_layer_t) on a given input data set.
  * Parameters:
  *  layer => depthwise layer with loaded filters.
  *  input => input data of type data3d_t
@@ -193,7 +190,6 @@ void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data
     depthwise_bias(layer, input, output);
 }
 
-
 /*
  * neuron_forward()
  *  Function that performs the forward of a neuron in front of a given set of input data.
@@ -204,7 +200,7 @@ void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data
  *  fixed => result of the operation         
  */
 
-static fixed neuron_forward(neuron_t neuron, data1d_t input){
+static float neuron_forward(neuron_t neuron, data1d_t input){
     uint32_t i;
     fixed result = 0;
 
@@ -244,16 +240,15 @@ void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output){
  *  input     => input data
  *  output    => output data
  */
-
 void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output){
     uint32_t c,i,j,aux1,aux2;
     fixed max = -FIX_MAX;
     fixed num;
 
-    // output->height = (input.height)/strides ;//+ (input.height%strides ? 0 : 1);
-    // output->width =  (input.width )/strides ;//+ (input.width %strides ? 0 : 1);
-    output->height = ((uint32_t) ((input.height - pool.size)/pool.strides)) + 1;
-    output->width  = ((uint32_t) ((input.width - pool.size)/pool.strides)) + 1;
+    // output->height = (input.height)/pool_size ;
+    // output->width =  (input.width )/pool_size ;
+    output->height = ((uint16_t) ((input.height - pool.size)/pool.strides)) + 1;
+    output->width  = ((uint16_t) ((input.width - pool.size)/pool.strides)) + 1;
     output->channels = input.channels;
     output->data = (fixed*)swap_alloc(sizeof(fixed)*(output->channels)*(output->height)*(output->width));
 
@@ -265,9 +260,9 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
 
                 for(aux1=0; aux1<pool.size; aux1++){
                         for(aux2=0; aux2<pool.size; aux2++){
-                        
+
                         num = input.data[c*input.width*input.height + (i*pool.strides + aux1)*input.width + j*pool.strides + aux2];
-                        
+
                         if(num>max){
                             max = num;
                         }
@@ -276,7 +271,7 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
 
                 output->data[c*output->width*output->height + i*output->width + j] = max;
             }
-        }    
+        }
     }
 }
 
@@ -313,12 +308,12 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
                     for(aux2=0; aux2<pool.size; aux2++){
                         num = input.data[c*input.width*input.height + (i*pool.strides + aux1)*input.width + j*pool.strides + aux2];
                         avg += num;
-                    }                  
+                    }
                 }
 
                 output->data[c*output->width*output->height + i*output->width + j] = FIXED_DIV(avg,cant);
             }
-        }    
+        }
     }
 }
 
@@ -544,6 +539,53 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
 }
 
 
+
+
+void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t *output) {
+    uint16_t c, i, j, output_index, input_index;
+
+    output->channels = input.channels;
+    output->width = input.width + 2 * pad_w;
+    output->height = input.height + 2 * pad_h;
+
+     size_t output_size = output->channels * output->width * output->height;
+
+     output->data = (fixed *)swap_alloc(output_size * sizeof(fixed));
+
+    // Copiar los datos de entrada al centro del tensor de salida
+    for (c = 0; c < input.channels; c++) {
+        for (i = 0; i < input.height; i++) {
+            for (j = 0; j < input.width; j++) {
+                output_index = (c * output->height + (i + pad_h)) * output->width + j + pad_w;
+                input_index = (c * input.height + i) * input.width + j;
+                output->data[output_index] = input.data[input_index];
+            }
+        }
+    }
+
+    for (c = 0; c < input.channels; c++) {
+        for (i = 0; i < input.height + 2 * pad_h; i++) {
+            for (j = 0; j < pad_w; j++) {
+
+                output->data[(c * output->height + i) * output->width + j] = 0.0;
+                output->data[(c * output->height + i) * output->width + output->width - 1 - j] = 0.0;
+            }
+        }
+    }
+
+    for (c = 0; c < input.channels; c++) {
+        for (i = 0; i < pad_h; i++) {
+            for (j = 0; j < output->width; j++) {
+                output->data[(c * output->height + i) * output->width + j] = 0.0;
+            }
+
+            for (j = 0; j < output->width; j++) {
+                output->data[(c * output->height + output->height - 1 - i) * output->width + j] = 0.0;
+            }
+        }
+    }
+}
+
 /* channel_adapt_layer()
  *  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
  *  Usually required for first convolutional layer
@@ -570,7 +612,9 @@ void channel_adapt_layer(data3d_t input, data3d_t * output){
 }
 
 
-/******************* Signal processing *******************/
+
+
+/* ------------------------------ Spectrogram ------------------------------ */
 
 /* 
  * void fft(float data_re[], float data_im[], const unsigned int N)

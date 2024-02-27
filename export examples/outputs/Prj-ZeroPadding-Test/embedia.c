@@ -71,6 +71,7 @@ static void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t 
  *  input => input data of type data3d_t
  *  *output => pointer to the data3d_t structure where the result will be saved.
  */
+
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     uint32_t delta, i;
 
@@ -240,6 +241,7 @@ void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output){
  *  input     => input data
  *  output    => output data
  */
+
 void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output){
     uint32_t c,i,j,aux1,aux2;
     float max = -INFINITY;
@@ -441,7 +443,7 @@ void softplus_activation(float *data, uint32_t length){
  *  input => input data of type data3d_t.
  *  *output => pointer to the data1d_t structure where the result will be stored.
  */
-void flatten3d_layer(data3d_t input, data1d_t * output){
+ void flatten3d_layer(data3d_t input, data1d_t * output){
     uint32_t c,i,j;
     uint32_t cantidad = 0;
 
@@ -539,69 +541,23 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
 
 
 
-/*
- * void initialize_zero_padding(uint8_t pad_h, uint8_t pad_w, data3d_t *output)
- * Initializes the zero-padding areas in the given 3D data structure with zeros.
- * Parameters:
- *   - pad_h: Number of zero-padding rows at the top and bottom.
- *   - pad_w: Number of zero-padding columns at the left and right.
- *   - output: Pointer to a 3D data structure where the zero-padding will be initialized.
- * Description:
- *   This function initializes the zero-padding areas in a 3D data structure with zeros.
- *   It adds the specified number of zero rows at the top and bottom (pad_h) and zero columns
- *   at the left and right (pad_w). The initialization is performed in-place on the output data.
- */
-void zero_padding2d_init(uint8_t pad_h, uint8_t pad_w, data3d_t *output){
-    uint32_t c, i, j;
 
-    for (c = 0; c < output->channels; c++) {
-        for (i = 0; i < output->height; i++) {
-            for (j = 0; j < pad_w; j++) {
-                output->data[(c * output->height + i) * output->width + j] = 0.0; // left fill
-                output->data[(c * output->height + i) * output->width + output->width - 1 - j] = 0.0; // right fill
-            }
-        }
-    }
-
-    for (c = 0; c < output->channels; c++) {
-        for (i = 0; i < pad_h; i++) {
-            // top fill
-            for (j = 0; j < output->width; j++) {
-                output->data[(c * output->height + i) * output->width + j] = 0.0;
-            }
-            // bottom fill
-            for (j = 0; j < output->width; j++) {
-                output->data[(c * output->height + output->height - 1 - i) * output->width + j] = 0.0;
-            }
-        }
-    }
-}
-
-/*
- * void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t *output)
- * Applies zero-padding to a 2D input data array.
- * Parameters:
- *   - pad_h: Number of zero-padding rows to add at the top and bottom.
- *   - pad_w: Number of zero-padding columns to add at the left and right.
- *   - input: 3D data structure representing the input data.
- *   - output: Pointer to a 3D data structure where the zero-padded output will be stored.
- * Description:
- *   This function performs zero-padding on a 2D input data array. It adds the specified
- *   number of zero rows at the top and bottom (pad_h) and zero columns at the left and right (pad_w).
- *   The result is stored in the output data structure.
- */
 void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t *output) {
-    uint32_t c, i, j, output_index, input_index;
+    // Declarar variables de bucle al inicio
+    uint16_t c, i, j, output_index, input_index;
 
-    // Calc output dimension
+    // Calcular las dimensiones del tensor de salida después del relleno
     output->channels = input.channels;
     output->width = input.width + 2 * pad_w;
     output->height = input.height + 2 * pad_h;
 
+    // Calcular el tamaño total del tensor de salida
     size_t output_size = output->channels * output->width * output->height;
-    output->data = (float *)swap_alloc(output_size * sizeof(float));
 
-    // Copy input data to the center of output data
+    // Asignar memoria para el tensor de salida
+    output->data = (float *)malloc(output_size * sizeof(float));
+
+    // Copiar los datos de entrada al centro del tensor de salida
     for (c = 0; c < input.channels; c++) {
         for (i = 0; i < input.height; i++) {
             for (j = 0; j < input.width; j++) {
@@ -612,7 +568,31 @@ void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t
         }
     }
 
-    zero_padding2d_init(pad_h, pad_w, output);
+    // Optimizar el relleno de ceros (solo se rellenan las áreas adicionales)
+    for (c = 0; c < input.channels; c++) {
+        for (i = 0; i < input.height + 2 * pad_h; i++) {
+            for (j = 0; j < pad_w; j++) {
+                // Rellenar la parte izquierda con ceros
+                output->data[(c * output->height + i) * output->width + j] = 0.0;
+                // Rellenar la parte derecha con ceros
+                output->data[(c * output->height + i) * output->width + output->width - 1 - j] = 0.0;
+            }
+        }
+    }
+
+    for (c = 0; c < input.channels; c++) {
+        for (i = 0; i < pad_h; i++) {
+            // Rellenar la parte superior con ceros
+            for (j = 0; j < output->width; j++) {
+                output->data[(c * output->height + i) * output->width + j] = 0.0;
+            }
+
+            // Rellenar la parte inferior con ceros
+            for (j = 0; j < output->width; j++) {
+                output->data[(c * output->height + output->height - 1 - i) * output->width + j] = 0.0;
+            }
+        }
+    }
 }
 
 /* channel_adapt_layer()
@@ -638,7 +618,7 @@ void channel_adapt_layer(data3d_t input, data3d_t * output){
             }
         }
     }
-}
+ }
 
 
 

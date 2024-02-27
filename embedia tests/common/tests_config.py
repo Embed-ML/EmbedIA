@@ -18,6 +18,7 @@ class TestsConfig:
         return [ModelDataType.FLOAT, ModelDataType.FIXED32, ModelDataType.FIXED16, ModelDataType.FIXED8, ModelDataType.QUANT8]
         # return [ModelDataType.FLOAT, ModelDataType.FIXED32]
         # return [ModelDataType.FIXED16]
+        # return [ModelDataType.FLOAT]
 
     @property
     def DATA_TYPE_BOUND_ERROR(self):

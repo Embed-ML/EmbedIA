@@ -79,7 +79,7 @@ class QuantizedTypeConverter(TypeConverter):
     min_val = 0
     max_val = 0
     max_qint = 0
-    scale = 0
+    scale = 1.0
     zero_pt = 0
     dtype = np.uint16
     symetric = True
@@ -134,6 +134,8 @@ class QuantizedTypeConverter(TypeConverter):
     def transform(self, values):
         # f = scale * (q - zero_point)
         # q = f / scale + zero_pt
+        if isinstance(values, list):
+            values = np.array(values)
         scaled_values = values/self.scale + self.zero_pt
 
         quantized_values = np.round(scaled_values).astype(self.dtype)
@@ -141,6 +143,8 @@ class QuantizedTypeConverter(TypeConverter):
 
     def inv_transform(self, quant_values):
         # f = scale * (q - zero_point)
+        if isinstance(values, list):
+            values = np.array(values)
         values = quant_values.astype(np.float32)
         # Desnormalizar los valores al rango original
         descaled_values = self.scale * (values - self.zero_pt)

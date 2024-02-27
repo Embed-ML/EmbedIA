@@ -1,5 +1,5 @@
-/* 
- * EmbedIA 
+/*
+ * EmbedIA
  * C LIBRARY FOR THE IMPLEMENTATION OF NEURAL NETWORKS ON MICROCONTROLLERS
  */
 #ifndef _EMBEDIA_H
@@ -52,11 +52,21 @@ typedef struct{
 
 /*
  * Structure that models a convolutional layer.
- * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters). 
+ * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters).
  */
+// Futura implementación de los datos correspondientes a las
+// capas convolucionales, datos como la cantidad de canales
+// y el tamaño del kernel son propios de la capa y no de cada filtro
+// typedef struct{
+//     uint16_t channels;
+//     uint16_t kernel_size;
+//     uint16_t n_filters;
+//     filter_t * filters;
+// }conv2d_layer_t;
+
 typedef struct{
     uint16_t n_filters;
-    filter_t * filters; 
+    filter_t * filters;
 }conv2d_layer_t;
 
 /*
@@ -73,13 +83,13 @@ typedef struct{
 /*
  * Structure that models a separable layer...
  * Specifies the number of filters (uint16_t n_filters,
- * a filter of the specified size (filter_t depth_filter) 
- * a vector of 1x1 filters (filter_t * point_filters) 
+ * a filter of the specified size (filter_t depth_filter)
+ * a vector of 1x1 filters (filter_t * point_filters)
  */
 typedef struct{
     uint16_t n_filters;
     filter_t depth_filter;
-    filter_t * point_filters; 
+    filter_t * point_filters;
 }separable_conv2d_layer_t;
 
 /*
@@ -93,7 +103,7 @@ typedef struct{
 
 /*
  * Structure that models a dense layer.
- * Specifies the number of neurons (uint16_t n_neurons) and a vector of neurons (neuron_t * neurons). 
+ * Specifies the number of neurons (uint16_t n_neurons) and a vector of neurons (neuron_t * neurons).
  */
 typedef struct{
     uint16_t n_neurons;
@@ -104,7 +114,7 @@ typedef struct{
 /*
  * Pooling Structure
  */
- 
+
 typedef struct{
     uint16_t size;
     uint16_t strides;
@@ -125,7 +135,7 @@ typedef struct{
 } normalization_layer_t;
 
 
-/* 
+/*
  * Structure for BatchNormalization layer.
  * Contains vectors for the two parameters used for normalization.
  * The number of each of the parameters is determined by the number of channels of the previous layer.
@@ -133,8 +143,9 @@ typedef struct{
 typedef struct {
     uint32_t length;
     const fixed *moving_inv_std_dev; // = gamma / sqrt(moving_variance + epsilon)
-    const fixed *std_beta;           // = beta - moving_mean * moving_inv_std_dev 
+    const fixed *std_beta;           // = beta - moving_mean * moving_inv_std_dev
 } batch_normalization_layer_t;
+
 
 /*
  * spectrogram_layer_t struct
@@ -196,10 +207,10 @@ void prepare_buffers();
  */
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
-/* 
+/*
  * separable_conv2d_layer()
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
- * 
+ *
  * Parameters:
  *   layer => convolutional layer with loaded filters.
  *   input => input data of type data3d_t
@@ -218,30 +229,30 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
 
 void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output);
 
-/* 
+/*
  * dense_layer()
  * Performs feed forward of a dense layer (dense_layer_t) on a given input data set.
  * Parameters:
- *   dense_layer => structure with the weights of the neurons of the dense layer.  
- *   input       => structure data1d_t with the input data to process. 
+ *   dense_layer => structure with the weights of the neurons of the dense layer.
+ *   input       => structure data1d_t with the input data to process.
  *   *output     => structure data1d_t to store the output result.
  */
 void dense_layer(dense_layer_t dense_layer, data1d_t input, data1d_t * output);
 
-/* 
+/*
  * max_pooling2d_layer()
- * Maxpooling layer, for now supports square size and stride. No support for padding 
+ * Maxpooling layer, for now supports square size and stride. No support for padding
  * Parameters:
  *   pool_size => size for pooling
  *   stride    => stride for pooling
- *   input     => input data 
+ *   input     => input data
  *   output    => output data
  */
 void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
-/* 
+/*
  * avg_pooling_2d()
- * Function that applies an average pooling to an input with a window size of received 
+ * Function that applies an average pooling to an input with a window size of received
  * by parameter (uint16_t strides)
  *
  * Parameters:
@@ -251,9 +262,9 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
 void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
 
-/* 
+/*
  * flatten3d_layer()
- * Performs a variable shape change. 
+ * Performs a variable shape change.
  * Converts the data format from data3d_t array format to data1d_t vector.
  * (prepares data for input into a layer of type dense_layer_t).
  * Parameters:
@@ -261,8 +272,8 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  *    *output => pointer to the data1d_t structure where the result will be stored.
  */
  void flatten3d_layer(data3d_t input, data1d_t * output);
-     
-/* 
+
+/*
  * argmax()
  * Finds the index of the largest value within a vector of data (data1d_t)
  * Parameters:
@@ -315,32 +326,42 @@ void normalization2(normalization_layer_t s, data1d_t input, data1d_t * output);
 
 #define max_abs_norm_layer(norm, input, output) normalization2(norm, input, output)
 
-
+/* Batch normalization */
 void batch_normalization_layer(batch_normalization_layer_t norm, uint32_t length, fixed *data);
-
 
 void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *data);
 
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data);
 
 
-/* Tranformation Layers
- *
- */
+/* Rashaping Layers */
 
-/* channel_adapt_layer()
- *  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
- *  Usually required for first convolutional layer
+/* void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t *output)
+ * Applies zero-padding to a 2D input data array.
  * Parameters:
- *  input   => input data of type data3d_t.
- *  *output => pointer to the data3d_t structure where the result will be stored.
+ *   - pad_h: Number of zero-padding rows to add at the top and bottom.
+ *   - pad_w: Number of zero-padding columns to add at the left and right.
+ *   - input: 3D data structure representing the input data.
+ *   - output: Pointer to a 3D data structure where the zero-padded output will be stored.
+ * Description:
+ *   This function performs zero-padding on a 2D input data array. It adds the specified
+ *   number of zero rows at the top and bottom (pad_h) and zero columns at the left and right (pad_w).
+ *   The result is stored in the output data structure.
  */
+void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t *output);
+
+
+/* Tranformation Layers */
+
+/*  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
+   Usually required for first convolutional layer
+*/
 void channel_adapt_layer(data3d_t input, data3d_t * output);
+
 
 /* Signal processing */
 
-/* 
- * void fft(float data_re[], float data_im[], const unsigned int N)
+/* void fft(float data_re[], float data_im[], const unsigned int N)
  * Performs a Fast Fourier Transform (FFT) on the complex data passed as parameters.
  * Parameters:
  *   - data_re: Array containing the real part of the complex data.

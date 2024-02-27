@@ -32,9 +32,9 @@ TESTS_LIST = [
 
 if __name__ == '__main__':
     import sys
-    sys.path.append('..')   # Add the parent directory, base folder for test modules
-    sys.path.append('../..')   # Add the parent directory, base folder for test modules
 
+    sys.path.append('..')  # embedia test folder
+    sys.path.append('../..')  # embedia root folder
 
     from common.tester import Tester, TestSummary
 

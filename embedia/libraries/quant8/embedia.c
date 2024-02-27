@@ -24,7 +24,7 @@ void prepare_buffers(){
 void * swap_alloc(size_t s){
 
     last_buff = (last_buff==&buffer1) ? &buffer2 : &buffer1;
-    
+
     if (last_buff->size < s){
         last_buff->data = realloc(last_buff->data, s);
         last_buff->size = s;
@@ -62,6 +62,7 @@ void conv2d(filter_t filter, qparam_t qp, data3d_t input, data3d_t * output, uin
             output->data[delta + i*output->width + j] = suma + DEQUANTIZE(filter.bias, qp);
         }
     }
+
 }
 
 /*
@@ -72,7 +73,8 @@ void conv2d(filter_t filter, qparam_t qp, data3d_t input, data3d_t * output, uin
  *  input => input data of type data3d_t
  *  *output => pointer to the data3d_t structure where the result will be saved.
  */
- void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
+
+void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     uint32_t delta, i;
 
     output->channels = layer.n_filters; //cantidad de filtros
@@ -123,7 +125,6 @@ static void pointwise(filter_t filter, qparam_t qp, data3d_t input, data3d_t * o
     }
 }
 
-
 /* 
  * separable_conv2d_layer()
  *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
@@ -154,6 +155,7 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
         pointwise(layer.point_filters[i], layer.qparam, depth_output,output,delta);
     }
 }
+
 
 static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
     int i, j, k, l, c;
@@ -430,6 +432,7 @@ void softplus_activation(float *data, uint32_t length){
     }
 }
 
+
 /*
  * flatten3d_layer()
  *  Performs a variable shape change.
@@ -516,48 +519,82 @@ void normalization2(normalization_layer_t n, data1d_t input, data1d_t * output){
  */
 
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data) {
-   /* uint32_t i;
-	dfixed d_data;
+    uint32_t i;
 
-	for(i = 0; i < data->length; i++) {
-		
-		d_data = DFIXED_MUL(data->data[i], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
-
-		if (d_data > DFIX_MAX)
-			d_data = FIX_MAX;
-		else if (d_data < DFIX_MIN)
-			d_data = FIX_MIN;
-		else 
-			d_data = DFIXED_TO_FIXED(d_data);
-
-		data->data[i] = d_data;
-	}
-    */
+    for(i = 0; i < data->length; i++) {
+        data->data[i] = data->data[i] * layer.moving_inv_std_dev[i] + layer.std_beta[i];
+    }
 }
+
 
 void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *data) {
-  /*
-  uint32_t i, j, ilen = 0;
+    uint32_t i, j, ilen = 0;
     uint32_t length = data->height * data->width;
-	dfixed d_data;
+    float scale, offset;
 
     for(i = 0; i < data->channels; i++, ilen += length) {
+        scale = DEQUANTIZE(layer.moving_inv_std_dev[i],layer.mov_qparam);
+        offset= DEQUANTIZE(layer.std_beta[i], layer.std_qparam);
         for(j = 0; j < length; j++) {
-            d_data = DFIXED_MUL(data->data[ilen+j], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
-			
-			if (d_data > DFIX_MAX)
-				d_data = FIX_MAX;
-			else if (d_data < DFIX_MIN)
-				d_data = FIX_MIN;
-			else 
-				d_data = DFIXED_TO_FIXED(d_data);
-
-			data->data[ilen+j] = d_data;
-		}
+            data->data[ilen+j] = data->data[ilen+j] * scale + offset;
+        }
     }
-    */
 }
 
+
+
+void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t *output) {
+    // Declarar variables de bucle al inicio
+    uint16_t c, i, j, output_index, input_index;
+
+    // Calcular las dimensiones del tensor de salida después del relleno
+    output->channels = input.channels;
+    output->width = input.width + 2 * pad_w;
+    output->height = input.height + 2 * pad_h;
+
+    // Calcular el tamaño total del tensor de salida
+    size_t output_size = output->channels * output->width * output->height;
+
+    // Asignar memoria para el tensor de salida
+    output->data = (float *)malloc(output_size * sizeof(float));
+
+    // Copiar los datos de entrada al centro del tensor de salida
+    for (c = 0; c < input.channels; c++) {
+        for (i = 0; i < input.height; i++) {
+            for (j = 0; j < input.width; j++) {
+                output_index = (c * output->height + (i + pad_h)) * output->width + j + pad_w;
+                input_index = (c * input.height + i) * input.width + j;
+                output->data[output_index] = input.data[input_index];
+            }
+        }
+    }
+
+    // Optimizar el relleno de ceros (solo se rellenan las áreas adicionales)
+    for (c = 0; c < input.channels; c++) {
+        for (i = 0; i < input.height + 2 * pad_h; i++) {
+            for (j = 0; j < pad_w; j++) {
+                // Rellenar la parte izquierda con ceros
+                output->data[(c * output->height + i) * output->width + j] = 0.0;
+                // Rellenar la parte derecha con ceros
+                output->data[(c * output->height + i) * output->width + output->width - 1 - j] = 0.0;
+            }
+        }
+    }
+
+    for (c = 0; c < input.channels; c++) {
+        for (i = 0; i < pad_h; i++) {
+            // Rellenar la parte superior con ceros
+            for (j = 0; j < output->width; j++) {
+                output->data[(c * output->height + i) * output->width + j] = 0.0;
+            }
+
+            // Rellenar la parte inferior con ceros
+            for (j = 0; j < output->width; j++) {
+                output->data[(c * output->height + output->height - 1 - i) * output->width + j] = 0.0;
+            }
+        }
+    }
+}
 
 /* channel_adapt_layer()
  *  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).

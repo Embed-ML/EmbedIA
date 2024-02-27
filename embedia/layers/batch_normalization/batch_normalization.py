@@ -1,3 +1,4 @@
+from math import sqrt
 from embedia.layers.data_layer import DataLayer
 from embedia.utils.c_helper import declare_array
 from embedia.model_generator.project_options import ModelDataType
@@ -84,7 +85,10 @@ class BatchNormalization(DataLayer):
 
     def functions_init(self):
 
-        (data_type, macro_converter) = self.model.get_type_converter()
+        (data_type, data_converter) = self.model.get_type_converter()
+
+        macro_converter = lambda x:x
+
         name = self.name
         struct_type = self.struct_data_type
         inv_gamma_dev_name = 'inv_gamma_dev'
@@ -101,12 +105,17 @@ class BatchNormalization(DataLayer):
         # epsilon is a small value to avoid division by zero
         
         #gamma_variance = np.array([(gamma[i] / sqrt(moving_variance[i] + epsilon)) for i in range(gamma.size)])
-        inv_gamma_dev = ['%f/sqrt(%f+%f)' % (self.gamma[i], self.moving_variance[i], self.epsilon) for i in range(self.gamma.size)]
+        #inv_gamma_dev = ['%f/sqrt(%f+%f)' % (self.gamma[i], self.moving_variance[i], self.epsilon) for i in range(self.gamma.size)]
+        inv_gamma_dev = [self.gamma[i] / sqrt(self.moving_variance[i]+self.epsilon) for i in range(self.gamma.size)]
+        inv_gamma_dev = data_converter.fit_transform(inv_gamma_dev)
+        qparam = f', {{ {data_converter.scale}, {data_converter.zero_pt} }}' if self.is_data_quantized() else ''
 
         # standard_beta = np.array([(beta[i] - moving_mean[i] * standard_gamma[i]) for i in range(beta.size)])
 
-        std_beta = ['%f-(%f*%f/sqrt(%f+%f))' % (self.beta[i], self.moving_mean[i], self.gamma[i], self.moving_variance[i], self.epsilon) for i in range(self.beta.size)]
-
+        #std_beta = ['%f-(%f*%f/sqrt(%f+%f))' % (self.beta[i], self.moving_mean[i], self.gamma[i], self.moving_variance[i], self.epsilon) for i in range(self.beta.size)]
+        std_beta = [ self.beta[i] - (self.moving_mean[i]*self.gamma[i]/sqrt(self.moving_variance[i]+self.epsilon) ) for i in range(self.beta.size)]
+        std_beta = data_converter.fit_transform(std_beta)
+        qparam += f', {{ {data_converter.scale}, {data_converter.zero_pt} }}' if self.is_data_quantized() else ''
 
         # get inverse of standard dev (square root of moving variance)
         o_inv_mov_std = declare_array(array_type, inv_gamma_dev_name, macro_converter, inv_gamma_dev)
@@ -121,7 +130,7 @@ class BatchNormalization(DataLayer):
     {o_inv_mov_std};
     {o_std_beta};
 
-    static const {struct_type} norm = {{ {length}, {inv_gamma_dev_name}, {std_beta_name} }};
+    static const {struct_type} norm = {{ {length}, {inv_gamma_dev_name}, {std_beta_name} {qparam} }};
     return norm;
 }}
 '''

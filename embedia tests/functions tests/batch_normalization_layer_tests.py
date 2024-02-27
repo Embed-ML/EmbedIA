@@ -1,10 +1,10 @@
-from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import BatchNormalization
 
 
 # Tests list
 TESTS_LIST = [
-    {'name': 'Unit50_ActLin_Imp50_BiasT',
-     'element': Dense(units=50, activation='linear', input_dim=50, use_bias=True)}
+    {'name': 'Basic',
+     'element': BatchNormalization(input_shape=(2,2,3))}
 ]
 
 if __name__ == '__main__':

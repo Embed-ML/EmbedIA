@@ -32,12 +32,15 @@ class Model(object):
         if self.model is None:
             return None
 
+        if hasattr(self.model.layers[0], 'data_format') and self.model.layers[0].data_format != 'channels_last':
+            return None # has attribute but channel is first
+
         inp_shape = self.model.input_shape
-        if len(inp_shape)==4 and inp_shape[-1]>=2: # image => check format channels
-            if self.model.layers[0].data_format == 'channels_last':
+        if len(inp_shape)>=3 and inp_shape[-1]>=2:
                 return ChannelsAdapter(model=self, shape=inp_shape, options=self.options)
-            return None
+
         return None
+
     def _update_layers(self, options_array=None):
         # options es la generica del proyecto
         # options_array es un vector con opciones para cada clase
