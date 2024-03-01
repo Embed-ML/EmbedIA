@@ -51,7 +51,7 @@ class BaseDataGenerator:
             input_shape = self.model.input_shape
         if input_shape[0] is None:
             input_shape = (1,) + input_shape[1:]
-        self._input_data = np.random.random(input_shape)
+        self._input_data = (np.random.random(input_shape)*5).astype('int')
         return self._input_data
 
     @abstractmethod

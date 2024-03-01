@@ -4,7 +4,7 @@ class TestsConfig:
 
     EMBEDIA_PATH = '../../embedia/'
     OUTPUT_PATH = './outputs/'
-    KEEP_SUCCESS_PROJECTS = True
+    KEEP_SUCCESS_PROJECTS = False
 
     DIM_1D_INPUT = 50
     DIM_1D_OUTPUT = 50
@@ -15,10 +15,10 @@ class TestsConfig:
 
     @property
     def DATA_TYPES(self):
-        return [ModelDataType.FLOAT, ModelDataType.FIXED32, ModelDataType.FIXED16, ModelDataType.FIXED8, ModelDataType.QUANT8]
+        # return [ModelDataType.FLOAT, ModelDataType.FIXED32, ModelDataType.FIXED16, ModelDataType.FIXED8, ModelDataType.QUANT8]
         # return [ModelDataType.FLOAT, ModelDataType.FIXED32]
         # return [ModelDataType.FIXED16]
-        # return [ModelDataType.FLOAT]
+        return [ModelDataType.FLOAT]
 
     @property
     def DATA_TYPE_BOUND_ERROR(self):

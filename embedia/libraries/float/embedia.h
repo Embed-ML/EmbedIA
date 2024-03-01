@@ -67,11 +67,14 @@ typedef struct{
 //     filter_t * filters;
 // }conv2d_layer_t;
 
+#define PAD_SAME 1
+#define PAD_VALID 0
+
 typedef struct{
     uint16_t n_filters;
     filter_t * filters;
-    size2d_t pad;
-    size2d_t stride;
+    uint8_t padding;
+    size2d_t strides;
 }conv2d_layer_t;
 
 /*

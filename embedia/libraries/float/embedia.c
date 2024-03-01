@@ -32,59 +32,167 @@ void * swap_alloc(size_t s){
     return last_buff->data;
 }
 
+
 /*
- * conv2d()
- *  Function that performs convolution between a filter and a data set.
- * Parameters:
- *  filter => filter structure with weights loaded.
- *  input => input data of type data3d_t
- *  *output => pointer to the data3d_t structure where the result will be stored
- *  delta => positioning of feature_map inside output.data
- */
+void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
+    filter_t filter;
+    int32_t delta, i,j,k,l, f_pos, i_pos;
+    int16_t f, c;
+    float value;
 
-static void conv2d(filter_t filter, data3d_t input, data3d_t * output, uint32_t delta){
-    uint32_t i,j,k,l,c;
-    float suma;
+    for(f=0; f<layer.n_filters; f++){
+        delta = f*(output->height)*(output->width);
+        filter = layer.filters[f];
 
-    for(i=0; i<output->height; i++){
-        for(j=0; j<output->width; j++){
-            suma = 0;
-            for(c=0; c<filter.channels; c++){
-                for(k=0; k<filter.kernel_size; k++){
-                    for(l=0; l<filter.kernel_size; l++){
-                        suma += (filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l]
-                                * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
+        for(i=0; i<output->height; i++){
+            for(j=0; j<output->width; j++){
+                value = 0;
+                for(c=0; c<filter.channels; c++){
+                    for(k=0; k<filter.kernel_size; k++){
+                        for(l=0; l<filter.kernel_size; l++){
+                            f_pos = (c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l;
+                            i_pos = (c * input.height * input.width) + // start of channel
+                                    (i*layer.strides.h + k) * input.width +         // start of row
+                                    (j*layer.strides.w + l);                        // offset from start
+
+                            value += filter.weights[f_pos] * input.data[i_pos];
+                        }
                     }
                 }
+                output->data[delta + i*output->width + j] = value + filter.bias;
             }
-            output->data[delta + i*output->width + j] = suma + filter.bias;
         }
     }
-
 }
+*/
+
+int compute_padding(int stride, int in_size, int filter_size, int out_size){
+    int dilation_rate = 1;
+    int offset = 0;
+    int effective_filter_size = (filter_size - 1) * dilation_rate + 1;
+    int total_padding = ((out_size - 1) * stride + effective_filter_size - in_size);
+    total_padding = total_padding > 0 ? total_padding : 0;
+    // *offset = total_padding % 2;
+    return total_padding / 2;
+}
+
+void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
+    filter_t filter;
+    int32_t delta, i,j,k,l, f_pos, i_pos;
+    int16_t f, c, pad_input_h, pad_input_w, i_pad, j_pad, pad_h, pad_w;
+    float value;
+
+    pad_h = compute_padding(layer.strides.h, input.height, layer.filters[0].kernel_size, output->height);
+    pad_w = compute_padding(layer.strides.w, input.width,  layer.filters[0].kernel_size, output->width);
+
+    pad_input_h = input.height + 2 * pad_h;
+    pad_input_w = input.width + 2 * pad_w;
+
+    for(f=0; f<layer.n_filters; f++){
+        delta = f*(output->height)*(output->width);
+        filter = layer.filters[f];
+
+        for(i=0; i<output->height; i++){
+            for(j=0; j<output->width; j++){
+                value = 0;
+                for(c=0; c<filter.channels; c++){
+                    for(k=0; k<filter.kernel_size; k++){
+                        for(l=0; l<filter.kernel_size; l++){
+                            i_pad = i * layer.strides.h + k - pad_h;
+                            j_pad = j * layer.strides.w + l - pad_h;
+
+                            // Check for valid input access within padded bounds
+                            if (i_pad >= 0 && i_pad < pad_input_h && j_pad >= 0 && j_pad < pad_input_w) {
+                                f_pos = (c * filter.kernel_size * filter.kernel_size) + k * filter.kernel_size + l;
+                                i_pos = (c * input.height * input.width) + i_pad * input.width + j_pad;
+                                value += filter.weights[f_pos] * input.data[i_pos];
+                            }
+                        }
+                    }
+                }
+                output->data[delta + i*output->width + j] = value + filter.bias;
+            }
+        }
+    }
+}
+
+/*
+void conv2d_simple_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
+    filter_t filter;
+    int32_t delta, i,j,k,l, f_pos, i_pos;
+    int16_t f, c;
+    float value;
+
+    for(f=0; f<layer.n_filters; f++){
+        delta = f*(output->height)*(output->width);
+        filter = layer.filters[f];
+
+        for(i=0; i<output->height; i++){
+            for(j=0; j<output->width; j++){
+                value = 0;
+                for(c=0; c<filter.channels; c++){
+                    for(k=0; k<filter.kernel_size; k++){
+                        for(l=0; l<filter.kernel_size; l++){
+                            f_pos = (c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l;
+                            i_pos = (c * input.height * input.width) + // start of channel
+                                    (i + k) * input.width +            // start of row
+                                    (j + l);                           // offset from start
+
+                            value += filter.weights[f_pos] * input.data[i_pos];
+                        }
+                    }
+                }
+                output->data[delta + i*output->width + j] = value + filter.bias;
+            }
+        }
+    }
+}
+
+*/
 
 /*
  * conv2d_layer()
- *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
+ * Function in charge of applying the convolution of a filter layer (conv_layer_t)
+ * on a given input data set, incorporating strides for efficient processing.
  * Parameters:
- *  layer => convolutional layer with loaded filters.
- *  input => input data of type data3d_t
- *  *output => pointer to the data3d_t structure where the result will be saved.
+ * layer => convolutional layer with loaded filters.
+ * input => input data of type data3d_t
+ * *output => pointer to the data3d_t structure where the result will be saved.
  */
+
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
-    uint32_t delta, i;
 
-    output->channels = layer.n_filters; //cantidad de filtros
-    output->height   = input.height - layer.filters[0].kernel_size + 1;
-    output->width    = input.width - layer.filters[0].kernel_size + 1;
-    output->data     = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
-
-    for(i=0; i<layer.n_filters; i++){
-        delta = i*(output->height)*(output->width);
-        conv2d(layer.filters[i],input,output,delta);
+    //if (layer.padding == PAD_SAME){
+    if (layer.padding == PAD_VALID){
+        // effective_filter_size = (filter_size - 1) * dilation_rate + 1 for dilation_rate=1 => kernel size
+        output->height = (input.height + layer.strides.h - layer.filters[0].kernel_size) / layer.strides.h;
+        output->width  = (input.width  + layer.strides.w - layer.filters[0].kernel_size) / layer.strides.w;
+    }else{
+        // output->height = ((input.height + 2 * layer.padding.h - layer.filters[0].kernel_size) / layer.strides.h) + 1;
+        // output->width = ((input.width + 2 * layer.padding.w - layer.filters[0].kernel_size) / layer.strides.w) + 1;
+        output->height = (input.height + layer.strides.h - 1) / layer.strides.h;
+        output->width  = (input.width  + layer.strides.w - 1) / layer.strides.w;
     }
+    output->channels = layer.n_filters; // total of output channels
+    output->data = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
 
+    conv2d_padding_layer(layer, input, output);
+    /*
+    if (layer.strides.h==1 && layer.strides.w==1)
+        if (layer.padding.h>0 && layer.padding.w>0)
+            conv2d_padding_layer(layer, input, output);
+        else
+            conv2d_simple_layer(layer, input, output);
+    else
+        if (layer.padding.h>0 && layer.padding.w>0)
+            conv2d_padding_layer(layer, input, output);
+        else
+            conv2d_strides_layer(layer, input, output);
+    */
 }
+
+
+
 
 static void depthwise(filter_t filter, data3d_t input, data3d_t * output){
     uint32_t i,j,k,l,c;
@@ -104,6 +212,7 @@ static void depthwise(filter_t filter, data3d_t input, data3d_t * output){
         }
     }
 }
+
 
 static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32_t delta){
     uint32_t i,j,c;

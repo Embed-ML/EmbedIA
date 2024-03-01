@@ -1,3 +1,17 @@
+# Lista de Trabajo (en curso o próximo)
+
+ - **Soporte de strides para capas convolucioneales: SeparableConv2D y DepthwiseConv2D**
+ - **Soporte de padding para capas convolucioneales: Conv2D(ya implementada para float), SeparableConv2D y DepthwiseConv2D**
+ - **Soporte para kernels asimetricos para Conv2D**
+ - **Refactoring de propiedad kernel_size para llevarla a conv2d_layer desde filter_T
+ - **Refactoring para dividir Model en EmbediaModel y TensorflowModel**
+ - **Refactoring para posibilitar modelos basados en Scikit Learn**
+ - **Implementar Capas Orientadas a Elementos:
+      - Add, Substract, Average, Multiply, Maximum?, Minimum?, Dot
+
+## Lista de Terminados recientes
+    - ** Soporte de padding, strides para Conv2D
+
 # Lista de tareas (sin orden particular)
 
 ## Modelos de Aprendizaje Automático
@@ -110,4 +124,7 @@
     - Posible solución: asignar estos valores en los archivos fixed.h al general el proyecto embedia 
 
             
+
+
+
       

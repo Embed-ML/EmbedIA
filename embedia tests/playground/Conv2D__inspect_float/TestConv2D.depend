@@ -1,0 +1,15 @@
+# depslib dependency file v1.0
+1709236236 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\functions tests\outputs\conv2d__inspect_float\main.c
+	<stdlib.h>
+	<stdio.h>
+	<math.h>
+	"../embedia/float/embedia.h"
+
+1709229443 c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\functions tests\outputs\embedia\float\embedia.h
+	<stdint.h>
+
+1709234149 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\functions tests\outputs\embedia\float\embedia.c
+	"embedia.h"
+	<stdlib.h>
+	<math.h>
+
