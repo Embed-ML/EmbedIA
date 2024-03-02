@@ -72,7 +72,9 @@ typedef struct{
 
 typedef struct{
     uint16_t n_filters;
+    uint16_t channels;
     filter_t * filters;
+    size2d_t kernel;
     uint8_t padding;
     size2d_t strides;
 }conv2d_layer_t;
@@ -207,13 +209,21 @@ void prepare_buffers();
 
 /*
  * conv2d_layer()
- *  Function in charge of applying the convolution of a filter layer (conv_layer_t) on a given input data set.
+ *  Function in charge of applying the convolution of a filter layer (conv_layer_t) without padding and strides
+ *  on a given input data set.
  * Parameters:
  *  layer => convolutional layer with loaded filters.
  *  input => input data of type data3d_t
  *  *output => pointer to the data3d_t structure where the result will be saved.
  */
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
+
+/* variant function with padding and strides */
+void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
+
+/* variant function with strides without padding*/
+void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output);
+
 
 /*
  * separable_conv2d_layer()

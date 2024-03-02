@@ -33,39 +33,6 @@ void * swap_alloc(size_t s){
 }
 
 
-/*
-void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
-    filter_t filter;
-    int32_t delta, i,j,k,l, f_pos, i_pos;
-    int16_t f, c;
-    float value;
-
-    for(f=0; f<layer.n_filters; f++){
-        delta = f*(output->height)*(output->width);
-        filter = layer.filters[f];
-
-        for(i=0; i<output->height; i++){
-            for(j=0; j<output->width; j++){
-                value = 0;
-                for(c=0; c<filter.channels; c++){
-                    for(k=0; k<filter.kernel_size; k++){
-                        for(l=0; l<filter.kernel_size; l++){
-                            f_pos = (c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l;
-                            i_pos = (c * input.height * input.width) + // start of channel
-                                    (i*layer.strides.h + k) * input.width +         // start of row
-                                    (j*layer.strides.w + l);                        // offset from start
-
-                            value += filter.weights[f_pos] * input.data[i_pos];
-                        }
-                    }
-                }
-                output->data[delta + i*output->width + j] = value + filter.bias;
-            }
-        }
-    }
-}
-*/
-
 int compute_padding(int stride, int in_size, int filter_size, int out_size){
     int dilation_rate = 1;
     int offset = 0;
@@ -76,79 +43,91 @@ int compute_padding(int stride, int in_size, int filter_size, int out_size){
     return total_padding / 2;
 }
 
-void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
-    filter_t filter;
-    int32_t delta, i,j,k,l, f_pos, i_pos;
-    int16_t f, c, pad_input_h, pad_input_w, i_pad, j_pad, pad_h, pad_w;
-    float value;
-
-    pad_h = compute_padding(layer.strides.h, input.height, layer.filters[0].kernel_size, output->height);
-    pad_w = compute_padding(layer.strides.w, input.width,  layer.filters[0].kernel_size, output->width);
-
-    pad_input_h = input.height + 2 * pad_h;
-    pad_input_w = input.width + 2 * pad_w;
-
-    for(f=0; f<layer.n_filters; f++){
-        delta = f*(output->height)*(output->width);
-        filter = layer.filters[f];
-
-        for(i=0; i<output->height; i++){
-            for(j=0; j<output->width; j++){
-                value = 0;
-                for(c=0; c<filter.channels; c++){
-                    for(k=0; k<filter.kernel_size; k++){
-                        for(l=0; l<filter.kernel_size; l++){
-                            i_pad = i * layer.strides.h + k - pad_h;
-                            j_pad = j * layer.strides.w + l - pad_h;
-
-                            // Check for valid input access within padded bounds
-                            if (i_pad >= 0 && i_pad < pad_input_h && j_pad >= 0 && j_pad < pad_input_w) {
-                                f_pos = (c * filter.kernel_size * filter.kernel_size) + k * filter.kernel_size + l;
-                                i_pos = (c * input.height * input.width) + i_pad * input.width + j_pad;
-                                value += filter.weights[f_pos] * input.data[i_pos];
-                            }
-                        }
-                    }
-                }
-                output->data[delta + i*output->width + j] = value + filter.bias;
-            }
-        }
+void calc_alloc_conv2d_output(conv2d_layer_t layer, data3d_t input, data3d_t *output){
+    if (layer.padding == PAD_VALID){
+        // effective_filter_size = (filter_size - 1) * dilation_rate + 1 for dilation_rate=1 => kernel size
+        output->height = (input.height + layer.strides.h - layer.kernel.h) / layer.strides.h;
+        output->width  = (input.width  + layer.strides.w - layer.kernel.w) / layer.strides.w;
+    }else{
+        // output->height = ((input.height + 2 * layer.padding.h - layer.filters[0].kernel_size) / layer.strides.h) + 1;
+        // output->width = ((input.width + 2 * layer.padding.w - layer.filters[0].kernel_size) / layer.strides.w) + 1;
+        output->height = (input.height + layer.strides.h - 1) / layer.strides.h;
+        output->width  = (input.width  + layer.strides.w - 1) / layer.strides.w;
     }
+    output->channels = layer.n_filters; // total of output channels
+    output->data = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
 }
 
-/*
-void conv2d_simple_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
-    filter_t filter;
+void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     int32_t delta, i,j,k,l, f_pos, i_pos;
     int16_t f, c;
     float value;
 
+    // calculate output size and allocate memory
+    calc_alloc_conv2d_output(layer, input, output);
+
     for(f=0; f<layer.n_filters; f++){
         delta = f*(output->height)*(output->width);
-        filter = layer.filters[f];
 
         for(i=0; i<output->height; i++){
             for(j=0; j<output->width; j++){
                 value = 0;
-                for(c=0; c<filter.channels; c++){
-                    for(k=0; k<filter.kernel_size; k++){
-                        for(l=0; l<filter.kernel_size; l++){
-                            f_pos = (c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l;
-                            i_pos = (c * input.height * input.width) + // start of channel
-                                    (i + k) * input.width +            // start of row
-                                    (j + l);                           // offset from start
+                for(c=0; c<layer.channels; c++){
+                    for(k=0; k<layer.kernel.h; k++){
+                        for(l=0; l<layer.kernel.w; l++){
+                            f_pos = (c*layer.kernel.h*layer.kernel.w)+k*layer.kernel.w+l;
+                            i_pos = (c * input.height * input.width) +      // start of channel
+                                    (i*layer.strides.h + k) * input.width + // start of row
+                                    (j*layer.strides.w + l);                // offset from start
 
-                            value += filter.weights[f_pos] * input.data[i_pos];
+                            value += layer.filters[f].weights[f_pos] * input.data[i_pos];
                         }
                     }
                 }
-                output->data[delta + i*output->width + j] = value + filter.bias;
+                output->data[delta + i*output->width + j] = value + layer.filters[f].bias;
             }
         }
     }
 }
 
-*/
+
+
+void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
+    int32_t delta, i,j,k,l, f_pos, i_pos;
+    int16_t f, c, i_pad, j_pad, pad_h, pad_w;
+    float value;
+
+    // calculate output size and allocate memory
+    calc_alloc_conv2d_output(layer, input, output);
+
+    pad_h = compute_padding(layer.strides.h, input.height, layer.kernel.h, output->height);
+    pad_w = compute_padding(layer.strides.w, input.width,  layer.kernel.w, output->width);
+
+    for(f=0; f<layer.n_filters; f++){
+        delta = f*(output->height)*(output->width);
+
+        for(i=0; i<output->height; i++){
+            for(j=0; j<output->width; j++){
+                value = 0;
+                for(c=0; c<layer.channels; c++){
+                    for(k=0; k<layer.kernel.h; k++){
+                        for(l=0; l<layer.kernel.w; l++){
+                            i_pad = i * layer.strides.h + k - pad_h;
+                            j_pad = j * layer.strides.w + l - pad_w;
+                            // Check for valid input access within padded bounds
+                            if (i_pad >= 0 && i_pad < input.height && j_pad >= 0 && j_pad < input.width) {
+                                f_pos = (c * layer.kernel.h * layer.kernel.w) + k * layer.kernel.w + l;
+                                i_pos = (c * input.height * input.width) + i_pad * input.width + j_pad;
+                                value += layer.filters[f].weights[f_pos] * input.data[i_pos];
+                            }
+                        }
+                    }
+                }
+                output->data[delta + i*output->width + j] = value + layer.filters[f].bias;
+            }
+        }
+    }
+}
 
 /*
  * conv2d_layer()
@@ -161,34 +140,35 @@ void conv2d_simple_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output
  */
 
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
+    int32_t delta, i,j,k,l, f_pos, i_pos;
+    int16_t f, c;
+    float value;
 
-    //if (layer.padding == PAD_SAME){
-    if (layer.padding == PAD_VALID){
-        // effective_filter_size = (filter_size - 1) * dilation_rate + 1 for dilation_rate=1 => kernel size
-        output->height = (input.height + layer.strides.h - layer.filters[0].kernel_size) / layer.strides.h;
-        output->width  = (input.width  + layer.strides.w - layer.filters[0].kernel_size) / layer.strides.w;
-    }else{
-        // output->height = ((input.height + 2 * layer.padding.h - layer.filters[0].kernel_size) / layer.strides.h) + 1;
-        // output->width = ((input.width + 2 * layer.padding.w - layer.filters[0].kernel_size) / layer.strides.w) + 1;
-        output->height = (input.height + layer.strides.h - 1) / layer.strides.h;
-        output->width  = (input.width  + layer.strides.w - 1) / layer.strides.w;
+    // calculate output size and allocate memory
+    calc_alloc_conv2d_output(layer, input, output);
+
+    for(f=0; f<layer.n_filters; f++){
+        delta = f*(output->height)*(output->width);
+
+        for(i=0; i<output->height; i++){
+            for(j=0; j<output->width; j++){
+                value = 0;
+                for(c=0; c<layer.channels; c++){
+                    for(k=0; k<layer.kernel.h; k++){
+                        for(l=0; l<layer.kernel.w; l++){
+                            f_pos = (c*layer.kernel.h*layer.kernel.w)+k*layer.kernel.w+l;
+                            i_pos = (c * input.height * input.width) + // start of channel
+                                    (i + k) * input.width +            // start of row
+                                    (j + l);                           // offset from start
+
+                            value += layer.filters[f].weights[f_pos] * input.data[i_pos];
+                        }
+                    }
+                }
+                output->data[delta + i*output->width + j] = value + layer.filters[f].bias;
+            }
+        }
     }
-    output->channels = layer.n_filters; // total of output channels
-    output->data = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
-
-    conv2d_padding_layer(layer, input, output);
-    /*
-    if (layer.strides.h==1 && layer.strides.w==1)
-        if (layer.padding.h>0 && layer.padding.w>0)
-            conv2d_padding_layer(layer, input, output);
-        else
-            conv2d_simple_layer(layer, input, output);
-    else
-        if (layer.padding.h>0 && layer.padding.w>0)
-            conv2d_padding_layer(layer, input, output);
-        else
-            conv2d_strides_layer(layer, input, output);
-    */
 }
 
 
