@@ -32,6 +32,20 @@ class CodeGenerator:
     def get_project_folder(self):
         return os.path.abspath(os.path.join(self._output_path, self._project_name))
 
+    def _copy_file_with_replace(self, src_file, dst_file, replace_dict):
+        with open(src_file, 'r') as file:
+            lines = file.readlines()
+            for i, line in enumerate(lines):
+                for key, value in replace_dict.items():
+                    new_ln = line.replace(key, value)
+                    if new_ln != line:
+                        lines[i] = new_ln
+                        break
+
+        with open(dst_file, 'w') as file:
+            file.writelines(lines)
+
+
     def _copy_embedia_files(self):
         source_path = os.path.abspath(os.path.join(self._embedia_path, 'libraries'))
         dest_path = os.path.abspath(self._output_path)
@@ -42,6 +56,27 @@ class CodeGenerator:
             src_folder = os.path.join(source_path, folder)
             dst_folder = os.path.join(dest_path, 'embedia', folder)
             shutil.copytree(src_folder, dst_folder, dirs_exist_ok=True)
+
+        src_folder = os.path.join(source_path, 'debug')
+        dst_folder = os.path.join(dest_path, 'embedia', 'debug')
+        shutil.copytree(src_folder, dst_folder, dirs_exist_ok=True)
+
+        filename = os.path.join(dest_path, 'embedia', 'debug', 'embedia_debug.h')
+        repl_dict = {
+            '{include}': '#include "embedia_debug.h"',
+            '{EMBEDIA_DEBUG}': '#define EMBEDIA_DEBUG 2',
+            'embedia.h': '../float/embedia.h'
+        }
+        self._copy_file_with_replace(filename, filename, repl_dict)
+
+        filename = os.path.join(dest_path, 'embedia', 'debug', 'embedia_debug.c')
+        repl_dict = {
+            'embedia_debug_def.h': 'embedia_debug_def_c.h'
+        }
+        self._copy_file_with_replace(filename, filename, repl_dict)
+
+
+
 
     def _create_project_folder(self):
         output_folder =  self.get_project_folder()
@@ -74,6 +109,7 @@ class CodeGenerator:
         if type_file != '':
             headers.append('../embedia/' + type_file + '.h')
 
+        headers.append('../embedia/debug/embedia_debug.h')
         return headers
 
     def _generate_data_structure(self, datatype, var_name, conv_datatype, data_converter, data):
@@ -138,7 +174,7 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float err){{
 
         for c_file in glob.glob(os.path.join(source_folder, '*.c')):
             filenames.append(os.path.abspath(os.path.join(source_folder, c_file)))
-
+        filenames.append(os.path.join(output_main, 'embedia', 'debug', 'embedia_debug.c'))
         return filenames
 
 
@@ -205,58 +241,13 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float err){{
                     predict += f'    // Activation layer for {layer.name}\n'
                     predict += f'    {act_fn}\n'
 
+            # debug info
+            dbg_fn = layer.debug_function(var_output)
+            predict += f'// Debug function for layer {layer.name}\n'
+            predict += f'{dbg_fn}\n'
+
         return (proto_decl, var_decl, data_init, func_impl, predict)
 
-    # def _generate_main_code_old_casi_ok(self, embedia_model, input, output, error_bound):
-    #
-    #     test_layer = embedia_model.embedia_layers[-1]
-    #     input_data_type = test_layer.get_input_data_type()
-    #     output_data_type = test_layer.get_output_data_type()
-    #     if embedia_model.is_data_quantized():
-    #         (data_type, data_converter) = embedia_model.get_type_converter(ModelDataType.FLOAT)
-    #     else:
-    #         (data_type, data_converter) = embedia_model.get_type_converter()
-    #
-    #     if data_type.startswith('fixed'):
-    #         conv_fn = lambda x: f'FX2FL({x})'
-    #     else:
-    #         conv_fn = lambda x: x
-    #
-    #     main_code = '#include <stdlib.h>\n#include <stdio.h>\n#include <math.h>\n'
-    #     for header in self._get_embedia_include_headers():
-    #         main_code += f'#include "{header}"\n'
-    #
-    #     main_code += test_layer.functions_init() + '\n'  # implementation of layer/element intitialization function
-    #     main_code += self._get_measure_function(output_data_type, conv_fn) + '\n'  # error measure function
-    #     main_code += test_layer.var()  # layer/element variable declaration
-    #
-    #     input_var = self._generate_data_structure(input_data_type, 'input', data_type, data_converter, input) + '\n'
-    #     output_var = self._generate_data_structure(output_data_type, 'real_output', data_type, data_converter,
-    #                                                output) + '\n'
-    #     # for test
-    #     if self._embedia_type in [ModelDataType.FIXED32, ModelDataType.FIXED16, ModelDataType.FIXED8]:
-    #         compare = 'FX2FL(real_output.data[i]) - FX2FL(output.data[i])'
-    #     else:
-    #         compare = 'real_output.data[i] - output.data[i]'
-    #
-    #     # total of output values, regards the shape
-    #     output_count = np.prod(output.shape)
-    #
-    #     main_code += input_var + ';\n'
-    #     main_code += output_var + ';\n'
-    #     main_code += output_data_type + ' output;\n\n'
-    #     main_code += f'# define ERROR_BOUND {error_bound}\n'
-    #     main_code += 'int main(){\n\n'  # main code start
-    #     main_code += test_layer.init() + '\n'  # call to layer/element initizalization function
-    #     main_code += '    ' + test_layer.predict('input', 'output') + '\n'
-    #
-    #     main_code += f'''
-    #     printf("Test result: %6.3f %%\\n", measure_error(real_output, output, ERROR_BOUND));
-    #
-    # '''
-    #     main_code += '    return 0;\n}'
-    #
-    #     return main_code
 
     def _generate_main_code(self, embedia_model, input, output, error_bound):
 
@@ -274,6 +265,7 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float err){{
             conv_fn = lambda x : x
 
         main_code = '#include <stdlib.h>\n#include <stdio.h>\n#include <math.h>\n'
+
         for header in self._get_embedia_include_headers():
             main_code += f'#include "{header}"\n'
 
