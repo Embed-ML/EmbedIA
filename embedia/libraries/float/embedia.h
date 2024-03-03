@@ -46,26 +46,12 @@ typedef struct{
  * the weights (float * weights) and the bias (float bias).
  */
 typedef struct{
-    uint16_t channels;
-    uint16_t kernel_size;
+    //uint16_t channels;
+    //uint16_t kernel_size;
     const float  * weights;
     float  bias;
 }filter_t;
 
-
-/*
- * Structure that models a convolutional layer.
- * Specifies the number of filters (uint16_t n_filters) and a vector of filters (filter_t * filters).
- */
-// Futura implementación de los datos correspondientes a las
-// capas convolucionales, datos como la cantidad de canales
-// y el tamaño del kernel son propios de la capa y no de cada filtro
-// typedef struct{
-//     uint16_t channels;
-//     uint16_t kernel_size;
-//     uint16_t n_filters;
-//     filter_t * filters;
-// }conv2d_layer_t;
 
 #define PAD_SAME 1
 #define PAD_VALID 0
@@ -96,10 +82,25 @@ typedef struct{
  * a filter of the specified size (filter_t depth_filter)
  * a vector of 1x1 filters (filter_t * point_filters)
  */
+ /*
 typedef struct{
     uint16_t n_filters;
     filter_t depth_filter;
     filter_t * point_filters;
+    uint16_t depth_channels;
+    uint16_t depth_kernel;
+    uint16_t point_channels;
+    uint16_t point_kernel;
+}separable_conv2d_layer_t;
+*/
+typedef struct{
+    uint16_t n_filters;
+    filter_t * point_filters;
+    uint16_t point_channels;
+    uint16_t point_kernel_sz;
+    filter_t depth_filter;
+    uint16_t depth_channels;
+    size2d_t depth_kernel_sz;
 }separable_conv2d_layer_t;
 
 /*

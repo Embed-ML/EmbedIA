@@ -179,7 +179,7 @@ class Conv2D(DataLayer):
 
             o_code = f'''
         static const {data_type} weights{i}[]={{{o_weights}        }};
-        static filter_t filter{i} = {{{-1}, {-1}, weights{i}, {conv_biases[i]}}}; {bias_weight}
+        static filter_t filter{i} = {{ weights{i}, {conv_biases[i]}}}; {bias_weight}
         filters[{i}]=filter{i};
             '''
             text += o_code

@@ -118,14 +118,15 @@ void print_data3d_t(const char *head_text, data3d_t data){
  * Parámetros:
  *                filter_t filter => filter a imprimir
  */
-void print_filter_t(const char *head_text, filter_t filter){
+void print_filter_t(const char *head_text, filter_t filter, uint16_t channels, size2d_t kernel_size){
 
     #if EMBEDIA_DEBUG > 0
 
     PRINT_TXT_LN(head_text);
 
-    PRINT_INT_LN(STR_CHN, filter.channels);
-    PRINT_INT_LN(STR_FSZ, filter.kernel_size);
+    PRINT_INT_LN(STR_CHN, channels);
+    PRINT_INT_LN(STR_FSZ, kernel_size.h);
+    PRINT_INT_LN(STR_FSZ, kernel_size.w);
     PRINT_FL_LN(STR_FBS, filter.bias);
 
     #if EMBEDIA_DEBUG > 1
@@ -133,10 +134,10 @@ void print_filter_t(const char *head_text, filter_t filter){
     printf(STR_CONTENT);
 
     uint16_t c,h,w;
-    for(c=0;c<filter.channels;c++){
-        for(h=0;h<filter.kernel_size;h++){
-            for(w=0;w<filter.kernel_size;w++){
-                PRINT_FL("", DBG_FL(filter.weights[h*filter.kernel_size+w]));
+    for(c=0;c<channels;c++){
+        for(h=0;h<kernel_size.h;h++){
+            for(w=0;w<kernel_size.w;w++){
+                PRINT_FL("", DBG_FL(filter.weights[h*kernel_size.w+w]));
             }
             PRINT_TXT_LN("");
         }

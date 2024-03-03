@@ -23,7 +23,7 @@ void print_data3d_t(const char *head_text, data3d_t data);
  *                filter_t filtro => filtro a imprimir
  */
 
-void print_filter_t(const char *head_text, filter_t filter);
+void print_filter_t(const char *head_text, filter_t filter, uint16_t channels, size2d_t kernel_size);
 
 
 #endif // EMBEDIA_DEBUG_H_INCLUDED

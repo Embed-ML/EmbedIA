@@ -174,34 +174,37 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
 
 
 
-static void depthwise(filter_t filter, data3d_t input, data3d_t * output){
-    uint32_t i,j,k,l,c;
-    float suma;
+static void depthwise(filter_t filter, uint16_t channels, size2d_t kernel_size, data3d_t input, data3d_t * output){
+    uint32_t i,j,k,l,c, f_pos, i_pos;
+
+    float sum;
 
     for(i=0; i<output->height; i++){
         for(j=0; j<output->width; j++){
-            for(c=0; c<filter.channels; c++){
-                suma=0;
-                for(k=0; k<filter.kernel_size; k++){
-                    for(l=0; l<filter.kernel_size; l++){
-                        suma += (filter.weights[(c*filter.kernel_size*filter.kernel_size)+k*filter.kernel_size+l] * input.data[(c*input.height*input.width)+(i+k)*input.width+(j+l)]);
+            for(c=0; c<channels; c++){
+                sum=0;
+                for(k=0; k<kernel_size.h; k++){
+                    for(l=0; l<kernel_size.w; l++){
+                        f_pos = (c*kernel_size.h*kernel_size.w)+k*kernel_size.w+l;
+                        i_pos = (c*input.height*input.width)+(i+k)*input.width+(j+l);
+                        sum += (filter.weights[f_pos] * input.data[i_pos]);
                     }
                 }
-                output->data[c*output->width*output->height + i*output->width + j] = suma;
+                output->data[c*output->width*output->height + i*output->width + j] = sum;
             }
         }
     }
 }
 
 
-static void pointwise(filter_t filter, data3d_t input, data3d_t * output, uint32_t delta){
+static void pointwise(filter_t filter, uint16_t channels, data3d_t input, data3d_t * output, uint32_t delta){
     uint32_t i,j,c;
     float suma;
 
     for(i=0; i<output->height; i++){
         for(j=0; j<output->width; j++){
             suma = 0;
-            for(c=0; c<filter.channels; c++){
+            for(c=0; c<channels; c++){
                 suma += (filter.weights[c] * input.data[(c*input.height*input.width)+i*input.width+j]);
             }
             output->data[delta + i*output->width + j] = suma + filter.bias;
@@ -223,11 +226,11 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
     data3d_t depth_output;
 
     depth_output.channels = input.channels; //cantidad de canales
-    depth_output.height   = input.height - layer.depth_filter.kernel_size + 1;
-    depth_output.width    = input.width - layer.depth_filter.kernel_size + 1;
+    depth_output.height   = input.height - layer.depth_kernel_sz.h + 1;
+    depth_output.width    = input.width - layer.depth_kernel_sz.w + 1;
     depth_output.data     = (float*)swap_alloc( sizeof(float)*depth_output.channels*depth_output.height*depth_output.width );
 
-    depthwise(layer.depth_filter,input,&depth_output);
+    depthwise(layer.depth_filter, layer.depth_channels, layer.depth_kernel_sz, input, &depth_output);
 
     output->channels = layer.n_filters; //cantidad de filtros
     output->height   = depth_output.height;
@@ -236,7 +239,7 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
 
     for(i=0; i<layer.n_filters; i++){
         delta = i*(output->height)*(output->width);
-        pointwise(layer.point_filters[i],depth_output,output,delta);
+        pointwise(layer.point_filters[i], layer.point_channels, depth_output,output,delta);
     }
 }
 

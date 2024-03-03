@@ -78,10 +78,11 @@ class SeparableConv2D(DataLayer):
 
     def functions_init(self):
         depth_filters, depth_channels, depth_rows, depth_columns = self.depth_weights.shape  # Getting layer info from it's weights
-        assert depth_rows == depth_columns  # WORKING WITH SQUARE KERNELS FOR NOW
-        depth_kernel_size = depth_rows  # Defining kernel size
+        #assert depth_rows == depth_columns  # WORKING WITH SQUARE KERNELS FOR NOW
+        depth_kernel_size = f'{{{depth_rows}, {depth_columns}}}'  # Defining kernel size
 
-        point_filters, point_channels, _, _ = self.point_weights.shape  # Getting layer info from it's weights
+        point_filters, point_channels, point_rows, point_cols = self.point_weights.shape  # Getting layer info from it's weights
+        point_kernel_size = f'{{{point_rows}, {point_cols}}}'
 
         struct_type = self.struct_data_type
 
@@ -120,7 +121,8 @@ class SeparableConv2D(DataLayer):
         o_code = f'''
         static {data_type} depth_weights[]={{{o_weights}
         }};
-        static filter_t depth_filter = {{{depth_channels}, {depth_kernel_size}, depth_weights }};
+        // static filter_t depth_filter = {{{depth_channels}, {depth_kernel_size}, depth_weights }};
+        static filter_t depth_filter = {{ depth_weights }};
 
         static filter_t point_filters[{point_filters}];
         '''
@@ -141,13 +143,13 @@ class SeparableConv2D(DataLayer):
             o_code = f'''
         static {data_type} point_weights{i}[]={{{o_weights}{comm_weights}
         }};
-        static filter_t point_filter{i} = {{{point_channels}, 1, point_weights{i}, {conv_biases[i]}{comm_bias}}};
+        static filter_t point_filter{i} = {{point_weights{i}, {conv_biases[i]}{comm_bias}}};
         point_filters[{i}] = point_filter{i};
         '''
             init_conv_layer += o_code
 
         init_conv_layer += f'''
-        {struct_type} layer = {{{point_filters}, depth_filter, point_filters{qparams} }};
+        {struct_type} layer = {{{point_filters}, point_filters, {point_channels}, {point_kernel_size}, depth_filter, {depth_channels}, {depth_kernel_size}{qparams} }};
         return layer;
 }}
         '''
