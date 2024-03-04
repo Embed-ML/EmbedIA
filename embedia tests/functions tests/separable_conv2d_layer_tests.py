@@ -2,9 +2,9 @@ from tensorflow.keras.layers import SeparableConv2D
 
 # Tests list
 # TESTS_LIST = [
-#     {'name': 'Ker3x3_Str1x1_Pad0_Mul1_Inp6x6x1', # simple test
-#      'element': SeparableConv2D(filters=4, kernel_size=(3, 3), strides=(1, 1), padding='valid', activation='linear',
-#                         depth_multiplier=1, input_shape=(6,6,1))
+#     {'name': '_Inspect', # simple test
+#      'element': SeparableConv2D(filters=1, kernel_size=(2, 2), strides=(1, 1), padding='valid', activation='linear',
+#                         depth_multiplier=1, input_shape=(4,4,3))
 #      }
 #     ]
 
@@ -12,8 +12,8 @@ def init_tests_lists():
     tests = []
     for filters in [1,2]:
         for kernel_size in [(2,2), (2,3), (3,2), (3,3)]:
-            for strides in [(1,1)]:
-                for padding in ['valid']:
+            for strides in [(1,1), (2,2)]:
+                for padding in ['valid', 'same']:
                     for input_shape in [(6, 6, 1), (5, 5, 3)]:
                         name = f'Fil{filters}_Ker{kernel_size}_Str{strides}_Pad{padding[0].upper()}_Inp{input_shape}'
                         test = {'name': name,

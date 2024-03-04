@@ -43,20 +43,21 @@ int compute_padding(int stride, int in_size, int filter_size, int out_size){
     return total_padding / 2;
 }
 
-void calc_alloc_conv2d_output(conv2d_layer_t layer, data3d_t input, data3d_t *output){
-    if (layer.padding == PAD_VALID){
+void calc_alloc_conv2d_output(uint16_t n_filters, size2d_t kernel_sz, size2d_t strides, uint8_t padding, data3d_t input, data3d_t *output){
+    if (padding == PAD_VALID){
         // effective_filter_size = (filter_size - 1) * dilation_rate + 1 for dilation_rate=1 => kernel size
-        output->height = (input.height + layer.strides.h - layer.kernel.h) / layer.strides.h;
-        output->width  = (input.width  + layer.strides.w - layer.kernel.w) / layer.strides.w;
+        output->height = (input.height + strides.h - kernel_sz.h) / strides.h;
+        output->width  = (input.width  + strides.w - kernel_sz.w) / strides.w;
     }else{
         // output->height = ((input.height + 2 * layer.padding.h - layer.filters[0].kernel_size) / layer.strides.h) + 1;
         // output->width = ((input.width + 2 * layer.padding.w - layer.filters[0].kernel_size) / layer.strides.w) + 1;
-        output->height = (input.height + layer.strides.h - 1) / layer.strides.h;
-        output->width  = (input.width  + layer.strides.w - 1) / layer.strides.w;
+        output->height = (input.height + strides.h - 1) / strides.h;
+        output->width  = (input.width  + strides.w - 1) / strides.w;
     }
-    output->channels = layer.n_filters; // total of output channels
+    output->channels = n_filters; // total of output channels
     output->data = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
 }
+
 
 void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     int32_t delta, i,j,k,l, f_pos, i_pos;
@@ -64,7 +65,8 @@ void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
     float value;
 
     // calculate output size and allocate memory
-    calc_alloc_conv2d_output(layer, input, output);
+    calc_alloc_conv2d_output(layer.n_filters, layer.kernel, layer.strides, layer.padding, input, output);
+
 
     for(f=0; f<layer.n_filters; f++){
         delta = f*(output->height)*(output->width);
@@ -98,7 +100,7 @@ void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
     float value;
 
     // calculate output size and allocate memory
-    calc_alloc_conv2d_output(layer, input, output);
+    calc_alloc_conv2d_output(layer.n_filters, layer.kernel, layer.strides, layer.padding, input, output);
 
     pad_h = compute_padding(layer.strides.h, input.height, layer.kernel.h, output->height);
     pad_w = compute_padding(layer.strides.w, input.width,  layer.kernel.w, output->width);
@@ -145,7 +147,7 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     float value;
 
     // calculate output size and allocate memory
-    calc_alloc_conv2d_output(layer, input, output);
+    calc_alloc_conv2d_output(layer.n_filters, layer.kernel, layer.strides, layer.padding, input, output);
 
     for(f=0; f<layer.n_filters; f++){
         delta = f*(output->height)*(output->width);
@@ -172,45 +174,61 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
 }
 
 
-
-
-static void depthwise(filter_t filter, uint16_t channels, size2d_t kernel_size, data3d_t input, data3d_t * output){
-    uint32_t i,j,k,l,c, f_pos, i_pos;
-
+static void depthwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t input, data3d_t *output) {
+    uint32_t i, j, k, l, c, f_pos, i_pos, pad_h, pad_w, j_pad, i_pad;
     float sum;
 
-    for(i=0; i<output->height; i++){
-        for(j=0; j<output->width; j++){
-            for(c=0; c<channels; c++){
-                sum=0;
-                for(k=0; k<kernel_size.h; k++){
-                    for(l=0; l<kernel_size.w; l++){
-                        f_pos = (c*kernel_size.h*kernel_size.w)+k*kernel_size.w+l;
-                        i_pos = (c*input.height*input.width)+(i+k)*input.width+(j+l);
-                        sum += (filter.weights[f_pos] * input.data[i_pos]);
+    pad_h = compute_padding(layer.strides.h, input.height, layer.depth_kernel_sz.h, output->height);
+    pad_w = compute_padding(layer.strides.w, input.width,  layer.depth_kernel_sz.w, output->width);
+
+    for (i = 0; i < output->height; i++) {
+        for (j = 0; j < output->width; j++) {
+            for (c = 0; c < layer.depth_channels; c++) {
+                sum = 0;
+                for (k = 0; k < layer.depth_kernel_sz.h; k++) {
+                    for (l = 0; l < layer.depth_kernel_sz.w; l++) {
+                        //f_pos = (c * layer.depth_kernel_sz.h * layer.depth_kernel_sz.w) + k * layer.depth_kernel_sz.w + l;
+                        //i_pos = (c * input.height * input.width) + (i * layer.strides.h + k) * input.width + (j * layer.strides.w + l);
+                        //sum += (filter.weights[f_pos] * input.data[i_pos]);
+
+                            i_pad = i * layer.strides.h + k - pad_h;
+                            j_pad = j * layer.strides.w + l - pad_w;
+                            // Check for valid input access within padded bounds
+                            if (i_pad >= 0 && i_pad < input.height && j_pad >= 0 && j_pad < input.width) {
+                                f_pos = (c * layer.depth_kernel_sz.h * layer.depth_kernel_sz.w) + k * layer.depth_kernel_sz.w + l;
+                                i_pos = (c * input.height * input.width) + i_pad * input.width + j_pad;
+                                sum += filter.weights[f_pos] * input.data[i_pos];
+                            }
+
+
                     }
                 }
-                output->data[c*output->width*output->height + i*output->width + j] = sum;
+                output->data[c * output->width * output->height + i * output->width + j] = sum;
             }
         }
     }
 }
 
+static void pointwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t input, data3d_t *output, uint32_t delta) {
+    uint32_t i, j, c, i_pos;
+    float sum;
 
-static void pointwise(filter_t filter, uint16_t channels, data3d_t input, data3d_t * output, uint32_t delta){
-    uint32_t i,j,c;
-    float suma;
-
-    for(i=0; i<output->height; i++){
-        for(j=0; j<output->width; j++){
-            suma = 0;
-            for(c=0; c<channels; c++){
-                suma += (filter.weights[c] * input.data[(c*input.height*input.width)+i*input.width+j]);
+    for (i = 0; i < output->height; i++) {
+        for (j = 0; j < output->width; j++) {
+            sum = 0;
+            for (c = 0; c < layer.point_channels; c++) {
+                //i_pos = (c * input.height * input.width) + (i * layer.strides.h) * input.width + (j * layer.strides.w);
+                i_pos = (c * input.height * input.width) + (i * 1) * input.width + (j * 1);
+                sum += (filter.weights[c] * input.data[i_pos]);
             }
-            output->data[delta + i*output->width + j] = suma + filter.bias;
+            output->data[delta + i * output->width + j] = sum + filter.bias;
         }
     }
 }
+
+
+
+
 
 /*
  * separable_conv2d_layer()
@@ -222,15 +240,12 @@ static void pointwise(filter_t filter, uint16_t channels, data3d_t input, data3d
  */
 
 void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output){
-    uint32_t delta, i;
+     uint32_t delta, i;
     data3d_t depth_output;
 
-    depth_output.channels = input.channels; //cantidad de canales
-    depth_output.height   = input.height - layer.depth_kernel_sz.h + 1;
-    depth_output.width    = input.width - layer.depth_kernel_sz.w + 1;
-    depth_output.data     = (float*)swap_alloc( sizeof(float)*depth_output.channels*depth_output.height*depth_output.width );
+    calc_alloc_conv2d_output(layer.depth_channels, layer.depth_kernel_sz, layer.strides, layer.padding, input, &depth_output);
 
-    depthwise(layer.depth_filter, layer.depth_channels, layer.depth_kernel_sz, input, &depth_output);
+    depthwise(layer, layer.depth_filter, input, &depth_output);
 
     output->channels = layer.n_filters; //cantidad de filtros
     output->height   = depth_output.height;
@@ -239,7 +254,7 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
 
     for(i=0; i<layer.n_filters; i++){
         delta = i*(output->height)*(output->width);
-        pointwise(layer.point_filters[i], layer.point_channels, depth_output,output,delta);
+        pointwise(layer, layer.point_filters[i], depth_output,output,delta);
     }
 }
 

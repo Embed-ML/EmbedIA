@@ -82,25 +82,17 @@ typedef struct{
  * a filter of the specified size (filter_t depth_filter)
  * a vector of 1x1 filters (filter_t * point_filters)
  */
- /*
-typedef struct{
-    uint16_t n_filters;
-    filter_t depth_filter;
-    filter_t * point_filters;
-    uint16_t depth_channels;
-    uint16_t depth_kernel;
-    uint16_t point_channels;
-    uint16_t point_kernel;
-}separable_conv2d_layer_t;
-*/
+
 typedef struct{
     uint16_t n_filters;
     filter_t * point_filters;
     uint16_t point_channels;
-    uint16_t point_kernel_sz;
+    size2d_t point_kernel_sz;
     filter_t depth_filter;
     uint16_t depth_channels;
     size2d_t depth_kernel_sz;
+    uint8_t padding;
+    size2d_t strides;
 }separable_conv2d_layer_t;
 
 /*
