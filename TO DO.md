@@ -124,7 +124,11 @@
     - Posible solución: asignar estos valores en los archivos fixed.h al general el proyecto embedia 
 
             
-
+## Optimizaciones:
+- **Velocidad**
+  - para incrementar la velocidad de procesamiento podrían realizarse optimizaciones de código específicas teniendo en cuenta los parámetros. Algo así se implemento con la capa Conv2D que tiene versiones sin padding ni strides, sin padding con strides y con padding y strides.
+  - Analizar la posibilidad de introducir para procesadores especiales optimizaciones basadas en funciones que realizan operaciones con punteros sobre datos.
+  - 
 
 
       

@@ -33,9 +33,19 @@ void * swap_alloc(size_t s){
 }
 
 
-int compute_padding(int stride, int in_size, int filter_size, int out_size){
+/*
+ * compute_padding()
+ *   Computes the amount of padding required for a convolutional layer with given stride, input size,
+ *   filter size, and output size.
+ * Parameters:
+ *   stride => Stride value for the convolution
+ *   in_size => Size of the input data
+ *   filter_size => Size of the convolutional filter
+ *   out_size => Expected output size
+ */
+static uint16_t compute_padding(int stride, int in_size, int filter_size, int out_size){
     int dilation_rate = 1;
-    int offset = 0;
+    // int offset = 0;
     int effective_filter_size = (filter_size - 1) * dilation_rate + 1;
     int total_padding = ((out_size - 1) * stride + effective_filter_size - in_size);
     total_padding = total_padding > 0 ? total_padding : 0;
@@ -43,14 +53,23 @@ int compute_padding(int stride, int in_size, int filter_size, int out_size){
     return total_padding / 2;
 }
 
-void calc_alloc_conv2d_output(uint16_t n_filters, size2d_t kernel_sz, size2d_t strides, uint8_t padding, data3d_t input, data3d_t *output){
+/*
+ * calc_alloc_conv2d_output()
+ *   Calculates the output size for a convolutional layer and allocates memory for the output data.
+ * Parameters:
+ * n_filters => Number of filters in the convolutional layer
+ * kernel_sz => Size of the convolutional kernel
+ * strides => Strides for the convolution
+ * padding => Type of padding (VALID or SAME)
+ * input => Input data for the convolution
+ * output => Pointer to store the output data
+ */
+static void calc_alloc_conv2d_output(uint16_t n_filters, size2d_t kernel_sz, size2d_t strides, uint8_t padding, data3d_t input, data3d_t *output){
     if (padding == PAD_VALID){
         // effective_filter_size = (filter_size - 1) * dilation_rate + 1 for dilation_rate=1 => kernel size
         output->height = (input.height + strides.h - kernel_sz.h) / strides.h;
         output->width  = (input.width  + strides.w - kernel_sz.w) / strides.w;
     }else{
-        // output->height = ((input.height + 2 * layer.padding.h - layer.filters[0].kernel_size) / layer.strides.h) + 1;
-        // output->width = ((input.width + 2 * layer.padding.w - layer.filters[0].kernel_size) / layer.strides.w) + 1;
         output->height = (input.height + strides.h - 1) / strides.h;
         output->width  = (input.width  + strides.w - 1) / strides.w;
     }
@@ -58,7 +77,16 @@ void calc_alloc_conv2d_output(uint16_t n_filters, size2d_t kernel_sz, size2d_t s
     output->data = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
 }
 
-
+/*
+ * conv2d_strides_layer()
+ *   Performs a 2D convolution operation with strides on the input data using the provided
+ *   convolutional layer parameters. This implementation assumes no padding in order to
+ *   optimize speed avoiding checking input/output limits
+ * Parameters:
+ *   layer => Convolutional layer with loaded filters
+ *   input => Input data for the convolution
+ *   output => Pointer to store the output data
+ */
 void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     int32_t delta, i,j,k,l, f_pos, i_pos;
     int16_t f, c;
@@ -66,7 +94,6 @@ void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
 
     // calculate output size and allocate memory
     calc_alloc_conv2d_output(layer.n_filters, layer.kernel, layer.strides, layer.padding, input, output);
-
 
     for(f=0; f<layer.n_filters; f++){
         delta = f*(output->height)*(output->width);
@@ -92,8 +119,15 @@ void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
     }
 }
 
-
-
+/*
+ * conv2d_padding_layer()
+ *   Performs a 2D convolution operation with padding on the input data using the provided convolutional
+ *   layer parameters. This is a general implementation that assumes padding > 0 and strides >1
+ * Parameters:
+ *   layer => Convolutional layer with loaded filters
+ *   input => Input data for the convolution
+ *   output => Pointer to store the output data
+ */
 void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     int32_t delta, i,j,k,l, f_pos, i_pos;
     int16_t f, c, i_pad, j_pad, pad_h, pad_w;
@@ -133,14 +167,14 @@ void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
 
 /*
  * conv2d_layer()
- * Function in charge of applying the convolution of a filter layer (conv_layer_t)
- * on a given input data set, incorporating strides for efficient processing.
+ *   Function in charge of applying the convolution of a filter layer on a given input data set.
+ *   This implementation assumes no padding and strides = 1 in order to optimize speed avoiding
+ *   checking input/output limits and most inner multiplication of loop related to strides
  * Parameters:
- * layer => convolutional layer with loaded filters.
- * input => input data of type data3d_t
- * *output => pointer to the data3d_t structure where the result will be saved.
+ *   layer => convolutional layer with loaded filters.
+ *   input => input data of type data3d_t
+ *   *output => pointer to the data3d_t structure where the result will be saved.
  */
-
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     int32_t delta, i,j,k,l, f_pos, i_pos;
     int16_t f, c;
@@ -158,7 +192,7 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
                 for(c=0; c<layer.channels; c++){
                     for(k=0; k<layer.kernel.h; k++){
                         for(l=0; l<layer.kernel.w; l++){
-                            f_pos = (c*layer.kernel.h*layer.kernel.w)+k*layer.kernel.w+l;
+                            f_pos = (c*layer.kernel.h*layer.kernel.w)+k*layer.kernel.w+l; // assumes strides=1
                             i_pos = (c * input.height * input.width) + // start of channel
                                     (i + k) * input.width +            // start of row
                                     (j + l);                           // offset from start
@@ -173,7 +207,15 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     }
 }
 
-
+/*
+ * depthwise()
+ *   Performs the depthwise convolution operation in a depthwise separable convolution layer.
+ * Parameters:
+ *   layer => Separable convolutional layer parameters
+ *   filter => Filter weights for the depthwise convolution
+ *   input => Input data for the convolution
+ *   *output => Pointer to store the output data
+ */
 static void depthwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t input, data3d_t *output) {
     uint32_t i, j, k, l, c, f_pos, i_pos, pad_h, pad_w, j_pad, i_pad;
     float sum;
@@ -195,8 +237,6 @@ static void depthwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t 
                                 i_pos = (c * input.height * input.width) + i_pad * input.width + j_pad;
                                 sum += filter.weights[f_pos] * input.data[i_pos];
                             }
-
-
                     }
                 }
                 output->data[c * output->width * output->height + i * output->width + j] = sum;
@@ -205,6 +245,16 @@ static void depthwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t 
     }
 }
 
+/*
+ * pointwise()
+ *   Performs the pointwise convolution operation in a depthwise separable convolution layer.
+ * Parameters:
+ *   layer => Separable convolutional layer parameters
+ *   filter => Filter weights for the pointwise convolution
+ *   input => Input data for the convolution
+ *   *output => Pointer to store the output data
+ *   delta => Offset for writing to the output data
+ */
 static void pointwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t input, data3d_t *output, uint32_t delta) {
     uint32_t i, j, c, i_pos;
     float sum;
@@ -213,7 +263,6 @@ static void pointwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t 
         for (j = 0; j < output->width; j++) {
             sum = 0;
             for (c = 0; c < layer.point_channels; c++) {
-                //i_pos = (c * input.height * input.width) + (i * layer.strides.h) * input.width + (j * layer.strides.w);
                 i_pos = (c * input.height * input.width) + (i * 1) * input.width + (j * 1);
                 sum += (filter.weights[c] * input.data[i_pos]);
             }
@@ -221,8 +270,6 @@ static void pointwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t 
         }
     }
 }
-
-
 
 
 
@@ -255,28 +302,13 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
 }
 
 /*
-static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
-    uint32_t i, j, k, l, c, i_pos, w_pos;
-    float sum;
-
-    for(i=0; i<output->height; i++){
-        for(j=0; j<output->width; j++){
-            for(c=0; c<layer.channels; c++){
-                sum=0;
-                for(k=0; k<layer.kernel_sz.h; k++){
-                    for(l=0; l<layer.kernel_sz.w; l++){
-                        i_pos = (c*input.height*input.width)+(i+k)*input.width+(j+l);
-                        w_pos = (c*layer.kernel_sz.h*layer.kernel_sz.w)+k*layer.kernel_sz.w+l;
-                        sum += (layer.weights[w_pos] * input.data[i_pos]);
-                    }
-                }
-                output->data[c*output->width*output->height + i*output->width + j]= sum + layer.bias[c];
-            }
-        }
-    }
-}
-
-*/
+ * depthwise_bias()
+ *   Performs the depthwise convolution operation with bias in a depthwise convolutional layer.
+ * Parameters:
+ *   layer => Depthwise convolutional layer parameters
+ *   input => Input data for the convolution
+ *   *output => Pointer to store the output data
+ */
 static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
     uint32_t i, j, k, l, c, f_pos, i_pos, pad_h, pad_w, j_pad, i_pad;
     float sum;
@@ -321,18 +353,10 @@ static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3
 
 void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
 
- /*   output->channels = layer.channels; //cantidad de canales
-    output->height   = input.height - layer.kernel_sz.h + 1;
-    output->width    = input.width - layer.kernel_sz.w + 1;
-    output->data     = (float*)swap_alloc( sizeof(float)*output->height*output->width*output->channels );
-    */
     calc_alloc_conv2d_output(layer.channels, layer.kernel_sz, layer.strides, layer.padding, input, output);
-
 
     depthwise_bias(layer, input, output);
 }
-
-
 
 
 
@@ -391,8 +415,6 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
     float max = -INFINITY;
     float num;
 
-    // output->height = (input.height)/pool_size ;
-    // output->width =  (input.width )/pool_size ;
     output->height = ((uint16_t) ((input.height - pool.size)/pool.strides)) + 1;
     output->width  = ((uint16_t) ((input.width - pool.size)/pool.strides)) + 1;
     output->channels = input.channels;
@@ -530,7 +552,6 @@ void tanh_activation(float *data, uint32_t length){
     uint32_t i;
 
     for(i=0;i<length;i++){
-        // data.data[i] = tanh(data.data[i]);
         data[i] = 2/(1+exp(-2*data[i])) - 1;
     }
 }
@@ -697,7 +718,7 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
  *   It adds the specified number of zero rows at the top and bottom (pad_h) and zero columns
  *   at the left and right (pad_w). The initialization is performed in-place on the output data.
  */
-void zero_padding2d_init(uint8_t pad_h, uint8_t pad_w, data3d_t *output){
+static void zero_padding2d_init(uint8_t pad_h, uint8_t pad_w, data3d_t *output){
     uint32_t c, i, j;
 
     for (c = 0; c < output->channels; c++) {
