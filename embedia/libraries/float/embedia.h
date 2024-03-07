@@ -58,8 +58,8 @@ typedef struct{
 
 typedef struct{
     uint16_t n_filters;
-    uint16_t channels;
     filter_t * filters;
+    uint16_t channels;
     size2d_t kernel;
     uint8_t padding;
     size2d_t strides;
@@ -69,11 +69,14 @@ typedef struct{
  * Structure that models a depthwise convolutional 2d layer.
  * Specifies the number of channels, kernel size, vector of weights and bias.
  */
+
 typedef struct{
-    uint16_t channels;
-    uint16_t kernel_size;
     const float  * weights;
     const float  * bias;
+    uint16_t channels;
+    size2d_t kernel_sz;
+    uint8_t padding;
+    size2d_t strides;
 }depthwise_conv2d_layer_t;
 
 /*

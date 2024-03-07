@@ -255,7 +255,7 @@ class Tester:
                 if verbose:
                     self._print_result(test_result)
 
-                if not self._config.KEEP_SUCCESS_PROJECTS and state == TestResult.TEST_SUCCESS:
+                if not self._config.KEEP_SUCCESS_TESTS and state == TestResult.TEST_SUCCESS:
                     try:
                         shutil.rmtree(project_folder)
                     except:

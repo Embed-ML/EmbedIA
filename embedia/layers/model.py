@@ -35,7 +35,7 @@ class Model(object):
         if hasattr(self.model.layers[0], 'data_format') and self.model.layers[0].data_format != 'channels_last':
             return None # has attribute but channel is first
 
-        inp_shape = self.model.input_shape
+        inp_shape = self.model.input_shape[1:]
         if len(inp_shape)>=3 and inp_shape[-1]>=2:
                 return ChannelsAdapter(model=self, shape=inp_shape, options=self.options)
 

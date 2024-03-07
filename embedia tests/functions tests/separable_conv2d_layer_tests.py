@@ -22,6 +22,7 @@ def init_tests_lists():
                                                strides=strides,
                                                padding=padding,
                                                activation='linear',
+                                               bias_initializer='random_normal',
                                                input_shape=input_shape)
                              }
                         tests.append(test)

@@ -184,7 +184,7 @@ class Conv2D(DataLayer):
             '''
             text += o_code
         text += f'''
-        conv2d_layer_t layer = {{{n_filters}, {n_channels}, filters, {kernel_size}, {padding}, {strides}{qparams} }};
+        conv2d_layer_t layer = {{{n_filters}, filters, {n_channels}, {kernel_size}, {padding}, {strides}{qparams} }};
         return layer;
 }}
         '''

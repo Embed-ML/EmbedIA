@@ -47,7 +47,7 @@ void print_data1d_t(const char *head_text, data1d_t data){
 
 }
 
-void print_datad2_t(const char *head_text, data2d_t data){
+void print_data2d_t(const char *head_text, data2d_t data){
 
     #if EMBEDIA_DEBUG > 0
 

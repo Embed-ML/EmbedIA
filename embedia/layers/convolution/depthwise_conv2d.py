@@ -99,10 +99,17 @@ class DepthwiseConv2D(DataLayer):
         comm_values = self.options.data_type != ModelDataType.FLOAT
 
         depth_filters, depth_channels, depth_rows, depth_columns = self.weights.shape  # Getting layer info from it's weights
-        assert depth_rows == depth_columns  # WORKING WITH SQUARE KERNELS FOR NOW
-        depth_kernel_size = depth_rows  # Defining kernel size
 
-        # point_filters, point_channels, _, _ = self.point_weights.shape  # Getting layer info from it's weights
+        kernel_size = f'{{ {depth_rows}, {depth_columns} }}'  # Defining kernel size
+
+        # padding
+        padding = 1 if self.layer.padding == 'same' else 0
+
+        # strides
+        (strd_rows, strd_cols) = (self.layer.strides[-2], self.layer.strides[-1])
+        assert strd_rows == strd_cols  # only supports equal length strides in the row and column dimensions
+        strides = f'{{{strd_rows}, {strd_cols}}}'
+
 
         struct_type = self.struct_data_type
 
@@ -143,7 +150,7 @@ class DepthwiseConv2D(DataLayer):
 
         # analizar lo que sigue
         init_conv_layer += f'''
-    {struct_type} layer = {{{depth_channels}, {depth_kernel_size}, weights, biases{qparams} }};
+    {struct_type} layer = {{weights, biases, {depth_channels}, {kernel_size}, {padding}, {strides}{qparams} }};
         
     return layer;
 }}

@@ -4,7 +4,7 @@ from tensorflow.keras.layers import Dense
 # Tests list
 TESTS_LIST = [
     {'name': 'Unit50_ActLin_Imp50_BiasT',
-     'element': Dense(units=50, activation='linear', input_dim=50, use_bias=True)}
+     'element': Dense(units=50, activation='linear', input_dim=50, use_bias=True, bias_initializer='random_normal')}
 ]
 
 if __name__ == '__main__':

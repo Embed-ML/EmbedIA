@@ -4,7 +4,7 @@ class TestsConfig:
 
     EMBEDIA_PATH = '../../embedia/'
     OUTPUT_PATH = './outputs/'
-    KEEP_SUCCESS_PROJECTS = False
+    KEEP_SUCCESS_TESTS = False
 
     DIM_1D_INPUT = 50
     DIM_1D_OUTPUT = 50
