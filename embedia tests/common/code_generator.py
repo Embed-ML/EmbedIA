@@ -62,10 +62,15 @@ class CodeGenerator:
         shutil.copytree(src_folder, dst_folder, dirs_exist_ok=True)
 
         filename = os.path.join(dest_path, 'embedia', 'debug', 'embedia_debug.h')
+
+        if self._embedia_type == ModelDataType.QUANT8:
+            datatype_folder = ModelDataType.get_name(ModelDataType.FLOAT)
+        else:
+            datatype_folder = ModelDataType.get_name(self._embedia_type)
         repl_dict = {
             '{include}': '#include "embedia_debug.h"',
             '{EMBEDIA_DEBUG}': '#define EMBEDIA_DEBUG 2',
-            'embedia.h': '../float/embedia.h'
+            'embedia.h': f'../{datatype_folder}/embedia.h'
         }
         self._copy_file_with_replace(filename, filename, repl_dict)
 

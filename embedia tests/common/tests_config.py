@@ -17,7 +17,7 @@ class TestsConfig:
     def DATA_TYPES(self):
         # return [ModelDataType.FLOAT, ModelDataType.FIXED32, ModelDataType.FIXED16, ModelDataType.FIXED8, ModelDataType.QUANT8]
         # return [ModelDataType.FLOAT, ModelDataType.FIXED32]
-        return [ModelDataType.FIXED32]
+        return [ModelDataType.FIXED16]
         # return [ModelDataType.FLOAT]
 
     @property

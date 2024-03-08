@@ -10,8 +10,6 @@
 
 //{includes}
 
-#define PRINT_RESULTS 0
-
 /* STRUCTURE DEFINITION */
 
 /*

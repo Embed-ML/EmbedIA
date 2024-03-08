@@ -921,7 +921,7 @@ void create_spectrogram(spectrogram_layer_t config, data1d_t input, data3d_t * o
     output->data     = (fixed*)swap_alloc( sizeof(fixed)*output->channels*output->height*output->width );
     
     for(i=0;i<config.n_blocks;i++){
-        // Copy the values ​​to the input of the fft
+        // Copy the values to the input of the fft
         const unsigned int start = i*config.step;
         for(j=0;j<config.n_fft;j++){
             data_re[j] = FX2FL(input.data[start+j]);
