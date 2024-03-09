@@ -4,7 +4,7 @@ import glob
 import shutil
 import numpy as np
 
-from embedia.layers.model import Model as EmbediaModel
+from embedia.models.tensorflow_model import TensorflowModel as EmbediaModel
 from embedia.layers.activation.activation import Activation
 from embedia.layers.data_layer import DataLayer
 from embedia.model_generator.project_options import ProjectOptions, ModelDataType
