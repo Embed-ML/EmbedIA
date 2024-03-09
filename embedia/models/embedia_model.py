@@ -14,7 +14,7 @@ import tensorflow as tf
 
 
 
-class Model(object):
+class EmbediaModel(object):
     types_dict = {}
     model = None
     embedia_layers = []
@@ -23,34 +23,15 @@ class Model(object):
         self.options = options
         self.clear_names()
 
-
-    def set_model(self, tfk_model):
-        self.model = tfk_model
+    def set_model(self, a_model):
+        self.model = a_model
         self._update_layers()
-
-    def _get_input_adapter(self):
-        if self.model is None:
-            return None
-
-        if hasattr(self.model.layers[0], 'data_format') and self.model.layers[0].data_format != 'channels_last':
-            return None # has attribute but channel is first
-
-        inp_shape = self.model.input_shape[1:]
-        if len(inp_shape)>=3 and inp_shape[-1]>=2:
-                return ChannelsAdapter(model=self, shape=inp_shape, options=self.options)
-
-        return None
 
     def _update_layers(self, options_array=None):
         # options es la generica del proyecto
         # options_array es un vector con opciones para cada clase
 
         embedia_layers = []
-
-        # add adapter if its required
-        input_adapter = self._get_input_adapter()
-        if input_adapter is not None:
-            embedia_layers.append(input_adapter)
 
         # external normalizer to the model? => add as first layer
         if self.options.normalizer is not None:
@@ -81,7 +62,6 @@ class Model(object):
         if idx == 0:
             return None
         return self.embedia_layers[idx-1]
-
 
     def clear_names(self):
         self.names = defaultdict(lambda: 0)
@@ -229,8 +209,11 @@ typedef char dfixed;
 typedef char half;
 typedef char quant8;
 typedef char qparam_t;
+typedef char size2d_t;
 """ + embedia_decl
 
+        # delete lines with '#' because parser doesnt support
+        embedia_decl = re.sub(r'^\s*#.*\n', '', embedia_decl, flags=re.MULTILINE)
         parser = pcp.CParser()
 
         code = parser.parse(embedia_decl)
@@ -264,6 +247,7 @@ typedef char qparam_t;
             'float': 4,
             'quant8': 1,
             'qparam_t': 5,
+            'size2d_t': 4,
             'xBITS': bytes_size,
             'fixed': bytes_size2,
             'dfixed': bytes_size3,
