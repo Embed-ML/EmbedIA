@@ -96,6 +96,22 @@ class Conv2D(DataLayer):
 
         return mem_size
 
+    def _get_padding_and_strides(self):
+        """
+        Gets the padding and strides for the current layer.
+
+        Args:
+            None.
+
+        Returns:
+            A tuple of two tuples, the first containing the padding and the second containing the strides.
+        """
+        conv_layer = self.layer
+        strides = conv_layer.strides
+        padding = 1 if conv_layer.padding == 'same' else 0
+        return (padding, strides)
+
+
     def functions_init(self):
         """
         Generate C code with the initialization function of the additional
@@ -113,6 +129,9 @@ class Conv2D(DataLayer):
 
         conv_weights = data_converter.fit_transform(self.weights)
         conv_biases = data_converter.transform(self.biases)
+        padding, strides = self._get_padding_and_strides()
+        padding = f'%d' % padding
+        strides = f'{{%d, %d}}' % strides
 
         if self.is_data_quantized():
             qparams = f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
@@ -122,12 +141,12 @@ class Conv2D(DataLayer):
         comm_values = self.options.data_type != ModelDataType.FLOAT # add original values as comment?
 
         n_filters, n_channels, n_rows, n_cols = self.weights.shape
-        if n_rows != n_cols:  # WORKING WITH SQUARE KERNELS FOR NOW
-            raise UnsupportedFeatureError(
-                self.layer, 'different kernel rows and columns')
-        if self.layer.padding != 'valid':  # no support for padding FOR NOW
-            raise UnsupportedFeatureError(self.layer, 'padding')
-        kernel_size = n_rows  # Defining kernel size
+        # if n_rows != n_cols:  # WORKING WITH SQUARE KERNELS FOR NOW
+        #     raise UnsupportedFeatureError(
+        #         self.layer, 'different kernel rows and columns')
+        #if self.layer.padding != 'valid':  # no support for padding FOR NOW
+        #    raise UnsupportedFeatureError(self.layer, 'padding')
+        kernel_size = f'{{ {n_rows}, {n_cols} }}' # Defining kernel size
 
         identation = ' '*8
         ret = ""
@@ -160,12 +179,12 @@ class Conv2D(DataLayer):
 
             o_code = f'''
         static const {data_type} weights{i}[]={{{o_weights}        }};
-        static filter_t filter{i} = {{{n_channels}, {kernel_size}, weights{i}, {conv_biases[i]}}}; {bias_weight}
+        static filter_t filter{i} = {{ weights{i}, {conv_biases[i]}}}; {bias_weight}
         filters[{i}]=filter{i};
             '''
             text += o_code
         text += f'''
-        conv2d_layer_t layer = {{{n_filters}, filters{qparams} }};
+        conv2d_layer_t layer = {{{n_filters}, filters, {n_channels}, {kernel_size}, {padding}, {strides}{qparams} }};
         return layer;
 }}
         '''
@@ -199,5 +218,11 @@ class Conv2D(DataLayer):
             processing of the layer in the file "embedia.c".
 
         """
-
-        return f'''conv2d_layer({self.name}_data, {input_name}, &{output_name});'''
+        # change function name for some optimizations
+        if self.layer.padding == 'same':
+            opt_name = '_padding'
+        elif self.layer.strides[0]>1 or self.layer.strides[1]>1:
+            opt_name = '_strides'
+        else:
+            opt_name = ''
+        return f'''conv2d{opt_name}_layer({self.name}_data, {input_name}, &{output_name});'''

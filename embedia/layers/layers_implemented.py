@@ -15,6 +15,7 @@ from embedia.layers.flatten.flatten import Flatten
 from embedia.layers.pooling.pooling import Pooling
 from embedia.layers.batch_normalization.batch_normalization import BatchNormalization
 from embedia.layers.activation.activation import Activation
+from embedia.layers.reshaping.zero_padding2d import ZeroPadding2D
 from embedia.layers.normalization.standard_scaler import StandardNormalization
 from embedia.layers.normalization.min_max_scaler import MinMaxNormalization
 from embedia.layers.normalization.max_abs_scaler import MaxAbsNormalization
@@ -60,6 +61,7 @@ dict_layers = {
     keras.layers.MaxPooling1D: Pooling,      # not yet implemented in C
     keras.layers.MaxPooling2D: Pooling,
     keras.layers.MaxPooling3D: Pooling,      # not yet implemented in C
+    keras.layers.ZeroPadding2D: ZeroPadding2D,
     # normalization layers from SKLearn
     preprocessing.StandardScaler: StandardNormalization,
     preprocessing.MinMaxScaler: MinMaxNormalization,
