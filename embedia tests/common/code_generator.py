@@ -129,48 +129,76 @@ class CodeGenerator:
         return f'{datatype} {var_name} = {{ {str_dim}, ({conv_datatype}[]){{ {str_data} }} }}'
 
     def _get_measure_function(self, datatype, conv_fn):
+        code = '''
+typedef struct{
+    float acc_error;
+    int match;
+    int total;
+} measures_info_t;
+'''
         if datatype == 'data3d_t':
-            return f'''
-float measure_error(data3d_t o_real, data3d_t o_pred, float err){{
-    int x, y, c, pr, pp, match;
-    for (match=0,c=0, pp=0; c<o_real.channels; c++){{
+            code+= f'''
+float measure_error(data3d_t o_real, data3d_t o_pred, float bnd_error, measures_info_t* info){{
+    int x, y, c, pr, pp;
+    float error;
+
+    info->total=o_real.channels*o_real.height*o_real.width;
+    info->match=0;
+    info->acc_error=0;
+
+    for (c=0, pp=0; c<o_real.channels; c++){{
         for (y=0; y<o_real.height; y++){{
             for (x=0; x<o_real.width; x++, pp++){{
                pr = (y*o_real.width+x)*o_real.channels + c;
                printf("%f   %f\\n", {conv_fn("o_real.data[pp]")}, {conv_fn("o_pred.data[pr]")});
-               if (fabs({conv_fn("o_real.data[pr]")}-{conv_fn("o_pred.data[pp]")}) <= err)
-                    match++;
+               error = fabs({conv_fn("o_real.data[pr]")}-{conv_fn("o_pred.data[pp]")});
+               info->acc_error += error;
+               if (error <= bnd_error)
+                    info->match++;
             }}
         }}
     }}
-    return 100.0*match/(o_real.channels*o_real.height*o_real.width);
-}}'''
-        elif datatype == 'data2d_t':
-            return f'''
-            float measure_error(data2d_t o_real, data2d_t o_pred, float err){{
-                int i, match;
-                for (match=0,i=0; i<o_real.width*o_real.height; i++){{
-                    printf("%f   %f\\n", {conv_fn("o_real.data[i]")}, {conv_fn("o_pred.data[i]")});
-                    if (fabs({conv_fn("o_real.data[i]")}-{conv_fn("o_pred.data[i]")}) <= err){{
-                        match++;
-                    }}
-                }}
-                return 100.0*match/(o_real.width*o_real.height);
-            }}
-'''
-        else:
-            return f'''
-float measure_error(data1d_t o_real, data1d_t o_pred, float err){{
-    int i, match;
-    for (match=0,i=0; i<o_real.length; i++){{
-        printf("%f   %f\\n", {conv_fn("o_real.data[i]")}, {conv_fn("o_pred.data[i]")});
-        if (fabs({conv_fn("o_real.data[i]")}-{conv_fn("o_pred.data[i]")}) <= err){{
-            match++;
-        }}
-    }}
-    return 100.0*match/o_real.length;
 }}
 '''
+        elif datatype == 'data2d_t':
+            code+= f'''
+float measure_error(data2d_t o_real, data2d_t o_pred, float bnd_error, measures_info_t* info){{
+    int i;
+    float error;
+
+    info->total=o_real.width*o_real.height;
+    info->match=0;
+    info->acc_error=0;
+
+    for (i=0; i<o_real.width*o_real.height; i++){{
+        printf("%f   %f\\n", {conv_fn("o_real.data[i]")}, {conv_fn("o_pred.data[i]")});
+        error = fabs({conv_fn("o_real.data[i]")}-{conv_fn("o_pred.data[i]")});
+        info->acc_error += error;
+        if (error <= bnd_error)
+            info->match++;
+    }}
+}}
+'''
+        else:
+            code+= f'''
+float measure_error(data1d_t o_real, data1d_t o_pred, float bnd_error, measures_info_t* info){{
+    int i;
+    float error;
+
+    info->total=o_real.length;
+    info->match=0;
+    info->acc_error=0;
+
+    for (i=0; i<o_real.length; i++){{
+        printf("%f   %f\\n", {conv_fn("o_real.data[i]")}, {conv_fn("o_pred.data[i]")});
+        error = fabs({conv_fn("o_real.data[i]")}-{conv_fn("o_pred.data[i]")});
+        info->acc_error += error;
+        if (error <= bnd_error)
+            info->match++;
+    }}
+}}
+'''
+        return code
 
     def get_filenames(self):
         output_main =  os.path.join(os.path.abspath(self._output_path))
@@ -291,13 +319,21 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float err){{
         main_code += output_var + ';\n\n'
         main_code += var_decl+'\n'  # layer/element/module variable declaration
         main_code += output_data_type + ' output;\n\n'  # output var declaration
-        main_code += f'# define ERROR_BOUND {error_bound}\n\n'
-        main_code += 'int main(){\n\n'  # main code start
-        main_code += data_init # call to layer/element/module initizalization function
-        main_code += '    ' + predict
+        main_code += f'''
+#define ERROR_BOUND {error_bound}
 
-        main_code += f'    printf("Test result: %6.3f %%\\n", measure_error(real_output, output, ERROR_BOUND));\n\n'
-        main_code += '    return 0;\n}'
+measures_info_t info; 
+  
+int main(){{
+
+    {data_init}
+    {predict}
+    measure_error(real_output, output, ERROR_BOUND, & info);
+    printf("Test result: %7.3f %%\\n", 100.0 * info.match / info.total);
+    printf(" Acc. error: %7.3f \\n", info.acc_error);
+    printf(" Elem count: %3d \\n", info.total);
+    return 0;
+}}'''
 
         return main_code
 

@@ -83,6 +83,8 @@ class QuantizedTypeConverter(TypeConverter):
     zero_pt = 0
     dtype = np.uint16
     symetric = True
+    lower_percentile = 1
+    upper_percentile = 99
 
     def __init__(self, bits, symetric=True):
         self.set_bits(bits)
@@ -101,6 +103,14 @@ class QuantizedTypeConverter(TypeConverter):
         self.size = bits / 8
         self.max_qint = 2 ** self.bits - 1
 
+    def _remove_outliers(self, data):
+        Q1 = np.percentile(data, 25)
+        Q3 = np.percentile(data, 75)
+        IQR = Q3 - Q1
+        lower_limit = Q1 - 1.5 * IQR
+        upper_limit = Q3 + 1.5 * IQR
+        return data[(data >= lower_limit) & (data <= upper_limit)]
+
     def fit(self, values):
         if self.symetric:
             self.max_val = np.max(np.abs(values))
@@ -108,6 +118,7 @@ class QuantizedTypeConverter(TypeConverter):
         else:
             self.min_val = np.min(values)
             self.max_val = np.max(values)
+
         self.scale = (self.max_val - self.min_val) / self.max_qint;
         if self.scale == 0:
             self.scale = 1
@@ -118,6 +129,46 @@ class QuantizedTypeConverter(TypeConverter):
             self.zero_pt = self.max_qint
         else:
             self.zero_pt = round(self.zero_pt)
+
+    def fit(self, values):
+        #15/17
+        if self.symetric:
+            self.max_val = np.percentile(np.abs(values), self.upper_percentile)
+            self.min_val = -self.max_val
+        else:
+            self.min_val = np.percentile(np.min(values), self.upper_percentile)
+            self.max_val = np.percentile(np.max(values), self.lower_percentile)
+        self.scale = (self.max_val - self.min_val) / self.max_qint;
+        if self.scale == 0:
+            self.scale = 1
+        self.zero_pt= -self.min_val / self.scale
+        if self.zero_pt < 0:
+            self.zero_pt = 0
+        elif self.zero_pt > self.max_qint:
+            self.zero_pt = self.max_qint
+        else:
+            self.zero_pt = round(self.zero_pt)
+
+    def fit_c(self, values):
+        #15/17
+        values = self._remove_outliers(values)
+        if self.symetric:
+            self.max_val = np.percentile(np.abs(values), self.upper_percentile)
+            self.min_val = -self.max_val
+        else:
+            self.min_val = np.percentile(np.min(values), self.upper_percentile)
+            self.max_val = np.percentile(np.max(values), self.lower_percentile)
+        self.scale = (self.max_val - self.min_val) / self.max_qint;
+        if self.scale == 0:
+            self.scale = 1
+        self.zero_pt= -self.min_val / self.scale
+        if self.zero_pt < 0:
+            self.zero_pt = 0
+        elif self.zero_pt > self.max_qint:
+            self.zero_pt = self.max_qint
+        else:
+            self.zero_pt = round(self.zero_pt)
+
 
     # def transform(self, values):
     #     scaled_values = self.max_qint * (values - self.min_val) / (self.max_val - self.min_val)

@@ -159,6 +159,15 @@ class Tester:
             inspector.save(filename, input_data, ln_break=-1)
         except:
             pass
+
+    def _parse_result(self, test_output_str):
+        match_perc= re.search(r'result:\s*(\d+\.\d+)', test_output_str)
+        if match_perc is not None:
+            match_perc = float(match_perc.group(1))
+        acc_error = float(re.search(r'error:\s*(\d+\.\d+)', test_output_str).group(1))
+        elements = int(re.search(r'count:\s*(\d+)', test_output_str).group(1))
+        return (match_perc, acc_error, elements)
+
     def _print_result(self, test_result, len_tname=80):
         out_line = test_result['test'][:len_tname].ljust(len_tname, '.') + ': '
         value = test_result['value']
@@ -168,7 +177,11 @@ class Tester:
         else:
             value = ' ' * 5
             message = ': ' + test_result['message']
-        error = 'bound:{:5f}'.format(test_result['error_bound'])
+        #count = '{:3d}/{:3d}'.format(int(test_result['value']*test_result['elements']/100), test_result['elements'])
+        #error = 'bound:{:5f}'.format(test_result['error_bound'])
+        value += ' below {:5f}'.format(test_result['error_bound'])
+
+        error = '| acc. err:{:5f}'.format(test_result['error'])#/test_result['elements'])
         state = test_result['state']
         out_line += f'{value} {error} ({state.simple_name()}{message})'
         print(state.clr(out_line))
@@ -216,15 +229,17 @@ class Tester:
                 value = -1
                 message = ''
                 state = None
-
+                acc_error = -1
+                elements = 0
                 if comp_result == 0:
                     (run_result, output_str) = compiler.run(os.path.join(project_folder, 'main.exe'))
                     # print(output_str)
                     if run_result == 0:
                         # Utilizar expresión regular para encontrar el número debe decir "result: xxx.xx%" en la salida
-                        match = re.search(r'result:\s*(\d+\.\d+)', output_str)
-                        if match:
-                            value = float(match.group(1))
+                        (match, acc_error, elements) = self._parse_result(output_str)
+                        if match >= 0:
+                            #value = float(match.group(1))
+                            value = match
                             if value < 80.0:
                                 state = TestResult.TEST_FAILURE
                                 message = 'Test failure'
@@ -250,6 +265,8 @@ class Tester:
                 test_result['message'] = message
                 test_result['state'] = state
                 test_result['value'] = value
+                test_result['error'] = acc_error
+                test_result['elements'] = elements # comparated elements on test
 
                 results.append(test_result)
                 if verbose:
