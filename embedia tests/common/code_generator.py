@@ -4,7 +4,7 @@ import glob
 import shutil
 import numpy as np
 
-from embedia.models.tensorflow_model import TensorflowModel as EmbediaModel
+from embedia.models import ModelFactory
 from embedia.layers.activation.activation import Activation
 from embedia.layers.data_layer import DataLayer
 from embedia.model_generator.project_options import ProjectOptions, ModelDataType
@@ -341,8 +341,8 @@ int main(){{
         # prepare embedia project for export code
         options = ProjectOptions()
         options.data_type = self._embedia_type
-        embedia_model = EmbediaModel(options)
-        embedia_model.set_model(model)
+        embedia_model = ModelFactory.create_model(model, options)
+
 
         main_code = self._generate_main_code(embedia_model, input, output, error_bound)
 

@@ -53,5 +53,5 @@ class TensorflowModel(EmbediaModel):
             ly = self._create_embedia_layer(layer)
             embedia_layers.append(ly)
 
-        self.embedia_layers = embedia_layers
+        self._embedia_layers = embedia_layers
         return embedia_layers

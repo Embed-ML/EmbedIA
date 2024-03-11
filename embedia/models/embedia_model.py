@@ -3,29 +3,64 @@ from collections import defaultdict
 from embedia.model_generator.project_options import ModelDataType
 import regex as re
 import pycparser as pcp
-import numpy as np
 from embedia.model_generator.project_options import BinaryBlockSize
 from embedia.layers.unimplemented_layer import UnimplementedLayer
 from embedia.layers.type_converters import *
 from embedia.layers.exceptions import *
-from embedia.layers.transformation.channels_adapter import ChannelsAdapter
-
-import tensorflow as tf
-
 
 
 class EmbediaModel(object):
-    types_dict = {}
-    model = None
-    embedia_layers = []
+    """
+    Class for representing and managing an EmbedIA model.
 
-    def __init__(self, options):
-        self.options = options
-        self.clear_names()
+    This class provides functionality for:
+    - Initializing a model from a TensorFlow/SkLearn/other model object
+    - Managing model layers/modules/components
+    - Handling data types and model options
+    - Generating information about model layers
+    """
 
-    def set_model(self, a_model):
-        self.model = a_model
+    _types_dict = {}
+    _model = None
+    _options = None
+    _embedia_layers = []
+
+    def __init__(self, obj_model, options):
+        """
+         Initializes an EmbediaModel object.
+
+         Args:
+             obj_model: The TensorFlow/SkLearn/Other model object to be converted.
+             options: Project-specific options for model generation.
+         """
+        self._options = options
+        self._clear_names()
+        self.model = obj_model
+
+    @property
+    def model(self):
+        return self._model
+
+    @model.setter
+    def model(self, a_model):
+        self._model = a_model
         self._update_layers()
+
+    @property
+    def embedia_layers(self):
+        return self._embedia_layers
+
+    @property
+    def types_dict(self):
+        return self._types_dict
+
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, options):
+        self._options = options
 
     def _update_layers(self, options_array=None):
         # options es la generica del proyecto
@@ -44,10 +79,19 @@ class EmbediaModel(object):
             ly = self._create_embedia_layer(layer)
             embedia_layers.append(ly)
 
-        self.embedia_layers = embedia_layers
+        self._embedia_layers = embedia_layers
         return embedia_layers
 
     def _create_embedia_layer(self, obj):
+        """
+        Create an EmbediA layer from an object.
+
+        Parameters:
+            obj (object): The object from which the EmbediA layer will be created.
+
+        Returns:
+            EmbediaLayer: The created EmbediA layer.
+        """
         try:
             layer = dict_layers[type(obj)](self, obj, self.options)
         except KeyError:
@@ -55,6 +99,15 @@ class EmbediaModel(object):
         return layer
 
     def get_previous_layer(self, layer):
+        """
+           Get the previous layer of the specified layer.
+
+           Parameters:
+               layer (EmbediaLayer): The layer for which to get the previous layer.
+
+           Returns:
+               EmbediaLayer: The previous layer, or None if there is no previous layer.
+           """
         try:
             idx = self.embedia_layers.index(layer)
         except ValueError:
@@ -63,10 +116,19 @@ class EmbediaModel(object):
             return None
         return self.embedia_layers[idx-1]
 
-    def clear_names(self):
+    def _clear_names(self):
         self.names = defaultdict(lambda: 0)
 
     def get_unique_name(self, obj):
+        """
+        Generate a unique name for the given object.
+
+        Parameters:
+            obj (object): The object for which to generate a unique name.
+
+        Returns:
+            str: A unique name for the object.
+        """
         if hasattr(obj, "layer") and obj.layer is not None:
             obj = obj.layer
             if hasattr(obj, "name"):
@@ -86,46 +148,53 @@ class EmbediaModel(object):
         return name+str(num)
 
     def get_type_converter(self, data_type=None):
-            """
-            returns a tuple with the name of the embedia type used (float, fixed, quant8) in the
-            data representation (e.g. neuron weights) together with the conversion
-            object to be invoked to transform a float value to the data type
+        """
+        returns a tuple with the name of the embedia type used (float, fixed, quant8) in the
+        data representation (e.g. neuron weights) together with the conversion
+        object to be invoked to transform a float value to the data type
 
-            Parameters
-            ----------
-            data_type : ModelDataType
-                variable with the data type used in the data representation
-                (float, fixed8, fixed16, fixed32, quant8, etc)
+        Parameters
+        ----------
+        data_type : ModelDataType
+            variable with the data type used in the data representation
+            (float, fixed8, fixed16, fixed32, quant8, etc)
 
-            Returns
-            -------
-            tuple (str, TypeConverter object)
-                tuple with type and macro convertion for C.
+        Returns
+        -------
+        tuple (str, TypeConverter object)
+            tuple with type and macro convertion for C.
 
-            """
+        """
 
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
-            if data_type is None:
-                data_type = self.options.data_type
-            if data_type == ModelDataType.FLOAT or data_type == ModelDataType.BINARY:
-                return ('float', FloatConverter()) # binary layers dont use data_type, use block_type
-            elif data_type == ModelDataType.BINARY_FLOAT16:
-                return ('half', None) # should use Float16TypeConverter(), test required
-                # def macro_converter(s):
-                #    return f"half({s})"
-                # data_type = 'half'
-            elif data_type == ModelDataType.QUANT8:
-                return ('quant8', QuantizedTypeConverter(8, False))
-            elif data_type == ModelDataType.FIXED32:
-                return ('fixed', FixedTypeConverter(15, 17))
-            elif data_type == ModelDataType.FIXED16:
-                return ('fixed', FixedTypeConverter(8, 8))
-            elif data_type == ModelDataType.FIXED8:
-                return ('fixed', FixedTypeConverter(5, 3))
-            else:
-                raise UnsupportedFeatureError(data_type, 'Data type converter not supported')
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
+        if data_type is None:
+            data_type = self.options.data_type
+        if data_type == ModelDataType.FLOAT or data_type == ModelDataType.BINARY:
+            return ('float', FloatConverter()) # binary layers dont use data_type, use block_type
+        elif data_type == ModelDataType.BINARY_FLOAT16:
+            return ('half', None) # should use Float16TypeConverter(), test required
+            # def macro_converter(s):
+            #    return f"half({s})"
+            # data_type = 'half'
+        elif data_type == ModelDataType.QUANT8:
+            return ('quant8', QuantizedTypeConverter(8, False))
+        elif data_type == ModelDataType.FIXED32:
+            return ('fixed', FixedTypeConverter(15, 17))
+        elif data_type == ModelDataType.FIXED16:
+            return ('fixed', FixedTypeConverter(8, 8))
+        elif data_type == ModelDataType.FIXED8:
+            return ('fixed', FixedTypeConverter(5, 3))
+        else:
+            raise UnsupportedFeatureError(data_type, 'Data type converter not supported')
 
     def identify_target_classes(self):
+        """
+        Identify the number of target classes based on the last layer of the model.
+
+        Returns:
+            int: 1 for binary classification, N for multiclass classification with N classes,
+                or 0 for regression.
+        """
         layer = self.embedia_layers[-1].layer
         act_fn = ''
         if hasattr(layer, 'activation') and layer.activation is not None:
@@ -142,7 +211,14 @@ class EmbediaModel(object):
         return 0 # regression
 
     def is_data_quantized(self):
+        """
+        Check if the data is quantized.
+
+        Returns:
+            bool: True if the data is quantized (ModelDataType.QUANT8), False otherwise.
+        """
         return self.options.data_type == ModelDataType.QUANT8
+
     def get_type_initializer(self):
         """
         Returns a function whose purpose is to explore the data to obtain conversion parameters, such as in the case
@@ -180,6 +256,16 @@ class EmbediaModel(object):
 
 
     def _build_types_size_dict(self, embedia_decl):
+        """
+        Build a dictionary of types and their sizes in bytes from the EmbediA declaration.
+
+        Parameters:
+           embedia_decl (str): The EmbediA declaration.
+
+        Returns:
+           dict: Dictionary of types and their sizes in bytes.
+        """
+
         # prepare to extract declaration of structures
         # get code to first function definition in order to includes structures
         if (self.options.data_type == ModelDataType.BINARY or self.options.data_type == ModelDataType.BINARY_FIXED32 or self.options.data_type == ModelDataType.BINARY_FLOAT16):
@@ -239,7 +325,7 @@ typedef char size2d_t;
             bytes_size2 = 4
             bytes_size3 = 8
         # base types sizes in bytes
-        self.types_dict = {
+        self._types_dict = {
             'uint8_t': 1,
             'uint16_t': 2,
             'uint32_t': 4,
@@ -255,14 +341,23 @@ typedef char size2d_t;
         }
 
         for node in code.ext:
-            if type(node) is pcp.c_ast.Typedef and not node.name in  self.types_dict:
+            if type(node) is pcp.c_ast.Typedef and not node.name in  self._types_dict:
                 dt_type = node.name
                 dt_size = self._explore_type(node)
-                self.types_dict[dt_type] = dt_size
+                self._types_dict[dt_type] = dt_size
 
-        return self.types_dict
+        return self._types_dict
 
     def _explore_type(self, node):
+        """
+        Explore the size of a data type.
+
+        Parameters:
+            node (object): The abstract syntax tree node representing the data type.
+
+        Returns:
+            int: The size in bytes of the data type.
+        """
         if type(node.type.type) is pcp.c_ast.Struct:
             size = 0
             for d in node.type.type.decls:
@@ -270,18 +365,29 @@ typedef char size2d_t;
             return size
         elif type(node.type) is pcp.c_ast.PtrDecl:
             return 4  # always return 4 bytes for now
-        elif node.type.type.names[0] in self.types_dict:
-            return self.types_dict[node.type.type.names[0]]
+        elif node.type.type.names[0] in self._types_dict:
+            return self._types_dict[node.type.type.names[0]]
 
         raise Exception(node.type)
 
     def get_layers_info(self, embedia_decl):
-        if len(self.types_dict) == 0:
+        """
+        Get the information of the model's layers.
+
+        Parameters:
+          embedia_decl (str): The EmbediA declaration.
+
+        Returns:
+          list: List of tuples with information for each layer (name, type, activation, parameters,
+                output shape, MACs, memory size).
+        """
+
+        if len(self._types_dict) == 0:
             self._build_types_size_dict(embedia_decl)
 
         layers_info = []
         for layer in self.embedia_layers:
-            info = layer.get_info(self.types_dict)
+            info = layer.get_info(self._types_dict)
             l_type = info.class_name
             l_name = info.layer_name
             l_act = info.activation
@@ -295,7 +401,17 @@ typedef char size2d_t;
         return layers_info
 
     def firstLayerOfItsclass(self, embedia_layer):
+        """
+         Check if the given EmbediA layer is the first layer of its class in the model.
+
+         Parameters:
+             embedia_layer (EmbediaLayer): The EmbediA layer to check.
+
+         Returns:
+             bool: True if the layer is the first of its class, False otherwise.
+         """
         for layer in self.embedia_layers:
             if type(embedia_layer) is type(layer):
                 return embedia_layer == layer
         return False
+

@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from embedia.models.tensorflow_model import TensorflowModel
+from embedia.models import ModelFactory
 from embedia.model_generator.project_options import (
         ModelDataType,
         ProjectType,
@@ -53,11 +53,9 @@ class ProjectGenerator:
 
     def create_project(self, output_folder, project_name, model, options):
 
-        embedia_model = TensorflowModel(options)
+        embedia_model = ModelFactory.create_model(model, options)
 
-        embedia_model.set_model(model)
         embedia_layers = embedia_model.embedia_layers
-
 
         # prepare folders and extension of files to copy/create
         self._prepare_folders(output_folder, project_name, options)
