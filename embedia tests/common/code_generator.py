@@ -4,11 +4,11 @@ import glob
 import shutil
 import numpy as np
 
-from embedia.models import ModelFactory
-from embedia.layers.activation.activation import Activation
-from embedia.layers.data_layer import DataLayer
+from embedia.core.model_factory import ModelFactory
+from embedia.core.dummy_layer import DummyLayer
 from embedia.model_generator.project_options import ProjectOptions, ModelDataType
 from embedia.utils.file_management import save_to_file
+
 
 class TestResult(Enum):
     ERROR = "ERROR"
@@ -212,15 +212,15 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float bnd_error, measures_
 
 
     def _generate_code_for_layers(self, embedia_layers):
-        input_data_type = embedia_layers[0].get_input_data_type()
-        output_data_type = embedia_layers[-1].get_output_data_type()
-        input_shape = embedia_layers[0].get_input_shape()
+        input_data_type = embedia_layers[0].input_data_type
+        output_data_type = embedia_layers[-1].output_data_type
+        input_shape = embedia_layers[0].input_shape
 
         proto_decl = ""
         var_decl = ""
         data_init = ""
         func_impl = ""
-        predict = "\n"
+        predict_fn = "\n"
 
         data_layers_input = [{'type': input_data_type, 'var_name': 'input'}, ]
         data_layers_output = [{'type': output_data_type, 'var_name': 'output'}]
@@ -228,66 +228,62 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float bnd_error, measures_
         layer_id = -1
         first_layer = True
 
+        output_layer_type = input_data_type
+
         for layer in embedia_layers:
-            if layer.layer is None:
-                predict += f'    //<<<<<<<<<<<<<<<<<<<<< INTERNAL LAYER >>>>>>>>>>>>>>>>>>>>>//\n'
+            if layer.target is None:
+                predict_fn += f'    //<<<<<<<<<<<<<<<<<<<<< INTERNAL LAYER >>>>>>>>>>>>>>>>>>>>>//\n'
             else:
                 layer_id += 1
-                predict += f'    //************************ LAYER {layer_id:2d} ***********************//\n'
+                predict_fn += f'    //************************ LAYER {layer_id:2d} ***********************//\n'
 
-            if isinstance(layer, DataLayer):
-                proto_decl += layer.prototypes_init()   # data init function prototype declaration
-                var_decl += layer.var()                 # data variable declaration
-                data_init += layer.init()               # variable initialization via data init function
-                func_impl += layer.functions_init()     # data init function implementation
+            if layer.use_data_structure:
+                proto_decl += layer.function_prototype      # data init function prototype declaration
+                var_decl += layer.variable_declaration      # data variable declaration
+                data_init += layer.variable_initialization  # variable initialization via data init function
+                func_impl += layer.function_implementation  # data init function implementation
 
             # layer section of predict function
             if not layer.inplace_output:
-                input_layer_type = layer.get_input_data_type()
+                input_layer_type = layer.input_data_type
                 if data_layers_input[-1]['type'] != input_layer_type:
                     var_input = f'input{len(data_layers_input)}'
-                    predict += f'{input_layer_type} {var_input};\n'
+                    predict_fn += f'{input_layer_type} {var_input};\n'
                     data_layers_input.append({'type': input_layer_type, 'var_name': var_input})
 
                 if not first_layer:
-                    predict += f'    {data_layers_input[-1]["var_name"]} = {data_layers_output[-1]["var_name"]};\n'
+                    predict_fn += f'    {data_layers_input[-1]["var_name"]} = {data_layers_output[-1]["var_name"]};\n'
+                    output_layer_type = layer.output_data_type
                 else:
-                    first_layer = False
+                    first_layer = isinstance(layer, DummyLayer)
 
-                output_layer_type = layer.get_output_data_type()
+                #output_layer_type = layer.output_data_type
                 if data_layers_output == [] or data_layers_output[-1]['type'] != output_layer_type:
                     var_output = f'output{len(data_layers_output)}'
-                    predict += f'    {output_layer_type} {var_output};\n'
+                    predict_fn += f'    {output_layer_type} {var_output};\n'
                     data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
             elif first_layer:  # layer section of predict function
-                first_layer = False
-                predict += f'    {data_layers_output[-1]["var_name"]} = {data_layers_input[-1]["var_name"]};\n'
+                first_layer = isinstance(layer, DummyLayer)
+                predict_fn += f'    {data_layers_output[-1]["var_name"]} = {data_layers_input[-1]["var_name"]};\n'
 
             param_in = data_layers_input[-1]['var_name']
             param_out = data_layers_output[-1]['var_name']
-            predict += f'    {layer.predict(param_in, param_out)}\n\n'
-
-            # Add activation function
-            if not isinstance(layer, Activation):
-                act_fn = layer.activation_function(var_output)
-                if act_fn != '':
-                    predict += f'    // Activation layer for {layer.name}\n'
-                    predict += f'    {act_fn}\n'
+            predict_fn += f'    {layer.invoke(param_in, param_out)}\n\n'
 
             # debug info
             dbg_fn = layer.debug_function(var_output)
-            predict += f'// Debug function for layer {layer.name}\n'
-            predict += f'{dbg_fn}\n'
+            predict_fn += f'// Debug function for layer {layer.name}\n'
+            predict_fn += f'{dbg_fn}\n'
 
-        return (proto_decl, var_decl, data_init, func_impl, predict)
+        return (proto_decl, var_decl, data_init, func_impl, predict_fn)
 
 
     def _generate_main_code(self, embedia_model, input, output, error_bound):
 
         test_layer = embedia_model.embedia_layers[-1]
-        input_data_type = embedia_model.embedia_layers[0].get_input_data_type()
-        output_data_type = embedia_model.embedia_layers[-1].get_output_data_type()
-        if embedia_model.is_data_quantized():
+        input_data_type = embedia_model.embedia_layers[0].input_data_type
+        output_data_type = embedia_model.embedia_layers[-1].output_data_type
+        if embedia_model.is_data_quantized:
             (data_type, data_converter) = embedia_model.get_type_converter(ModelDataType.FLOAT)
         else:
             (data_type, data_converter) = embedia_model.get_type_converter()
@@ -342,7 +338,6 @@ int main(){{
         options = ProjectOptions()
         options.data_type = self._embedia_type
         embedia_model = ModelFactory.create_model(model, options)
-
 
         main_code = self._generate_main_code(embedia_model, input, output, error_bound)
 

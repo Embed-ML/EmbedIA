@@ -1,6 +1,5 @@
-from embedia.layers.layer import Layer
-from embedia.utils.c_helper import declare_array
-from embedia.model_generator.project_options import ModelDataType
+from embedia.core.layer import Layer
+
 
 class ChannelsAdapter(Layer):
 
@@ -19,7 +18,7 @@ class ChannelsAdapter(Layer):
             shape = shape[1:]
         self._shape = shape
 
-        super().__init__(model=model, layer=None, options=options, **kwargs)
+        super().__init__(model=model, target=None, **kwargs)
 
 
     def get_input_shape(self):
@@ -43,5 +42,5 @@ class ChannelsAdapter(Layer):
         """
         return self._shape
 
-    def predict(self, input_name, output_name):
+    def invoke(self, input_name, output_name):
         return f'''channel_adapt_layer({input_name}, &{output_name});'''

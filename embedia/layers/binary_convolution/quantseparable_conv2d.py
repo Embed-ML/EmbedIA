@@ -1,34 +1,35 @@
-from embedia.layers.data_layer import DataLayer
+from embedia.core.layer import Layer
 from embedia.model_generator.project_options import ModelDataType
-from embedia.utils import file_management
 from embedia.utils.binary_helper import BinaryGlobalMask
 from embedia.model_generator.project_options import BinaryBlockSize
 import numpy as np
 import larq as lq
 import math
 
-class QuantSeparableConv2D(DataLayer):
+class QuantSeparableConv2D(Layer):
 
-    def __init__(self, model, layer, options, **kwargs):
+    def __init__(self, model, target, **kwargs):
 
-        super().__init__(model, layer, options, **kwargs)
+        super().__init__(model, target, **kwargs)
         # the type defined in "struct_data_type" must exists in "embedia.h"
         # self.struct_data_type = self.get_type_name().lower()+'_layer_t'
-        self.input_data_type = "data3d_t"
-        self.output_data_type = "data3d_t"
-        self.depth_weights = self.adapt_weights(layer.get_weights()[0])
-        self.point_weights = self.adapt_weights(layer.get_weights()[1])
-        self.biases = layer.get_weights()[2]
+        # self.input_data_type = "data3d_t"
+        # self.output_data_type = "data3d_t"
+        self._use_data_structure = True  # this layer require data structure initialization
+
+        self.depth_weights = self.adapt_weights(target.get_weights()[0])
+        self.point_weights = self.adapt_weights(target.get_weights()[1])
+        self.biases = target.get_weights()[2]
 
         #verificamos a que caso corresponde
         with lq.context.quantized_scope(True):
-            if (layer.get_config()['input_quantizer'] == None) and (layer.get_config()['pointwise_quantizer'] == None) and (layer.get_config()['depthwise_quantizer'] == None):
+            if (target.get_config()['input_quantizer'] == None) and (target.get_config()['pointwise_quantizer'] == None) and (target.get_config()['depthwise_quantizer'] == None):
                 
                 #es una conv normal
                 self.tipo_conv = 0
                     
-            elif (layer.get_config()['input_quantizer'] != None) and (layer.get_config()['pointwise_quantizer'] != None) and (layer.get_config()['depthwise_quantizer'] != None):
-                if (layer.get_config()['input_quantizer']['class_name'] == 'SteSign') and (layer.get_config()['pointwise_quantizer']['class_name'] == 'SteSign') and (layer.get_config()['depthwise_quantizer']['class_name'] == 'SteSign'):
+            elif (target.get_config()['input_quantizer'] != None) and (target.get_config()['pointwise_quantizer'] != None) and (target.get_config()['depthwise_quantizer'] != None):
+                if (target.get_config()['input_quantizer']['class_name'] == 'SteSign') and (target.get_config()['pointwise_quantizer']['class_name'] == 'SteSign') and (target.get_config()['depthwise_quantizer']['class_name'] == 'SteSign'):
                     #conv pura binaria 
                     self.tipo_conv = 1
                 else:
@@ -39,7 +40,7 @@ class QuantSeparableConv2D(DataLayer):
                 raise f"Error: No support for layer with this arguments"
 
 
-    def var(self):
+    def variable_declaration(self):
         if self.tipo_conv == 0:
             
             return f"separable_conv2d_layer_t {self.name}_data;\n"
@@ -49,7 +50,7 @@ class QuantSeparableConv2D(DataLayer):
             return f"quant_separable_conv2d_layer_t {self.name}_data;\n"
 
 
-    def prototypes_init(self):
+    def function_prototype(self):
         if self.tipo_conv == 0:
             
             return f"separable_conv2d_layer_t init_{self.name}_data(void);\n"
@@ -70,7 +71,7 @@ class QuantSeparableConv2D(DataLayer):
  
     def calculate_MAC(self):
 
-        out_size = self.get_output_size()
+        out_size = self.output_size
 
         # layer dimensions
         n_channels, n_filters, n_rows, n_cols = self.depth_weights.shape
@@ -126,7 +127,8 @@ class QuantSeparableConv2D(DataLayer):
         return mem_size
 
 
-    def functions_init(self):
+    @property
+    def function_implementation(self):
         depth_filtros, depth_channels, depth_rows, depth_columns = self.depth_weights.shape  # Getting layer info from it's weights
         assert depth_rows == depth_columns  # WORKING WITH SQUARE KERNELS FOR NOW
         depth_kernel_size = depth_rows  # Defining kernel size
@@ -288,7 +290,7 @@ class QuantSeparableConv2D(DataLayer):
 
         return init_conv_layer
     
-    def predict(self, input_name, output_name):
+    def invoke(self, input_name, output_name):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously

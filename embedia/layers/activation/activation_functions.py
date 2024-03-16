@@ -28,7 +28,7 @@ class ActivationFunctions:
         return self._base_params(output_name, output_size, qparams)
 
     def _leakyrelu_params(self, output_name, output_size, qparams=''):
-        if self.model.is_data_quantized(): # no make sense to use quantization, use float
+        if self.model.is_data_quantized: # no make sense to use quantization, use float
             (data_type, data_converter) = self.model.get_type_converter(ModelDataType.FLOAT)
         else: # default data type converter
             (data_type, data_converter) = self.model.get_type_converter()

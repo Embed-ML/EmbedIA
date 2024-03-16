@@ -1,20 +1,22 @@
-from embedia.layers.data_layer import DataLayer
+from embedia.core.layer import Layer
 from embedia.model_generator.project_options import ModelDataType
-from embedia.utils import file_management
 import numpy as np
 
 
-class SeparableConv2D(DataLayer):
+class SeparableConv2D(Layer):
 
-    def __init__(self, model, layer, options, **kwargs):
+    def __init__(self, model, target, **kwargs):
 
-        super().__init__(model, layer, options, **kwargs)
+        super().__init__(model, target, **kwargs)
         # the type defined in "struct_data_type" must exists in "embedia.h"
         # self.struct_data_type = self.get_type_name().lower()+'_layer_t'
 
-        self.depth_weights = self._adapt_weights(layer.get_weights()[0])
-        self.point_weights = self._adapt_weights(layer.get_weights()[1])
-        self.biases = layer.get_weights()[2]
+        self._use_data_structure = True  # this layer require data structure initialization
+
+        self.depth_weights = self._adapt_weights(target.get_weights()[0])
+        self.point_weights = self._adapt_weights(target.get_weights()[1])
+        self.biases = target.get_weights()[2]
+
 
     def _adapt_weights(self, weights):
         _row, _col, _can, _filt = weights.shape
@@ -36,7 +38,7 @@ class SeparableConv2D(DataLayer):
 
         """
         # estimate amount multiplication and addition operations
-        out_size = self.get_output_size()
+        out_size = self.output_size
 
         # layer dimensions
         n_channels, n_filters, n_rows, n_cols = self.depth_weights.shape
@@ -76,7 +78,8 @@ class SeparableConv2D(DataLayer):
 
         return mem_size
 
-    def functions_init(self):
+    @property
+    def function_implementation(self):
         depth_filters, depth_channels, depth_rows, depth_columns = self.depth_weights.shape  # Getting layer info from it's weights
 
         depth_kernel_size = f'{{{depth_rows}, {depth_columns}}}'  # Defining kernel size
@@ -85,10 +88,10 @@ class SeparableConv2D(DataLayer):
         point_kernel_size = f'{{{point_rows}, {point_cols}}}'
 
         # padding
-        padding = 1 if self.layer.padding == 'same' else 0
+        padding = 1 if self.target.padding == 'same' else 0
 
         # strides
-        (strd_rows, strd_cols) = (self.layer.strides[-2], self.layer.strides[-1])
+        (strd_rows, strd_cols) = (self.target.strides[-2], self.target.strides[-1])
         assert strd_rows == strd_cols  # only supports equal length strides in the row and column dimensions
         strides = f'{{{strd_rows}, {strd_cols}}}'
 
@@ -101,7 +104,7 @@ class SeparableConv2D(DataLayer):
         conv_point_weights = data_converter.transform(self.point_weights)
         conv_biases = data_converter.transform(self.biases)
 
-        if self.is_data_quantized():
+        if self.is_data_quantized:
             qparams = f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
         else:
             qparams = ''
@@ -164,7 +167,7 @@ class SeparableConv2D(DataLayer):
 
         return init_conv_layer
 
-    def predict(self, input_name, output_name):
+    def invoke(self, input_name, output_name):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously

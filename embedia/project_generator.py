@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from embedia.models import ModelFactory
+from embedia.core.model_factory import ModelFactory
 from embedia.model_generator.project_options import (
         ModelDataType,
         ProjectType,
@@ -213,7 +213,7 @@ class ProjectGenerator:
         total_size = 0
         total_MACs = 0
 
-        for i, (l_name, l_type, l_act, params, shape, MACs, size) in enumerate(layers_info):
+        for i, (l_name, l_type, params, shape, MACs, size) in enumerate(layers_info):
             total_size += size
             total_MACs += MACs
             total_params = (total_params[0] + params[0], total_params[1] + params[1])
@@ -222,13 +222,11 @@ class ProjectGenerator:
             if params[1] > 0:
                 param_str += '(%d)' % params[1]
             layer = l_type
-            if l_act is not None:
-                layer += f'({l_act})'
             layers_info[i] = (layer, l_name, param_str, shape, MACs, size)
         # print table
         table = PrettyTable()
-        table.field_names = ['Layer(activation)', 'Name', '#Param(NT)', 'Shape', 'MACs', 'Size (KiB)']
-        table.align['Layer(activation)'] = 'l'
+        table.field_names = ['EmbedIA Layer', 'Name', '#Param(NT)', 'Shape', 'MACs', 'Size (KiB)']
+        table.align['EmbedIA Layer'] = 'l'
         table.align['Name'] = 'l'
         table.align['#Param(NT)'] = 'r'
         table.align['MACs'] = 'r'

@@ -8,7 +8,7 @@ from embedia.utils.model_inspector import ModelInspector
 from enum import Enum, auto
 from common.tests_config import TestsConfig
 from prettytable import PrettyTable
-
+import tensorflow as tf
 
 class TestResult(Enum):
     COMPILE_ERROR = auto()  # error compiling test
@@ -193,17 +193,20 @@ class Tester:
         compiler = self._compiler
 
         results = []
+
+        # Temporarily disable function retracing
+        tf.config.run_functions_eagerly(True)
+
         # test
         for test in tests_list:
             test_name = test['name']
             test_elem = test['element']
 
+            #data_gen.test_element = test_elem
+            shape = test['shape'] if 'shape' in test else None
 
-            data_gen.test_element = test_elem
-            if 'shape' in test:
-                data_gen.generate(test['shape'])
-            else:
-                data_gen.generate()
+            data_gen.generate(test_elem, shape)
+
             base_project_name = f'{data_gen.test_element.__class__.__name__}_{test_name}'
 
             for datatype in cfg.DATA_TYPES:
@@ -279,5 +282,8 @@ class Tester:
                         pass
                 else:
                     self._inspect(data_gen.model, data_gen.input_data, os.path.join(project_folder, 'computed_output.txt'))
+
+            # Habilitar nuevamente la retrazabilidad de las funciones
+            tf.config.run_functions_eagerly(False)
 
         return results

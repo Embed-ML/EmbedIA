@@ -1,4 +1,4 @@
-from embedia.layers.layer import Layer
+from embedia.core.layer import Layer
 
 
 class Flatten(Layer):
@@ -11,16 +11,18 @@ class Flatten(Layer):
     which performs the processing of the layer.
     """
 
-    def __init__(self, model, layer, options=None, **kwargs):
-        super().__init__(model, layer, options, **kwargs)
+    def __init__(self, model, target, **kwargs):
+        super().__init__(model, target, **kwargs)
 
-        dims = len(self.get_input_shape())
+
+        #self._output_data_type = 'data1d_t'
+
+
+        #dims = len(self.input_shape)
         # define C data types of input/output data. Note that the data type of
         # the input depends on the dimensions of the input.
-        self.input_data_type = f'data{dims}d_t'
-        self.output_data_type = 'data1d_t'
-
-    def predict(self, input_name, output_name):
+        #self._input_data_type = f'data{dims}d_t'
+    def invoke(self, input_name, output_name):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously
@@ -46,6 +48,6 @@ class Flatten(Layer):
             processing of the layer in the file "embedia.c".
 
         """
-        dims = len(self.get_input_shape())
+        dims = len(self.input_shape)
         fn_name = f'flatten{dims}d_layer'
         return f'''{fn_name}({input_name}, &{output_name});'''

@@ -1,18 +1,7 @@
-from embedia.layers.layers_implemented import dict_layers
-from collections import defaultdict
-from embedia.model_generator.project_options import ModelDataType
-import regex as re
-import pycparser as pcp
-import numpy as np
-from embedia.model_generator.project_options import BinaryBlockSize
-from embedia.layers.unimplemented_layer import UnimplementedLayer
-from embedia.layers.type_converters import *
-from embedia.layers.exceptions import *
 from embedia.layers.transformation.channels_adapter import ChannelsAdapter
-from embedia.models import EmbediaModel
-
-import tensorflow as tf
-
+from embedia.layers.activation.activation import Activation
+from embedia.core.embedia_model import EmbediaModel
+from tensorflow.keras.layers import Activation as KerasActivation
 
 
 class TensorflowModel(EmbediaModel):
@@ -52,6 +41,15 @@ class TensorflowModel(EmbediaModel):
             obj = layer
             ly = self._create_embedia_layer(layer)
             embedia_layers.append(ly)
+
+            if not isinstance(layer, KerasActivation) and hasattr(layer, 'activation') and layer.activation is not None:
+                if hasattr(layer.activation, 'name'):
+                    name = layer.activation.name
+                else:
+                    name = layer.activation.__name__
+                if name != 'linear':
+                    # add Activation as independent layer
+                    embedia_layers.append(Activation(self, layer))
 
         self._embedia_layers = embedia_layers
         return embedia_layers

@@ -1,11 +1,10 @@
 from math import sqrt
-from embedia.layers.data_layer import DataLayer
+from embedia.core.layer import Layer
 from embedia.utils.c_helper import declare_array
 from embedia.model_generator.project_options import ModelDataType
 
 
-class BatchNormalization(DataLayer):
-
+class BatchNormalization(Layer):
     """
     The normalization layer is a layer that requires additional data
     (coefficients and averages values to be initialized) in addition to the
@@ -14,10 +13,10 @@ class BatchNormalization(DataLayer):
     declaration of the prototype of the initialization function and the call
     to it.
     Normally the programmer must implement two methods. The first one is
-    "functions_init" which returns the implementation of the initialization
+    "function_implementation" which returns the implementation of the initialization
     function in C code, retrieving the layer information and dumping it into
-    the structure (defined in embedia.h") appropriately. The second one is
-    "predict", where the programmer must invoke the function EmbedIA function
+    the structure (defined in embedia.h) appropriately. The second one is
+    "invoke", where the programmer must invoke the function EmbedIA function
     (implemented in "embedia.c") that should perform the layer processing.
     To avoid overlapping names, both the function name and the variable name
     are automatically generated using the layer name. The same is true for the
@@ -32,7 +31,7 @@ class BatchNormalization(DataLayer):
     initialization function "normalization_datat init_normalization0_data(void)"
     and the invocation "normalization0_data = init_normalization0_data()".
     This way of naming must be taken into account in the implementation of the
-    initialization function in the "functions_init" method.
+    initialization function in the "function_implementation" method.
     This class implements the operation of normalizations that use averages and
     coefficients ([average-value]/coefficient ). The classes that inherit from
     this one must only fill the values of the "sub_values" and "div_values"
@@ -40,23 +39,22 @@ class BatchNormalization(DataLayer):
 """
 
     # Constructor receives batch normalization object in layer
-    def __init__(self, model, layer, options=None, **kwargs):
-        super().__init__(model, layer, options, **kwargs)
+    def __init__(self, model, target, **kwargs):
+        super().__init__(model, target, **kwargs)
 
-        self.gamma = layer.get_weights()[0]
-        self.beta = layer.get_weights()[1]
-        self.moving_mean = layer.get_weights()[2]
-        self.moving_variance = layer.get_weights()[3]
-        self.epsilon = layer.epsilon
+        self.gamma = target.get_weights()[0]
+        self.beta = target.get_weights()[1]
+        self.moving_mean = target.get_weights()[2]
+        self.moving_variance = target.get_weights()[3]
+        self.epsilon = target.epsilon
 
-        # As the name generated automatically depends on the class name and the
-        # same structure is used for all normalizations, the EmbedIA data type
-        # name is forced in this class.
-        self.struct_data_type = 'batch_normalization_layer_t'
+        self._inplace_output = True # EmbedIA function saves output into input
+        self._use_data_structure = True  # this layer require data structure initialization
 
-        # EmbedIA function saves output into input
-        self.inplace_output = True
-
+    @property
+    def struct_data_type(self):
+        return 'batch_normalization_layer_t'
+    
     def calculate_memory(self, types_dict):
         """
         calculates amount of memory required to store the data of layer
@@ -83,7 +81,8 @@ class BatchNormalization(DataLayer):
 
         return mem_size
 
-    def functions_init(self):
+    @property
+    def function_implementation(self):
 
         (data_type, data_converter) = self.model.get_type_converter()
 
@@ -108,14 +107,14 @@ class BatchNormalization(DataLayer):
         #inv_gamma_dev = ['%f/sqrt(%f+%f)' % (self.gamma[i], self.moving_variance[i], self.epsilon) for i in range(self.gamma.size)]
         inv_gamma_dev = [self.gamma[i] / sqrt(self.moving_variance[i]+self.epsilon) for i in range(self.gamma.size)]
         inv_gamma_dev = data_converter.fit_transform(inv_gamma_dev)
-        qparam = f', {{ {data_converter.scale}, {data_converter.zero_pt} }}' if self.is_data_quantized() else ''
+        qparam = f', {{ {data_converter.scale}, {data_converter.zero_pt} }}' if self.is_data_quantized else ''
 
         # standard_beta = np.array([(beta[i] - moving_mean[i] * standard_gamma[i]) for i in range(beta.size)])
 
         #std_beta = ['%f-(%f*%f/sqrt(%f+%f))' % (self.beta[i], self.moving_mean[i], self.gamma[i], self.moving_variance[i], self.epsilon) for i in range(self.beta.size)]
         std_beta = [ self.beta[i] - (self.moving_mean[i]*self.gamma[i]/sqrt(self.moving_variance[i]+self.epsilon) ) for i in range(self.beta.size)]
         std_beta = data_converter.fit_transform(std_beta)
-        qparam += f', {{ {data_converter.scale}, {data_converter.zero_pt} }}' if self.is_data_quantized() else ''
+        qparam += f', {{ {data_converter.scale}, {data_converter.zero_pt} }}' if self.is_data_quantized else ''
 
         # get inverse of standard dev (square root of moving variance)
         o_inv_mov_std = declare_array(array_type, inv_gamma_dev_name, macro_converter, inv_gamma_dev)
@@ -136,6 +135,6 @@ class BatchNormalization(DataLayer):
 '''
         return init_layer
 
-    def predict(self, input_name, output_name):
-        dim = len(self.get_input_shape())
+    def invoke(self, input_name, output_name):
+        dim = len(self.input_shape)
         return f'''batch_normalization{dim}d_layer({self.name}_data, &{output_name});'''

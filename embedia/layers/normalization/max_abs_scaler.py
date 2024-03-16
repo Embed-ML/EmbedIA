@@ -17,11 +17,11 @@ class MaxAbsNormalization(Normalization):
     EmbedIA function declared in "embedia.h"
     """
 
-    def __init__(self, model, layer, options=None, **kwargs):
+    def __init__(self, model, target, **kwargs):
 
         self.sub_values = None
-        self.div_values = layer.max_abs_
+        self.div_values = target.max_abs_
 
         self.norm_function_name = 'max_abs_norm_layer'
 
-        super().__init__(model, layer, options, **kwargs)
+        super().__init__(model, target, **kwargs)

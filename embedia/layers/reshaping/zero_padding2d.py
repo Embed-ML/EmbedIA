@@ -1,7 +1,4 @@
-from embedia.layers.data_layer import Layer
-from embedia.utils.c_helper import declare_array
-from embedia.model_generator.project_options import ModelDataType
-import numpy as np
+from embedia.core.layer import Layer
 
 
 class ZeroPadding2D(Layer):
@@ -15,13 +12,13 @@ class ZeroPadding2D(Layer):
     which performs the processing of the layer.
     """
 
-    def __init__(self, model, layer, options=None, **kwargs):
-        super().__init__(model, layer, options, **kwargs)
+    def __init__(self, model, target, **kwargs):
+        super().__init__(model, target, **kwargs)
 
-        self.input_data_type = f'data3d_t'
-        self.output_data_type = 'data3d_t'
+        #self.input_data_type = f'data3d_t'
+        #self.output_data_type = 'data3d_t'
 
-    def predict(self, input_name, output_name):
+    def invoke(self, input_name, output_name):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously
@@ -48,5 +45,5 @@ class ZeroPadding2D(Layer):
 
         """
 
-        (pad_h, pad_w) = (self.layer.padding[0], self.layer.padding[1])
+        (pad_h, pad_w) = (self.target.padding[0], self.target.padding[1])
         return f'''zero_padding2d_layer({pad_h}, {pad_w}, {input_name}, &{output_name});'''

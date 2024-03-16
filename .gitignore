@@ -3,10 +3,7 @@
 outputs/prueba_definitiva/
 embedia tests/project tests/outputs
 *.bak
-*.pyc
 *.o
-*.pyc
-*.pyc
 *.exe
 .vscode/
 .idea/

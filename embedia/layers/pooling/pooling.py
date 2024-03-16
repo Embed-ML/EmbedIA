@@ -1,4 +1,4 @@
-from embedia.layers.layer import Layer
+from embedia.core.layer import Layer
 
 
 class Pooling(Layer):
@@ -26,32 +26,27 @@ class Pooling(Layer):
     "d_layer".
     """
 
-    def __init__(self, model, layer, options=None, **kwargs):
-        super().__init__(model, layer, options, **kwargs)
+    def __init__(self, model, target, **kwargs):
+        super().__init__(model, target, **kwargs)
 
-        self.dimensions = len(layer.pool_size)
-        dim = self.dimensions
+        self.dimensions = len(target.pool_size)
 
-        # the input/output data types depends on the numbers of dimensions
-        self.input_data_type = f'data{dim+1}d_t'
-        self.output_data_type = f'data{dim+1}d_t'
+        self.strides = target.strides[0]
+        self.pool_size = target.pool_size[0]
 
-        self.strides = layer.strides[0]
-        self.pool_size = layer.pool_size[0]
-        # These values must be redefined in the subclass if it does not follow
-        # the automatic naming rule.
-        (self.pool_name, self.struct_data_type) = self.get_pool_name(layer)
 
-    def get_pool_name(self, layer):
+
+    @property
+    def pool_name(self):
         """
         Gets the name of the EmbedIA function to be invoked to perform the
         layer processing. The definition of the function with this name must
-        be defined in "embedia.h" and implemented in "embedia.c".
+        be defined in some ".h" and implemented in respective ".c".
 
         Parameters
         ----------
         layer : object
-            Keras pooling layer object
+            pooling layer object
 
         Returns
         -------
@@ -59,12 +54,21 @@ class Pooling(Layer):
             name of EmbedIA pooling function to call in predict method
 
         """
-        name = layer.pool_function.__name__.lower()
-        name = name[0:name.find('_')] + '_pooling%dd_layer' % self.dimensions
-        data_type = 'pooling%dd_layer_t' % self.dimensions
-        return  (name, data_type)
+        name = self.target.pool_function.__name__.lower()
+        return name[0:name.find('_')] + '_pooling%dd_layer' % self.dimensions
 
-    def predict(self, input_name, output_name):
+    @property
+    def struct_data_type(self):
+        """
+        gets automatic embedia name for structure associated with layer/element
+        Returns
+        -------
+        str
+            embedia type name for layer/element.
+        """
+        return 'pooling%dd_layer_t' % self.dimensions
+
+    def invoke(self, input_name, output_name):
         """
         Generates C code for the invoke the EmbedIA function that implements
         the layer/element. The C function must be previously implemented in

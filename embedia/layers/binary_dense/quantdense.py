@@ -1,4 +1,4 @@
-from embedia.layers.data_layer import DataLayer
+from embedia.core.layer import Layer
 from embedia.utils.c_helper import declare_array
 from embedia.utils.c_helper import declare_array2
 from embedia.model_generator.project_options import BinaryBlockSize
@@ -7,7 +7,7 @@ import larq as lq
 import math
 
 
-class QuantDense(DataLayer):
+class QuantDense(Layer):
     """
     The Dense layer is a layer that requires additional data (weights to be
     initialized) in addition to the input data. For this reason it inherits
@@ -15,7 +15,7 @@ class QuantDense(DataLayer):
     will store the data, the declaration of the prototype of the initialization
     function and the call to it.
     Normally the programmer must implement two methods. The first one is
-    "functions_init" which returns the implementation of the initialization
+    "function_implementation" which returns the implementation of the initialization
     function in C code, retrieving the layer information and dumping it into
     the structure (defined in embedia.h") in an appropriate way. The second one
     is "predict" where the programmer must invoke the EmbedIA function
@@ -33,32 +33,32 @@ class QuantDense(DataLayer):
     "dense_datat init_dense0_data(void)" and the invocation
     "dense0_data = init_dense0_data()". This way of naming must be taken into
     account in the implementation of the initialization function in the
-    "functions_init" method
+    "function_implementation" method
     """
 
-    def __init__(self, model, layer, options=None, **kwargs):
-        super().__init__(model, layer, options, **kwargs)
-        self.input_data_type = "data1d_t"
-        self.output_data_type = "data1d_t"
+    def __init__(self, model, target, **kwargs):
+        super().__init__(model, target, **kwargs)
 
-        # assign properties to be used in "functions_init"
-        self.weights = layer.get_weights()[0]
-        self.biases = layer.get_weights()[1]
+        self._use_data_structure = True  # this layer require data structure initialization
+
+        # assign properties to be used in "function_implementation"
+        self.weights = target.get_weights()[0]
+        self.biases = target.get_weights()[1]
 
         # verificamos a que caso corresponde
         with lq.context.quantized_scope(True):
-            if (layer.get_config()['input_quantizer'] is None) and (layer.get_config()['kernel_quantizer'] is None):
+            if (target.get_config()['input_quantizer'] is None) and (target.get_config()['kernel_quantizer'] is None):
                 # es una desnse normal
                 self.tipo_densa = 0
-            elif (layer.get_config()['input_quantizer'] is None) and (layer.get_config()['kernel_quantizer'] is not None):
+            elif (target.get_config()['input_quantizer'] is None) and (target.get_config()['kernel_quantizer'] is not None):
 
                 # entrada no binaria
                 print(
-                    f"Error: No support for layer {layer} with this arguments")
-                raise f"Error: No support for layer {layer} with this arguments"
+                    f"Error: No support for layer {target} with this arguments")
+                raise f"Error: No support for layer {target} with this arguments"
 
-            elif (layer.get_config()['input_quantizer'] is not None) and (layer.get_config()['kernel_quantizer'] is not None):
-                if (layer.get_config()['input_quantizer']['class_name'] == 'SteSign') and (layer.get_config()['kernel_quantizer']['class_name'] == 'SteSign'):
+            elif (target.get_config()['input_quantizer'] is not None) and (target.get_config()['kernel_quantizer'] is not None):
+                if (target.get_config()['input_quantizer']['class_name'] == 'SteSign') and (target.get_config()['kernel_quantizer']['class_name'] == 'SteSign'):
                     # dnse pura binaria
                     self.tipo_densa = 1
                 else:
@@ -68,7 +68,7 @@ class QuantDense(DataLayer):
                 print("Error: No support for layer {layer} with this arguments")
                 raise "Error: No support for layer {layer} with this arguments"
 
-    def var(self):
+    def variable_declaration(self):
         if self.tipo_densa == 0:
 
             return f"dense_layer_t {self.name}_data;\n"
@@ -77,7 +77,7 @@ class QuantDense(DataLayer):
 
             return f"quantdense_layer_t {self.name}_data;\n"
 
-    def prototypes_init(self):
+    def function_prototype(self):
         if self.tipo_densa == 0:
 
             return f"dense_layer_t init_{self.name}_data(void);\n"
@@ -141,7 +141,8 @@ class QuantDense(DataLayer):
 
         return mem_size
 
-    def functions_init(self):
+    @property
+    def function_implementation(self):
         """
         Generate C code with the initialization function of the additional
         structure (defined in "embedia.h") required by the layer.
@@ -253,7 +254,7 @@ class QuantDense(DataLayer):
 
         return init_dense_layer
 
-    def predict(self, input_name, output_name):
+    def invoke(self, input_name, output_name):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously

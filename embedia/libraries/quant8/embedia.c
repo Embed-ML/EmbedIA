@@ -207,7 +207,16 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     }
 }
 
-static void depthwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t input, data3d_t * output){
+/*
+ * depthwise()
+ *   Performs the depthwise convolution operation in a depthwise separable convolution layer.
+ * Parameters:
+ *   layer => Separable convolutional layer parameters
+ *   filter => Filter weights for the depthwise convolution
+ *   input => Input data for the convolution
+ *   *output => Pointer to store the output data
+ */
+ static void depthwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t input, data3d_t * output){
     uint32_t i,j,k,l,c, f_pos, i_pos, i_pad, j_pad;
     uint8_t pad_h, pad_w;
     float sum, value;
@@ -322,7 +331,7 @@ static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3
                                 f_pos = (c * layer.kernel_sz.h * layer.kernel_sz.w) + k * layer.kernel_sz.w + l;
                                 i_pos = (c * input.height * input.width) + i_pad * input.width + j_pad;
                                 sum += DEQUANTIZE(layer.weights[f_pos], layer.w_qparam) * input.data[i_pos];
-                            }
+                              }
 
 
                     }

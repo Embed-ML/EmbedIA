@@ -1,8 +1,8 @@
-from embedia.layers.data_layer import DataLayer
+from embedia.core.layer import Layer
 from embedia.utils.c_helper import declare_array
 from embedia.model_generator.project_options import ModelDataType
 
-class Normalization(DataLayer):
+class Normalization(Layer):
 
     """
     The normalization layer is a layer that requires additional data
@@ -12,7 +12,7 @@ class Normalization(DataLayer):
     declaration of the prototype of the initialization function and the call
     to it.
     Normally the programmer must implement two methods. The first one is
-    "functions_init" which returns the implementation of the initialization
+    "function_implementation" which returns the implementation of the initialization
     function in C code, retrieving the layer information and dumping it into
     the structure (defined in embedia.h") appropriately. The second one is
     "predict", where the programmer must invoke the function EmbedIA function
@@ -30,7 +30,7 @@ class Normalization(DataLayer):
     initialization function "normalization_datat init_normalization0_data(void)"
     and the invocation "normalization0_data = init_normalization0_data()".
     This way of naming must be taken into account in the implementation of the
-    initialization function in the "functions_init" method.
+    initialization function in the "function_implementation" method.
     This class implements the operation of normalizations that use averages and
     coefficients ([average-value]/coefficient ). The classes that inherit from
     this one must only fill the values of the "sub_values" and "div_values"
@@ -42,17 +42,24 @@ class Normalization(DataLayer):
     div_values = None
 
     # Constructor receives sklearn normalization object (Scaler) in layer
-    def __init__(self, model, layer, options=None, **kwargs):
-        super().__init__(model, layer, options, **kwargs)
+    def __init__(self, model, target, **kwargs):
+        super().__init__(model, target,**kwargs)
 
-        # As the name generated automatically depends on the class name and the
-        # same structure is used for all normalizations, the EmbedIA data type
-        # name is forced in this class.
-        self.struct_data_type = 'normalization_layer_t'
+        self._use_data_structure = True  # this layer require data structure initialization
 
         # Name of EmbedIA normalization function declared in "embedia.h".
         # Subclass must assign the propertly name
         # self.norm_function_name = '?'
+
+
+    @property
+    def struct_data_type(self):
+        # As the name generated automatically depends on the class name and the
+        # same structure is used for all normalizations, the EmbedIA data type
+        # name is forced in this class.
+        return 'normalization_layer_t'
+
+
 
     def get_input_shape(self):
         """
@@ -119,9 +126,10 @@ class Normalization(DataLayer):
 
         return mem_size
 
-    def functions_init(self):
+    @property
+    def function_implementation(self):
 
-        if self.is_data_quantized():
+        if self.is_data_quantized:
             (data_type, data_converter) = self.model.get_type_converter(ModelDataType.FLOAT)
         else:
             (data_type, data_converter) = self.model.get_type_converter()
@@ -147,7 +155,7 @@ class Normalization(DataLayer):
         o_inv_div_val = declare_array(f'static const {data_type}', div_var_name, macro_converter, inv_div_val)
 
         quant_params = ''
-        if self.is_quantizable() and self.is_data_quantized():
+        if self.is_quantizable and self.is_data_quantized:
             (sc, zp) = (data_converter.scale, data_converter.zero_pt)
             quant_params += f', {{{sc}, {zp}}}'
 
@@ -164,5 +172,5 @@ class Normalization(DataLayer):
 '''
         return init_layer
 
-    def predict(self, input_name, output_name):
+    def invoke(self, input_name, output_name):
         return f'''{self.norm_function_name}({self.name}_data, {input_name}, &{output_name});'''

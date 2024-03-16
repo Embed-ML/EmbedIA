@@ -3,7 +3,7 @@ from tensorflow.keras.layers import DepthwiseConv2D
 # Tests list
 # TESTS_LIST = [
 #     {'name': '_Inspect', # simple test
-#      'element': DepthwiseConv2D(kernel_size=(3, 3), strides=(2, 2), padding='valid', activation='linear',
+#      'element': DepthwiseConv2D(kernel_size=(2, 3), strides=(1, 1), padding='same', activation='linear',
 #                         bias_initializer='random_normal', input_shape=(6,6,1))
 #      }
 # ]
