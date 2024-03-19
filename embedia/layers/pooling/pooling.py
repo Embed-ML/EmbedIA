@@ -24,16 +24,16 @@ class Pooling(Layer):
     function named "avg_pooling2d_layer" will be called, composed by the first
     part of the name "avg" followed by "_pooling" + "input dimension" +
     "d_layer".
+
+    Layer wrapper required properties:
+        - strides => (height, width)
+        - pool_size => (height, width)
+        - dimensions => 2 because the pooling
+        - function_name => function name for pooling layers ex: "avg_pooling2d_layer"
     """
 
-    def __init__(self, model, target, **kwargs):
-        super().__init__(model, target, **kwargs)
-
-        self.dimensions = len(target.pool_size)
-
-        self.strides = target.strides[0]
-        self.pool_size = target.pool_size[0]
-
+    def __init__(self, model, wrapper, **kwargs):
+        super().__init__(model, wrapper, **kwargs)
 
 
     @property
@@ -54,8 +54,7 @@ class Pooling(Layer):
             name of EmbedIA pooling function to call in predict method
 
         """
-        name = self.target.pool_function.__name__.lower()
-        return name[0:name.find('_')] + '_pooling%dd_layer' % self.dimensions
+        return '%s_pooling%dd_layer' % (self._wrapper.function_name, self._wrapper.dimensions)
 
     @property
     def struct_data_type(self):
@@ -66,7 +65,7 @@ class Pooling(Layer):
         str
             embedia type name for layer/element.
         """
-        return 'pooling%dd_layer_t' % self.dimensions
+        return 'pooling%dd_layer_t' % self._wrapper.dimensions
 
     def invoke(self, input_name, output_name):
         """
@@ -94,9 +93,9 @@ class Pooling(Layer):
 
         name = self.name
         pool_name = self.pool_name
-        strides = self.strides
-        pool_size = self.pool_size
-        dim = self.dimensions
+        strides = self._wrapper.strides[0]
+        pool_size = self._wrapper.pool_size[0]
+        dim = self._wrapper.dimensions
         text = f'''static const pooling{dim}d_layer_t {name}_data = {{ {pool_size}, {strides} }};
 {pool_name}({name}_data, {input_name}, &{output_name});'''
         return text

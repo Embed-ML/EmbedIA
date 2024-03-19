@@ -10,10 +10,13 @@ class ZeroPadding2D(Layer):
     Normally, the programmer must implement the "predict" method, with the
     invocation to the EmbedIA function (previously implemented in "embedia.c")
     which performs the processing of the layer.
+
+    Layer wrapper required properties:
+        - padding => (height, width)
     """
 
-    def __init__(self, model, target, **kwargs):
-        super().__init__(model, target, **kwargs)
+    def __init__(self, model, wrapper, **kwargs):
+        super().__init__(model, wrapper, **kwargs)
 
         #self.input_data_type = f'data3d_t'
         #self.output_data_type = 'data3d_t'
@@ -45,5 +48,5 @@ class ZeroPadding2D(Layer):
 
         """
 
-        (pad_h, pad_w) = (self.target.padding[0], self.target.padding[1])
+        (pad_h, pad_w) = (self.wrapper.padding[0], self.wrapper.padding[1])
         return f'''zero_padding2d_layer({pad_h}, {pad_w}, {input_name}, &{output_name});'''

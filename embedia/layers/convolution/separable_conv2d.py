@@ -4,29 +4,68 @@ import numpy as np
 
 
 class SeparableConv2D(Layer):
+    """
 
-    def __init__(self, model, target, **kwargs):
+     Develop info:
+     This class must define the behavior of an EmdedIA layer/element. It defines
+     methods/properties to obtain information related to the inputs and outputs of
+     the layer/element such as its shape, number of elements, EmbedIA associated
+     data type.
+     It also implements methods to generate the C code necessary for debugging
+     function and invocation of the C function associated to the layer/element.
+     This function must be implemented in some .c file its prototype declared
+     in respective .h. The name of function can be anything but an EmbedIA naming
+     rule is recomended: LayerClassName+"_layer". Example for SeparableConv2D class
+     should be named separable_conv2d_layer.
+     The invoke function receives an input and an output parameter with the parameter's
+     name that are used in the predict function of the model.
 
-        super().__init__(model, target, **kwargs)
+     The SeparableConv2D convolutional layer is a layer that requires additional data structure
+     (weights to be initialized) in addition to the input data. For this reason
+     sets "_use_data_structure" to True. Because ot this, code generator generates C code
+     automatically based on the content of the properties that store c code:
+     - struct_data_type [automatic named]: name of data type of structure to store parameters
+       like filters, kernel size, padding, etc. This structure must be declared in some .h file.
+       Example: for Classname+"_layer_t" generates separable_conv2d_layer_t
+     - variable_declaration [automatic generated]: variable declaration to store parameters.
+       Example: for Classname+"_layer_t" LayerName+"_data" generates separable_conv2d_layer_t separable_conv2d_0_data
+     - function_prototype [automatic generated]: function prototype to invoke on data initialization.
+       Example: for struct_data_type "init_"+LayerName+"_data"(void)' generates
+       separable_conv2d_layer_t init_separable_conv2d_data(void)
+     - variable_initialization [automatic generated]: code to initialize structure variable via
+       initialization function. Example: for LayerName+"_data" = "init_"+LayerName+"_data(void)"
+       generates conv2d_0_data = init_separable_conv2d_0_data(void).
+     - function_implementation [user generated]: full code of initialization function. User must
+       generate code to initialize the data structure.
+
+     Layer wrapper required properties:
+         - padding => 0=valid, 1=same
+         - strides => (height, width)
+         - weights => 4d array formatted: filters, channel, row, column
+         - biases => 1d array
+    """
+    def __init__(self, model, wrapper, **kwargs):
+
+        super().__init__(model, wrapper, **kwargs)
         # the type defined in "struct_data_type" must exists in "embedia.h"
         # self.struct_data_type = self.get_type_name().lower()+'_layer_t'
 
         self._use_data_structure = True  # this layer require data structure initialization
 
-        self.depth_weights = self._adapt_weights(target.get_weights()[0])
-        self.point_weights = self._adapt_weights(target.get_weights()[1])
-        self.biases = target.get_weights()[2]
+        # self.depth_weights = self._adapt_weights(wrapper.get_weights()[0])
+        # self.point_weights = self._adapt_weights(wrapper.get_weights()[1])
+        # self.biases = wrapper.get_weights()[2]
 
 
-    def _adapt_weights(self, weights):
-        _row, _col, _can, _filt = weights.shape
-        arr = np.zeros((_filt, _can, _row, _col))
-        for row, elem in enumerate(weights):
-            for col, elem2 in enumerate(elem):
-                for chn, elem3 in enumerate(elem2):
-                    for filt, value in enumerate(elem3):
-                        arr[filt, chn, row, col] = value
-        return arr
+    # def _adapt_weights(self, weights):
+    #     _row, _col, _can, _filt = weights.shape
+    #     arr = np.zeros((_filt, _can, _row, _col))
+    #     for row, elem in enumerate(weights):
+    #         for col, elem2 in enumerate(elem):
+    #             for chn, elem3 in enumerate(elem2):
+    #                 for filt, value in enumerate(elem3):
+    #                     arr[filt, chn, row, col] = value
+    #     return arr
 
     def calculate_MAC(self):
         """
@@ -41,10 +80,10 @@ class SeparableConv2D(Layer):
         out_size = self.output_size
 
         # layer dimensions
-        n_channels, n_filters, n_rows, n_cols = self.depth_weights.shape
+        n_channels, n_filters, n_rows, n_cols = self._wrapper.depth_weights.shape
         MACs = out_size*n_cols*n_rows*n_channels
 
-        n_channels, n_filters, n_rows, n_cols = self.point_weights.shape
+        n_channels, n_filters, n_rows, n_cols = self._wrapper.point_weights.shape
         MACs += out_size*n_cols*n_rows*n_channels
 
         return MACs
@@ -60,10 +99,10 @@ class SeparableConv2D(Layer):
         """
 
         # layer dimensions
-        n_channels, n_filters, n_rows, n_cols = self.depth_weights.shape
+        n_channels, n_filters, n_rows, n_cols = self._wrapper.depth_weights.shape
         depth_params = n_channels * n_filters * n_rows * n_cols
 
-        n_channels, n_filters, n_rows, n_cols = self.point_weights.shape
+        n_channels, n_filters, n_rows, n_cols = self._wrapper.point_weights.shape
         point_params = n_channels * n_filters * n_rows * n_cols
 
         # EmbedIA filter structure size
@@ -72,7 +111,6 @@ class SeparableConv2D(Layer):
         # base data type in bits: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)
 
-
         mem_size = ((depth_params + point_params + n_filters) * dt_size / 8 +
                     sz_filter_t * n_filters)
 
@@ -80,18 +118,18 @@ class SeparableConv2D(Layer):
 
     @property
     def function_implementation(self):
-        depth_filters, depth_channels, depth_rows, depth_columns = self.depth_weights.shape  # Getting layer info from it's weights
+        depth_filters, depth_channels, depth_rows, depth_columns = self._wrapper.depth_weights.shape  # Getting layer info from it's weights
 
         depth_kernel_size = f'{{{depth_rows}, {depth_columns}}}'  # Defining kernel size
 
-        point_filters, point_channels, point_rows, point_cols = self.point_weights.shape  # Getting layer info from it's weights
+        point_filters, point_channels, point_rows, point_cols = self._wrapper.point_weights.shape  # Getting layer info from it's weights
         point_kernel_size = f'{{{point_rows}, {point_cols}}}'
 
         # padding
-        padding = 1 if self.target.padding == 'same' else 0
+        padding = self._wrapper.padding
 
         # strides
-        (strd_rows, strd_cols) = (self.target.strides[-2], self.target.strides[-1])
+        (strd_rows, strd_cols) = (self._wrapper.strides[-2], self._wrapper.strides[-1])
         assert strd_rows == strd_cols  # only supports equal length strides in the row and column dimensions
         strides = f'{{{strd_rows}, {strd_cols}}}'
 
@@ -99,10 +137,10 @@ class SeparableConv2D(Layer):
 
         (data_type, data_converter) = self.model.get_type_converter()
 
-        data_converter.fit(np.concatenate((self.depth_weights.ravel(), self.point_weights.ravel())))
-        conv_depth_weights = data_converter.transform(self.depth_weights)
-        conv_point_weights = data_converter.transform(self.point_weights)
-        conv_biases = data_converter.transform(self.biases)
+        data_converter.fit(np.concatenate((self._wrapper.depth_weights.ravel(), self._wrapper.point_weights.ravel())))
+        conv_depth_weights = data_converter.transform(self._wrapper.depth_weights)
+        conv_point_weights = data_converter.transform(self._wrapper.point_weights)
+        conv_biases = data_converter.transform(self._wrapper.biases)
 
         if self.is_data_quantized:
             qparams = f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
@@ -123,7 +161,7 @@ class SeparableConv2D(Layer):
                 for c in range(depth_columns):
                     o_weights += f'''{conv_depth_weights[0,ch,r,c]}, '''
                 if comm_values:
-                    o_weights += f'/* {self.depth_weights[0, ch, r, 0:depth_columns]} */'
+                    o_weights += f'/* {self._wrapper.depth_weights[0, ch, r, 0:depth_columns]} */'
                 o_weights += '\n'
 
         id = o_weights.rfind(',')
@@ -145,8 +183,8 @@ class SeparableConv2D(Layer):
                 o_weights+= f'''{conv_point_weights[i,ch,0,0]}, '''
             # o_weights = o_weights[0:-2] # remove las comma
             if comm_values:
-                comm_weights = f' /* {self.point_weights[i, ch, 0, 0:point_channels]} */'
-                comm_bias = f' /* {self.biases[i]} */'
+                comm_weights = f' /* {self._wrapper.point_weights[i, ch, 0, 0:point_channels]} */'
+                comm_bias = f' /* {self._wrapper.biases[i]} */'
             else:
                 comm_weights = ''
                 comm_bias = ''

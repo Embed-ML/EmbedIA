@@ -16,11 +16,11 @@ class MinMaxNormalization(Normalization):
     coefficients.
     """
 
-    def __init__(self, model, target, **kwargs):
+    def __init__(self, model, wrapper, **kwargs):
 
-        self.sub_values = target.data_min_
-        self.div_values = target.data_range_
+        # self.sub_values = wrapper.data_min_
+        # self.div_values = wrapper.data_range_
+        #
+        # self.norm_function_name = 'min_max_norm_layer'
 
-        self.norm_function_name = 'min_max_norm_layer'
-
-        super().__init__(model, target, **kwargs)
+        super().__init__(model, wrapper, **kwargs)

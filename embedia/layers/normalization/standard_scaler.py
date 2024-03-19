@@ -16,11 +16,11 @@ class StandardNormalization(Normalization):
     coefficients.
     """
 
-    def __init__(self, model, target, **kwargs):
+    def __init__(self, model, wrapper, **kwargs):
 
-        self.sub_values = target.mean_
-        self.div_values = target.scale_
+        # self.sub_values = wrapper.mean_
+        # self.div_values = wrapper.scale_
+        #
+        # self.norm_function_name = 'standard_norm_layer'
 
-        self.norm_function_name = 'standard_norm_layer'
-
-        super().__init__(model, target, **kwargs)
+        super().__init__(model, wrapper, **kwargs)

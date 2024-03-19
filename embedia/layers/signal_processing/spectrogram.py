@@ -7,14 +7,14 @@ class Spectrogram(Layer):
     
     """
 
-    def __init__(self, model, target, **kwargs):
+    def __init__(self, model, wrapper, **kwargs):
         # super().__init__(model, layer, options, **kwargs)
         # self.name = 'spectrogram'
         # self.class_name = 'spectrogram'
         # layer._class.name_ = 'spectrogram'
         # self.input_shape = self.layer.input_shape
         # self.output_shape = self.layer.output_shape
-        super().__init__(model, target, **kwargs)
+        super().__init__(model, wrapper, **kwargs)
         self.input_data_type = "data1d_t"
         self.output_data_type = "data3d_t"
 
@@ -46,7 +46,7 @@ class Spectrogram(Layer):
             shape of the input data
         """
         
-        return self.target.input_shape
+        return self.wrapper.input_shape
 
     def get_output_shape(self):
         """
@@ -57,7 +57,7 @@ class Spectrogram(Layer):
         n-tuple
             shape of the output data
         """
-        return self.target.output_shape
+        return self.wrapper.output_shape
 
     def calculate_MAC(self):
         """
@@ -145,17 +145,17 @@ class Spectrogram(Layer):
 spectrogram_layer_t init_melspec_data(void){{
     spectrogram_layer_t layer_spec;
     layer_spec.convert_to_db = {0};
-    layer_spec.n_fft = {self.target.n_fft};
-    layer_spec.n_mels = {self.target.n_mels};
-    layer_spec.frame_length = {self.target.input_length};
-    layer_spec.sample_rate = {self.target.input_fs};
-    layer_spec.n_blocks = {self.target.n_blocks};
-    layer_spec.n_fft_table = {int(self.target.n_fft / 2)};
-    layer_spec.noverlap = {self.target.noverlap};
-    layer_spec.step = {self.target.step};
-    layer_spec.len_nfft_nmels = {(self.target.n_fft // 2) // self.target.n_mels};
-    layer_spec.spec_size = {self.target.shape[0] * self.target.shape[1]};
-    layer_spec.ts_us = {int(1 / self.target.input_fs * 1000 * 1000)};
+    layer_spec.n_fft = {self.wrapper.n_fft};
+    layer_spec.n_mels = {self.wrapper.n_mels};
+    layer_spec.frame_length = {self.wrapper.input_length};
+    layer_spec.sample_rate = {self.wrapper.input_fs};
+    layer_spec.n_blocks = {self.wrapper.n_blocks};
+    layer_spec.n_fft_table = {int(self.wrapper.n_fft / 2)};
+    layer_spec.noverlap = {self.wrapper.noverlap};
+    layer_spec.step = {self.wrapper.step};
+    layer_spec.len_nfft_nmels = {(self.wrapper.n_fft // 2) // self.wrapper.n_mels};
+    layer_spec.spec_size = {self.wrapper.shape[0] * self.wrapper.shape[1]};
+    layer_spec.ts_us = {int(1 / self.wrapper.input_fs * 1000 * 1000)};
 
     return layer_spec;
 }}

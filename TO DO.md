@@ -1,13 +1,16 @@
 # Lista de Trabajo (en curso o próximo)
 
+ - ** Soporte para max_pooling de multiples dimensiones para strides y pool_size
+
+ - **Implementar Capas Orientadas a Elementos:
+      - Add, Substract, Average, Multiply, Maximum?, Minimum?, Dot
+## LISTOS:
  - **Soporte de strides para capas convolucioneales: SeparableConv2D y DepthwiseConv2D**
  - **Soporte de padding para capas convolucioneales: Conv2D(ya implementada para float), SeparableConv2D y DepthwiseConv2D**
  - **Soporte para kernels asimetricos para Conv2D**
  - **Refactoring de propiedad kernel_size para llevarla a conv2d_layer desde filter_T
  - **Refactoring para dividir Model en EmbediaModel y TensorflowModel**
  - **Refactoring para posibilitar modelos basados en Scikit Learn**
- - **Implementar Capas Orientadas a Elementos:
-      - Add, Substract, Average, Multiply, Maximum?, Minimum?, Dot
 
 ## Lista de Terminados recientes
     - ** Soporte de padding, strides para Conv2D
@@ -126,11 +129,12 @@
 - Revisar la funcion Tanh para fixed16 y fixed32. Las pruebas indican un error mayor al de validación
 
 - Revisar DepthwiseConv2D para kernel 2x3 y tipo quant8
-- Ver tema de input_shape en las pruebas para las capas de normalizacion independiente
+
 - Agregar test para Flatten
 - Agregar test para Binarias
 - Agregar Test para Espectrograma
 
+- 
 ## Optimizaciones:
 - **Velocidad**
   - para incrementar la velocidad de procesamiento podrían realizarse optimizaciones de código específicas teniendo en cuenta los parámetros. Algo así se implemento con la capa Conv2D que tiene versiones sin padding ni strides, sin padding con strides y con padding y strides.

@@ -18,7 +18,7 @@ class ChannelsAdapter(Layer):
             shape = shape[1:]
         self._shape = shape
 
-        super().__init__(model=model, target=None, **kwargs)
+        super().__init__(model=model, wrapper=None, **kwargs)
 
 
     def get_input_shape(self):

@@ -13,7 +13,7 @@ class UnimplementedLayer(EmbediaLayer):
     'Random' layers of Tensorflow/Keras
     """
 
-    def __init__(self, model, target, **kwargs):
+    def __init__(self, model, wrapper, **kwargs):
         """
         Constructor that receives:
             - EmbedIA Model
@@ -21,20 +21,20 @@ class UnimplementedLayer(EmbediaLayer):
             - EmbedIA project options
         Parameters
         ----------
-        target : object
+        wrapper : object
             layer/object is associated to this EmbedIA layer/element. For
             example, it can receive a Keras layer or a SkLearn scaler.
         Returns
         -------
         None.
         """
-        super().__init__(model, target, **kwargs)
+        super().__init__(model, wrapper, **kwargs)
 
         self.resolve()
 
     def resolve(self):
         if self.options is None or self.options.on_unimplemented_layer == UnimplementedLayerAction.FAILURE:
-            raise UnsupportedLayerError(self.target)
+            raise UnsupportedLayerError(self.wrapper)
 
         if self.options.on_unimplemented_layer == UnimplementedLayerAction.IGNORE_ALL:
             self.message = 'Not implemented. Forced to ignore'
@@ -42,11 +42,11 @@ class UnimplementedLayer(EmbediaLayer):
             if self.is_known_layer():
                 self.message = 'Not implemented. Required in training but not in prediction'
             else:
-                raise UnsupportedLayerError(self.target)
+                raise UnsupportedLayerError(self.wrapper)
 
     def is_known_layer(self):
-        known = (isinstance(self.target, Layer)
-                 and self.target.__class__.__name__.startswith('Random'))
+        known = (isinstance(self.wrapper, Layer)
+                 and self.wrapper.__class__.__name__.startswith('Random'))
 
         return known
 

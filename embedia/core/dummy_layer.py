@@ -6,7 +6,7 @@ class DummyLayer(Layer):
     play any purpose in the inference process
     """
 
-    def __init__(self, model, target, **kwargs):
+    def __init__(self, model, wrapper, **kwargs):
         """
         Constructor that receives:
             - EmbedIA Model
@@ -14,14 +14,14 @@ class DummyLayer(Layer):
             - EmbedIA project options
         Parameters
         ----------
-        target : object
+        wrapper : object
             layer/object is associated to this EmbedIA layer/element. For
             example, it can receive a Keras layer or a SkLearn scaler.
         Returns
         -------
         None.
         """
-        super().__init__(model, target, **kwargs)
+        super().__init__(model, wrapper, **kwargs)
 
 
     def invoke(self, input_name, output_name):

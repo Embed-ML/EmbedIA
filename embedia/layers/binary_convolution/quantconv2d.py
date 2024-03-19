@@ -39,34 +39,34 @@ class QuantConv2D(Layer):
     account in the implementation of the initialization function in the
     "function_implementation" method    """
 
-    def __init__(self, model, target, **kwargs):
-        super().__init__(model, target, **kwargs)
+    def __init__(self, model, wrapper, **kwargs):
+        super().__init__(model, wrapper, **kwargs)
         #self._input_data_type = "data3d_t"
         #self._output_data_type = "data3d_t"
 
         self._use_data_structure = True  # this layer require data structure initialization
 
         # assign properties to be used in "function_implementation"
-        self.weights = self._adapt_weights(target.get_weights()[0])
-        self.biases = target.get_weights()[1]
+        self.weights = self._adapt_weights(wrapper.get_weights()[0])
+        self.biases = wrapper.get_weights()[1]
 
         # verificamos a que caso de los tres corresponde...
         with lq.context.quantized_scope(True):
-            if (target.get_config()['input_quantizer'] is None) and (target.get_config()['kernel_quantizer'] is None):
+            if (wrapper.get_config()['input_quantizer'] is None) and (wrapper.get_config()['kernel_quantizer'] is None):
 
                 # es una conv normal
                 self.tipo_conv = 0
 
-            elif (target.get_config()['input_quantizer'] is None) and (target.get_config()['kernel_quantizer'] is not None):
-                if (target.get_config()['kernel_quantizer']['class_name'] == 'SteSign'):
+            elif (wrapper.get_config()['input_quantizer'] is None) and (wrapper.get_config()['kernel_quantizer'] is not None):
+                if (wrapper.get_config()['kernel_quantizer']['class_name'] == 'SteSign'):
                     # conv binaria entrada no binarizada
                     self.tipo_conv = 1
                 else:
                     print("Error: No support for layer with this arguments")
                     raise "Error: No support for layer with this arguments"
 
-            elif (target.get_config()['input_quantizer'] is not None) and (target.get_config()['kernel_quantizer'] is not None):
-                if (target.get_config()['input_quantizer']['class_name'] == 'SteSign') and (target.get_config()['kernel_quantizer']['class_name'] == 'SteSign'):
+            elif (wrapper.get_config()['input_quantizer'] is not None) and (wrapper.get_config()['kernel_quantizer'] is not None):
+                if (wrapper.get_config()['input_quantizer']['class_name'] == 'SteSign') and (wrapper.get_config()['kernel_quantizer']['class_name'] == 'SteSign'):
                     # conv pura binaria
                     self.tipo_conv = 2
                 else:

@@ -25,7 +25,7 @@ class LayerInfo(object):
 
         self.output_shape = self.layer.output_shape
 
-        k_layer = self.layer.target
+        k_layer = self.layer.wrapper
         if hasattr(k_layer, 'trainable_weights'):
             trainable = int(np.sum([K.count_params(p) for p in k_layer.trainable_weights]))
             non_trainable = int(np.sum([K.count_params(p) for p in k_layer.non_trainable_weights]))
@@ -55,22 +55,21 @@ class Layer(object):
     be named conv2d_layer.
     The invoke function receives an input and an output parameter with the parameter's
     name that are used in the predict function of the model.
+      - model = None # EmbedIA model
+      - target = None # object for data access
+      - support_quantization = False # support quantized data. Default False
+      - inplace_output = False # process output in input variable
+      - use_data_structure = False # requires data structure definition an initialization
     """
-    _model = None # EmbedIA model
-    _target = None # object for data access
-    # these properties must be defined in the constructor of subclass
-    _support_quantization = False # support quantized data. Default False
-    _inplace_output = False # process output in input variable
-    _use_data_structure = False # requires data structure definition an initialization
 
-    def __init__(self, model, target, **kwargs):
+    def __init__(self, model, wrapper, **kwargs):
         """
         Constructor that receives:
             - EmbedIA Model
             - object (Keras, SkLearn, etc.) associated to the EmbedIA layer
         Parameters
         ----------
-        target : object
+        wrapper : object
             layer/object is associated to this EmbedIA layer/element. For
             example, it can receive a Keras layer or a SkLearn scaler.
         Returns
@@ -79,11 +78,15 @@ class Layer(object):
         """
         super().__init__(**kwargs)
         self._model = model
-        self._target = target
+        self._wrapper = wrapper
 
         # assign layer name from layer/element associated, if it's possible
         self._name = model.get_unique_name(self)
 
+        self._input_shape = None
+        self._output_shape = None
+
+        self._use_data_structure = False
         # When the value of this property is "true" it indicates that the
         # layer/element can process the output result on the same input
         # parameter. A typical case are layers that perform normalization
@@ -103,8 +106,8 @@ class Layer(object):
         return self._model
 
     @property
-    def target(self):
-        return self._target
+    def wrapper(self):
+        return self._wrapper
 
     @property
     def inplace_output(self):
@@ -281,38 +284,99 @@ class Layer(object):
     @property
     def input_shape(self):
         """
-        get the shape of the input of the EmbedIA layer/element.
+        Get the shape of the input to the EmbedIA layer/element.
+
+        If the value of _input_shape is None (the default set in the constructor),
+        it delegates to get the value from the wrapper (if a wrapper is set).
+
+        If the Layer itself cannot define the shape, nor can the wrapper, then the
+        EmbediaModel must set _input_shape in order to get the shape (necessary to
+        determine the input data type of the C++ EmbedIA layer prototype) after all
+        layers of model has been created.
+
         Returns
         -------
         n-tuple
             returns the input shape of the layer/element.
         """
-        if self.target is None or not hasattr(self.target, 'input_shape') or self.target.input_shape is None:
-            s = self.model.get_input_shape(self)
+        if self._input_shape is None:
+            if self._wrapper is None:
+                return None
+            else:
+                shape = self._wrapper.input_shape
         else:
-            s = self.target.input_shape
+            shape = self._input_shape
 
-        if len(s) >= 1 and s[0] is None:
-            return s[1:]
-        return s
+        if len(shape) >= 1 and shape[0] is None:
+            return shape[1:]
+        return shape
+
+    @input_shape.setter
+    def input_shape(self, value):
+        """
+        Set the input shape of the EmbedIA layer/element.
+
+        Sets the _input_shape attribute to the provided value.
+        If _input_shape is None (the default set in the constructor), the getter method will attempt
+        to get the value from the wrapper's input_shape property (if a wrapper is set). Otherwise,
+        the getter will return the _input_shape value.
+
+        Parameters
+        ----------
+        value : n-tuple
+            The new input shape value to set.
+
+        """
+        self._input_shape = value
+
 
     @property
     def output_shape(self):
         """
-        get the shape of the output of the EmbedIA layer/element.
+        If the value of _output_shape is None (the default set in the constructor),
+        it delegates to get the value from the wrapper (if a wrapper is set).
+
+        If the Layer itself cannot define the shape, nor can the wrapper, then the
+        EmbediaModel must set _output_shape in order to get the shape (necessary to
+        determine the output data type of the C++ EmbedIA layer prototype) after all
+        layers of model has been created.
+
         Returns
         -------
         n-tuple
-            returns the output shape of the layer/element.
+            returns the input shape of the layer/element.
         """
-        if self.target is None or not hasattr(self.target, 'output_shape') or self.target.output_shape is None:
-            s = self.model.get_output_shape(self)
-        else:
-            s = self.target.output_shape
 
-        if len(s) >= 1 and s[0] is None:
-            return s[1:]
-        return s
+        if self._output_shape is None:
+            if self._wrapper is None:
+                return None
+            else:
+                shape = self._wrapper.output_shape
+        else:
+            shape = self._output_shape
+
+        if len(shape) >= 1 and shape[0] is None:
+            return shape[1:]
+        return shape
+
+    @output_shape.setter
+    def output_shape(self, value):
+        """
+         Set the input shape of the EmbedIA layer/element.
+
+         Sets the _output_shape attribute to the provided value.
+         If _output_shape is None (the default set in the constructor), the getter method will attempt
+         to get the value from the wrapper's output_shape property (if a wrapper is set). Otherwise,
+         the getter will return the _output_shape value.
+
+         Parameters
+         ----------
+         value : n-tuple
+             The new input shape value to set.
+
+         """
+
+        self._output_shape = value
 
     @property
     def input_size(self):

@@ -36,29 +36,29 @@ class QuantDense(Layer):
     "function_implementation" method
     """
 
-    def __init__(self, model, target, **kwargs):
-        super().__init__(model, target, **kwargs)
+    def __init__(self, model, wrapper, **kwargs):
+        super().__init__(model, wrapper, **kwargs)
 
         self._use_data_structure = True  # this layer require data structure initialization
 
         # assign properties to be used in "function_implementation"
-        self.weights = target.get_weights()[0]
-        self.biases = target.get_weights()[1]
+        self.weights = wrapper.get_weights()[0]
+        self.biases = wrapper.get_weights()[1]
 
         # verificamos a que caso corresponde
         with lq.context.quantized_scope(True):
-            if (target.get_config()['input_quantizer'] is None) and (target.get_config()['kernel_quantizer'] is None):
+            if (wrapper.get_config()['input_quantizer'] is None) and (wrapper.get_config()['kernel_quantizer'] is None):
                 # es una desnse normal
                 self.tipo_densa = 0
-            elif (target.get_config()['input_quantizer'] is None) and (target.get_config()['kernel_quantizer'] is not None):
+            elif (wrapper.get_config()['input_quantizer'] is None) and (wrapper.get_config()['kernel_quantizer'] is not None):
 
                 # entrada no binaria
                 print(
-                    f"Error: No support for layer {target} with this arguments")
-                raise f"Error: No support for layer {target} with this arguments"
+                    f"Error: No support for layer {wrapper} with this arguments")
+                raise f"Error: No support for layer {wrapper} with this arguments"
 
-            elif (target.get_config()['input_quantizer'] is not None) and (target.get_config()['kernel_quantizer'] is not None):
-                if (target.get_config()['input_quantizer']['class_name'] == 'SteSign') and (target.get_config()['kernel_quantizer']['class_name'] == 'SteSign'):
+            elif (wrapper.get_config()['input_quantizer'] is not None) and (wrapper.get_config()['kernel_quantizer'] is not None):
+                if (wrapper.get_config()['input_quantizer']['class_name'] == 'SteSign') and (wrapper.get_config()['kernel_quantizer']['class_name'] == 'SteSign'):
                     # dnse pura binaria
                     self.tipo_densa = 1
                 else:

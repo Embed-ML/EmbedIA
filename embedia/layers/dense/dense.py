@@ -34,14 +34,11 @@ class Dense(Layer):
     """
     support_quantization = False  # support quantized data
 
-    def __init__(self, model, target, **kwargs):
-        super().__init__(model, target, **kwargs)
+    def __init__(self, model, wrapper, **kwargs):
+        super().__init__(model, wrapper, **kwargs)
 
         self._use_data_structure = True  # this layer require data structure initialization
 
-        # assign properties to be used in "function_implementation"
-        self.weights = target.get_weights()[0]
-        self.biases = target.get_weights()[1]
 
     def calculate_MAC(self):
         """
@@ -53,7 +50,7 @@ class Dense(Layer):
 
         """
         # layer dimensions
-        (n_input, n_neurons) = self.weights.shape
+        (n_input, n_neurons) = self._wrapper.weights.shape
 
         MACs = n_input * n_neurons
 
@@ -71,7 +68,7 @@ class Dense(Layer):
         """
 
         # layer dimensions
-        (n_input, n_neurons) = self.weights.shape
+        (n_input, n_neurons) = self._wrapper.weights.shape
 
         # neuron structure size
         sz_neuron_t = types_dict['neuron_t']
@@ -97,8 +94,8 @@ class Dense(Layer):
         str
             C function for data initialization
         """
-        weights = self.weights
-        biases = self.biases
+        weights = self._wrapper.weights
+        biases = self._wrapper.biases
         name = self.name
         struct_type = self.struct_data_type
         (data_type, data_converter) = self.model.get_type_converter()

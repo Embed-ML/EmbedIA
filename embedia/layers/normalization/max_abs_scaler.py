@@ -11,17 +11,13 @@ class MaxAbsNormalization(Normalization):
     prototype of the initialization function and the call to it.
     The Normalization class implements the basic behavior of all normalizations
     that use coefficients and/or averages in their operation.
-    Normally the programmer should only assign the "sub_values" propertie with
+    Normally the programmer should only assign the "sub_values" properties with
     the mean values, the "div_values" property with the division
     coefficients and the "norm_function_name" property with the name of
     EmbedIA function declared in "embedia.h"
     """
 
-    def __init__(self, model, target, **kwargs):
+    def __init__(self, model, wrapper, **kwargs):
 
-        self.sub_values = None
-        self.div_values = target.max_abs_
+        super().__init__(model, wrapper, **kwargs)
 
-        self.norm_function_name = 'max_abs_norm_layer'
-
-        super().__init__(model, target, **kwargs)

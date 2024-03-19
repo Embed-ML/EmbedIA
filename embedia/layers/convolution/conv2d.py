@@ -40,25 +40,31 @@ class Conv2D(Layer):
     - function_implementation [user generated]: full code of initialization function. User must
       generate code to initialize the data structure.
 
+    Layer wrapper required properties:
+        - padding => 0=valid, 1=same
+        - strides => (height, width)
+        - weights => 4d array formatted: filters, channel, row, column
+        - biases => 1d array
+
    """
 
-    def __init__(self, model, target, **kwargs):
-        super().__init__(model, target, **kwargs)
+    def __init__(self, model, wrapper, **kwargs):
+        super().__init__(model, wrapper, **kwargs)
 
         self._use_data_structure = True  # this layer require data structure initialization
         # assign properties to be used in "function_implementation"
-        self.weights = self._adapt_weights(target.get_weights()[0])
-        self.biases = target.get_weights()[1]
+        #self.weights = self._adapt_weights(wrapper.get_weights()[0])
+        #self.biases = wrapper.get_weights()[1]
 
-    def _adapt_weights(self, weights):
-        _row, _col, _chn, _filt = weights.shape
-        arr = np.zeros((_filt, _chn, _row, _col))
-        for row, elem in enumerate(weights):
-            for column, elem2 in enumerate(elem):
-                for channel, elem3 in enumerate(elem2):
-                    for filters, value in enumerate(elem3):
-                        arr[filters, channel, row, column] = value
-        return arr
+    # def _adapt_weights(self, weights):
+    #     _row, _col, _chn, _filt = weights.shape
+    #     arr = np.zeros((_filt, _chn, _row, _col))
+    #     for row, elem in enumerate(weights):
+    #         for column, elem2 in enumerate(elem):
+    #             for channel, elem3 in enumerate(elem2):
+    #                 for filters, value in enumerate(elem3):
+    #                     arr[filters, channel, row, column] = value
+    #     return arr
 
     def calculate_MAC(self):
         """
@@ -70,7 +76,7 @@ class Conv2D(Layer):
 
         """
         # layer dimensions
-        n_filters, n_channels, n_rows, n_cols = self.weights.shape
+        n_filters, n_channels, n_rows, n_cols = self._wrapper.weights.shape
 
         # estimate amount multiplication and addition operations
         out_size = self.output_size
@@ -90,7 +96,7 @@ class Conv2D(Layer):
         """
 
         # layer dimensions
-        n_filters, n_channels, n_rows, n_cols = self.weights.shape
+        n_filters, n_channels, n_rows, n_cols = self._wrapper.weights.shape
 
         # EmbedIA filter structure size
         sz_filter_t = types_dict['filter_t']
@@ -102,21 +108,6 @@ class Conv2D(Layer):
                     dt_size / 8 + sz_filter_t) * n_filters
 
         return mem_size
-
-    def _get_padding_and_strides(self):
-        """
-        Gets the padding and strides for the current layer.
-
-        Args:
-            None.
-
-        Returns:
-            A tuple of two tuples, the first containing the padding and the second containing the strides.
-        """
-        conv_layer = self.target
-        strides = conv_layer.strides
-        padding = 1 if conv_layer.padding == 'same' else 0
-        return (padding, strides)
 
 
     @property
@@ -135,11 +126,10 @@ class Conv2D(Layer):
 
         (data_type, data_converter) = self.model.get_type_converter()
 
-        conv_weights = data_converter.fit_transform(self.weights)
-        conv_biases = data_converter.transform(self.biases)
-        padding, strides = self._get_padding_and_strides()
-        padding = f'%d' % padding
-        strides = f'{{%d, %d}}' % strides
+        conv_weights = data_converter.fit_transform(self._wrapper.weights)
+        conv_biases = data_converter.transform(self._wrapper.biases)
+        padding = f'%d' % self._wrapper.padding
+        strides = f'{{%d, %d}}' % self._wrapper.strides
 
         if self.is_data_quantized:
             qparams = f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
@@ -148,12 +138,8 @@ class Conv2D(Layer):
 
         comm_values = self.options.data_type != ModelDataType.FLOAT # add original values as comment?
 
-        n_filters, n_channels, n_rows, n_cols = self.weights.shape
-        # if n_rows != n_cols:  # WORKING WITH SQUARE KERNELS FOR NOW
-        #     raise UnsupportedFeatureError(
-        #         self.layer, 'different kernel rows and columns')
-        #if self.layer.padding != 'valid':  # no support for padding FOR NOW
-        #    raise UnsupportedFeatureError(self.layer, 'padding')
+        n_filters, n_channels, n_rows, n_cols = self._wrapper.weights.shape
+
         kernel_size = f'{{ {n_rows}, {n_cols} }}' # Defining kernel size
 
         identation = ' '*8
@@ -174,14 +160,14 @@ class Conv2D(Layer):
                     for c in range(n_cols):
                         o_weights += f'   {conv_weights[i, ch, r, c]}, '
                     if comm_values:
-                        o_weights += f'/* {self.weights[i, ch, r, 0:n_cols]} */'
+                        o_weights += f'/* {self._wrapper.weights[i, ch, r, 0:n_cols]} */'
                     o_weights += '\n'
 
             id = o_weights.rfind(',')
             o_weights = o_weights[0:id] + o_weights[id+1:]  # remove last comma
 
             if comm_values:
-                bias_weight = f' //{self.biases[i]}'
+                bias_weight = f' //{self._wrapper.biases[i]}'
             else:
                 bias_weight = ''
 
@@ -227,9 +213,9 @@ class Conv2D(Layer):
 
         """
         # change function name for some optimizations
-        if self.target.padding == 'same':
+        if self._wrapper.padding == 1: #same
             opt_name = '_padding'
-        elif self.target.strides[0]>1 or self.target.strides[1]>1:
+        elif self._wrapper.strides[0]>1 or self._wrapper.strides[1]>1:
             opt_name = '_strides'
         else:
             opt_name = ''

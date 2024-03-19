@@ -3,9 +3,9 @@ import re
 
 class ActivationFunctions:
 
-    def __init__(self, model, activation, **kwargs):
-        self.model = model
-        self.activation = activation
+    def __init__(self, model, wrapper, **kwargs):
+        self._model = model
+        self._wrapper = wrapper
 
     def _base_params(self, output_name, output_size, qparams=''):
         if qparams != '':
@@ -28,12 +28,12 @@ class ActivationFunctions:
         return self._base_params(output_name, output_size, qparams)
 
     def _leakyrelu_params(self, output_name, output_size, qparams=''):
-        if self.model.is_data_quantized: # no make sense to use quantization, use float
-            (data_type, data_converter) = self.model.get_type_converter(ModelDataType.FLOAT)
+        if self._model.is_data_quantized: # no make sense to use quantization, use float
+            (data_type, data_converter) = self._model.get_type_converter(ModelDataType.FLOAT)
         else: # default data type converter
-            (data_type, data_converter) = self.model.get_type_converter()
+            (data_type, data_converter) = self._model.get_type_converter()
 
-        alpha = data_converter.fit_transform([self.activation.alpha])
+        alpha = data_converter.fit_transform([self._wrapper.leakyrelu_alpha])
         extra_param = f', {alpha[0]}'
         return self._base_params(output_name, output_size, qparams) + extra_param
 
@@ -42,16 +42,9 @@ class ActivationFunctions:
         method = getattr(self, method_name)
         return method(output_name, output_size, qparams)
 
-    def get_function_name(self):
-        # activation functions may be objects or functions
-        if hasattr(self.activation, '__name__'):
-            name = self.activation.__name__.lower()
-            name = re.sub(r'_[^_]*$', '', name) # delete text after underscore. Ej: softmax_v2 => softmax
-            return name
-        return self.activation.__class__.__name__.lower()
 
-    def predict(self, output_name, var_output_size, qparams=''):
-        fnc_name = self.get_function_name()
+    def invoke(self, output_name, var_output_size, qparams=''):
+        fnc_name = self._wrapper.function_name
         if fnc_name == 'linear':
             return ''
         params = self.get_params(fnc_name, output_name, var_output_size, qparams)

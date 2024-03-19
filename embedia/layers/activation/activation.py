@@ -7,30 +7,22 @@ class Activation(Layer):
     """
     Normally all layers can directly incorporate activation functions. However,
     sometimes this functionality can appear as an independent layer. The EmbedIA
-    activation layer is associated with the Keras Activation layer/object
+    activation layer is associated with the Keras Activation layer/object.
+
+    Default Tensorflow wrapper properties are required (name, activation, input_shape, output_shape)
+
     """
 
-    def __init__(self, model, target, **kwargs):
-        super().__init__(model, target, **kwargs)
+    def __init__(self, model, wrapper, **kwargs):
+        super().__init__(model, wrapper, **kwargs)
 
         # saves output into output of previous layer
         self._inplace_output = True
 
-        self._create_activation_function()
-
-        # layer can be a Keras layer with activation or an Activation layer
-        if not isinstance(target, KerasActivation):
-            # rename with keras layer partial name
-            self._name = model.get_unique_name(target.name + '_' + self._activation_function.get_function_name())
-
-
-
-    def _create_activation_function(self):
-        if hasattr(self.target, 'activation'):
-            activation = self.target.activation
-        else:
-            activation = self.target
-        self._activation_function = ActivationFunctions(self.model, activation)
+        # # layer can be a Keras layer with activation or an Activation layer
+        # if not isinstance(wrapper.target, KerasActivation):
+        #     # rename with keras layer partial name
+        #     self._name = model.get_unique_name(wrapper.name + '_' + self._activation_function.get_function_name())
 
     def invoke(self, input_name, output_name):
         """
@@ -57,12 +49,8 @@ class Activation(Layer):
         """
         output_size = self.output_size # number of elements number
 
-        if hasattr(self.target, 'activation'):
-            activation = self.target.activation
-        else:
-            activation = self.target
-
         qparams = ''
-        act_fncs = self._activation_function
+        act_fncs = ActivationFunctions(self._model, self._wrapper)
 
-        return act_fncs.predict(f'{output_name}.data', output_size, qparams)
+        return act_fncs.invoke(f'{output_name}.data', output_size, qparams)
+

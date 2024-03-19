@@ -231,7 +231,7 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float bnd_error, measures_
         output_layer_type = input_data_type
 
         for layer in embedia_layers:
-            if layer.target is None:
+            if layer.wrapper is None:
                 predict_fn += f'    //<<<<<<<<<<<<<<<<<<<<< INTERNAL LAYER >>>>>>>>>>>>>>>>>>>>>//\n'
             else:
                 layer_id += 1

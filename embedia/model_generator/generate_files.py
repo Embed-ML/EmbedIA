@@ -135,7 +135,7 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
     first_layer = True
 
     for layer in embedia_layers:
-        if layer.target is None:
+        if layer.wrapper is None:
             predict_fn += f'\n//<<<<<<<<<<<<<<<<<<<<< INTERNAL LAYER >>>>>>>>>>>>>>>>>>>>>//'
         else:
             layer_id += 1

@@ -20,11 +20,6 @@ class EmbediaModel(object):
     - Generating information about model layers
     """
 
-    _types_dict = {}
-    _model = None
-    _options = None
-    _embedia_layers = []
-
     def __init__(self, obj_model, options):
         """
          Initializes an EmbediaModel object.
@@ -33,6 +28,11 @@ class EmbediaModel(object):
              obj_model: The TensorFlow/SkLearn/Other model object to be converted.
              options: Project-specific options for model generation.
          """
+
+        self._types_dict = {}
+        self._options = None
+        self._embedia_layers = []
+
         self._options = options
         self._clear_names()
         self.model = obj_model
@@ -44,7 +44,7 @@ class EmbediaModel(object):
     @model.setter
     def model(self, a_model):
         self._model = a_model
-        self._update_layers()
+        self._create_embedia_layers()
 
     @property
     def embedia_layers(self):
@@ -62,25 +62,26 @@ class EmbediaModel(object):
     def options(self, options):
         self._options = options
 
-    def _update_layers(self, options_array=None):
+    def _create_embedia_layers(self, options_array=None):
         # options es la generica del proyecto
         # options_array es un vector con opciones para cada clase
 
-        embedia_layers = []
+        self._embedia_layers = []
 
         # external normalizer to the model? => add as first layer
         if self.options.normalizer is not None:
             obj = self.options.normalizer
             ly = self._create_embedia_layer(obj)
-            embedia_layers.append(ly)
+            self._embedia_layers.append(ly)
 
         for layer in self.model.layers:
             obj = layer
             ly = self._create_embedia_layer(layer)
-            embedia_layers.append(ly)
+            self._embedia_layers.append(ly)
 
-        self._embedia_layers = embedia_layers
-        return embedia_layers
+        self._complete_layers_shapes()
+
+        return self.embedia_layers
 
     def _create_embedia_layer(self, obj):
         """
@@ -93,10 +94,23 @@ class EmbediaModel(object):
             EmbediaLayer: The created EmbediA layer.
         """
         try:
-            layer = dict_layers[type(obj)](self, obj)
+            (layer_class, wrapper_class) = dict_layers[type(obj)]
+            if wrapper_class is None:
+                wrapper = None
+            else:
+                wrapper = wrapper_class(obj)
+            layer = layer_class(self, wrapper)
         except KeyError:
             layer = UnimplementedLayer(self, obj)
         return layer
+
+    def _complete_layers_shapes(self):
+
+        for layer in self.embedia_layers:
+            if layer.input_shape is None:
+                layer.input_shape = self.get_input_shape(layer)
+            if layer.output_shape is None:
+                layer.output_shape = self.get_output_shape(layer)
 
     def get_input_shape(self, embedia_layer):
         try:
@@ -108,11 +122,15 @@ class EmbediaModel(object):
         for i in range(idx - 1, -1, -1):
             if self.embedia_layers[i].output_shape is not None:
                 return self.embedia_layers[i].output_shape
+            elif self.embedia_layers[i].input_shape is not None:
+                return self.embedia_layers[i].input_shape
 
         # Check following layers
         for i in range(idx + 1, len(self.embedia_layers)):
             if self.embedia_layers[i].input_shape is not None:
                 return self.embedia_layers[i].input_shape
+            elif self.embedia_layers[i].output_shape is not None:
+                return self.embedia_layers[i].output_shape
 
         return None
 
@@ -126,11 +144,15 @@ class EmbediaModel(object):
         for i in range(idx + 1, len(self.embedia_layers)):
             if self.embedia_layers[i].input_shape is not None:
                 return self.embedia_layers[i].input_shape
+            elif self.embedia_layers[i].output_shape is not None:
+                return self.embedia_layers[i].output_shape
 
         # Check previous layers
         for i in range(idx - 1, -1, -1):
             if self.embedia_layers[i].output_shape is not None:
                 return self.embedia_layers[i].output_shape
+            elif self.embedia_layers[i].input_shape is not None:
+                return self.embedia_layers[i].input_shape
 
         return None
 
@@ -151,8 +173,8 @@ class EmbediaModel(object):
         if type(obj) == str:
             name = obj
         else:
-            if hasattr(obj, "layer") and obj.target is not None:
-                obj = obj.target
+            if obj.wrapper is not None:
+                obj = obj.wrapper
                 if hasattr(obj, "name"):
                     name = obj.name
                 elif hasattr(obj, "__name__"):
@@ -217,18 +239,18 @@ class EmbediaModel(object):
             int: 1 for binary classification, N for multiclass classification with N classes,
                 or 0 for regression.
         """
-        layer = self.embedia_layers[-1].target
+        wrapper = self.embedia_layers[-1].wrapper
         act_fn = ''
-        if hasattr(layer, 'activation') and layer.activation is not None:
-            act_fn = layer.activation.__name__.lower()
+        if wrapper.activation is not None:
+            act_fn = wrapper.activation.__name__.lower()
 
         if act_fn == '':
-            act_fn = layer.__class__.__name__.lower()
+            act_fn = wrapper.target.__class__.__name__.lower()
 
         if act_fn in ['sigmoid', 'sigmoidal', 'softsign', 'tanh']:
                 return 1 # binary classification
         if act_fn == 'softmax':
-            return layer.output_shape[-1] # multiclass classification
+            return wrapper.output_shape[-1] # multiclass classification
 
         return 0 # regression
 

@@ -28,8 +28,8 @@ class DataLayer(Layer):
     which is responsible for implementing the operation of the layer/element.
     """
 
-    def __init__(self, model, target, **kwargs):
-        super().__init__(model, target, **kwargs)
+    def __init__(self, model, wrapper, **kwargs):
+        super().__init__(model, wrapper, **kwargs)
 
         # this type automatic defined in "struct_data_type" must exists in
         # "embedia.h"

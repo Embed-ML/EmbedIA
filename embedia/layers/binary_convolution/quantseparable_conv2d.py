@@ -8,28 +8,28 @@ import math
 
 class QuantSeparableConv2D(Layer):
 
-    def __init__(self, model, target, **kwargs):
+    def __init__(self, model, wrapper, **kwargs):
 
-        super().__init__(model, target, **kwargs)
+        super().__init__(model, wrapper, **kwargs)
         # the type defined in "struct_data_type" must exists in "embedia.h"
         # self.struct_data_type = self.get_type_name().lower()+'_layer_t'
         # self.input_data_type = "data3d_t"
         # self.output_data_type = "data3d_t"
         self._use_data_structure = True  # this layer require data structure initialization
 
-        self.depth_weights = self.adapt_weights(target.get_weights()[0])
-        self.point_weights = self.adapt_weights(target.get_weights()[1])
-        self.biases = target.get_weights()[2]
+        self.depth_weights = self.adapt_weights(wrapper.get_weights()[0])
+        self.point_weights = self.adapt_weights(wrapper.get_weights()[1])
+        self.biases = wrapper.get_weights()[2]
 
         #verificamos a que caso corresponde
         with lq.context.quantized_scope(True):
-            if (target.get_config()['input_quantizer'] == None) and (target.get_config()['pointwise_quantizer'] == None) and (target.get_config()['depthwise_quantizer'] == None):
+            if (wrapper.get_config()['input_quantizer'] == None) and (wrapper.get_config()['pointwise_quantizer'] == None) and (wrapper.get_config()['depthwise_quantizer'] == None):
                 
                 #es una conv normal
                 self.tipo_conv = 0
                     
-            elif (target.get_config()['input_quantizer'] != None) and (target.get_config()['pointwise_quantizer'] != None) and (target.get_config()['depthwise_quantizer'] != None):
-                if (target.get_config()['input_quantizer']['class_name'] == 'SteSign') and (target.get_config()['pointwise_quantizer']['class_name'] == 'SteSign') and (target.get_config()['depthwise_quantizer']['class_name'] == 'SteSign'):
+            elif (wrapper.get_config()['input_quantizer'] != None) and (wrapper.get_config()['pointwise_quantizer'] != None) and (wrapper.get_config()['depthwise_quantizer'] != None):
+                if (wrapper.get_config()['input_quantizer']['class_name'] == 'SteSign') and (wrapper.get_config()['pointwise_quantizer']['class_name'] == 'SteSign') and (wrapper.get_config()['depthwise_quantizer']['class_name'] == 'SteSign'):
                     #conv pura binaria 
                     self.tipo_conv = 1
                 else:

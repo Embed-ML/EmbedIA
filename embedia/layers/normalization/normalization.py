@@ -37,18 +37,15 @@ class Normalization(Layer):
     properties in their constructor.
 """
 
-    # these properties must be defined in the constructor of subclass
-    sub_values = None
-    div_values = None
-
     # Constructor receives sklearn normalization object (Scaler) in layer
-    def __init__(self, model, target, **kwargs):
-        super().__init__(model, target,**kwargs)
+    def __init__(self, model, wrapper, **kwargs):
+        super().__init__(model, wrapper, **kwargs)
 
+        self._support_quantization = False
         self._use_data_structure = True  # this layer require data structure initialization
 
         # Name of EmbedIA normalization function declared in "embedia.h".
-        # Subclass must assign the propertly name
+        # Subclass must assign the property name
         # self.norm_function_name = '?'
 
 
@@ -60,32 +57,43 @@ class Normalization(Layer):
         return 'normalization_layer_t'
 
 
+    @property
+    def div_values(self):
+        return self._wrapper.div_values
 
-    def get_input_shape(self):
-        """
-        Returns the shape of the input data. This method is redefined because
-        SKLearn "Scalers" do not have the "input_shape" property of the Keras
-        layers on which the original implementation is based.
+    @property
+    def sub_values(self):
+        return self._wrapper.sub_values
 
-        Returns
-        -------
-        n-tuple
-            shape of the input data
-        """
-        if self.div_values is None:
-            return self.sub_values.shape
-        return self.div_values.shape
+    @property
+    def norm_function_name(self):
+        return self._wrapper.funcion_name + '_norm_layer'
 
-    def get_output_shape(self):
-        """
-        Returns the shape of the output data.
-
-        Returns
-        -------
-        n-tuple
-            shape of the output data
-        """
-        return self.get_input_shape()
+    # def get_input_shape(self):
+    #     """
+    #     Returns the shape of the input data. This method is redefined because
+    #     SKLearn "Scalers" do not have the "input_shape" property of the Keras
+    #     layers on which the original implementation is based.
+    #
+    #     Returns
+    #     -------
+    #     n-tuple
+    #         shape of the input data
+    #     """
+    #     if self.div_values is None:
+    #         return self.sub_values.shape
+    #     return self.div_values.shape
+    #
+    # def get_output_shape(self):
+    #     """
+    #     Returns the shape of the output data.
+    #
+    #     Returns
+    #     -------
+    #     n-tuple
+    #         shape of the output data
+    #     """
+    #     return self.get_input_shape()
 
     def calculate_MAC(self):
         """
@@ -96,7 +104,7 @@ class Normalization(Layer):
             amount of multiplication and accumulation operations
 
         """
-        MACs = self.get_input_shape()[0]
+        MACs = self.input_shape()[0]
 
         return MACs
 
@@ -111,7 +119,7 @@ class Normalization(Layer):
         """
 
         # layer dimensions
-        n_input = self.get_input_shape()[0]
+        n_input = self.input_shape()[0]
 
         # neuron structure size
         print(types_dict)

@@ -11,8 +11,8 @@ class Flatten(Layer):
     which performs the processing of the layer.
     """
 
-    def __init__(self, model, target, **kwargs):
-        super().__init__(model, target, **kwargs)
+    def __init__(self, model, wrapper, **kwargs):
+        super().__init__(model, wrapper, **kwargs)
 
 
         #self._output_data_type = 'data1d_t'
