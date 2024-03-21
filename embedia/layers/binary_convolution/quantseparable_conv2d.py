@@ -17,9 +17,9 @@ class QuantSeparableConv2D(Layer):
         # self.output_data_type = "data3d_t"
         self._use_data_structure = True  # this layer require data structure initialization
 
-        self.depth_weights = self.adapt_weights(wrapper.get_weights()[0])
-        self.point_weights = self.adapt_weights(wrapper.get_weights()[1])
-        self.biases = wrapper.get_weights()[2]
+        # self.depth_weights = self.adapt_weights(wrapper.get_weights()[0])
+        # self.point_weights = self.adapt_weights(wrapper.get_weights()[1])
+        # self.biases = wrapper.get_weights()[2]
 
         #verificamos a que caso corresponde
         with lq.context.quantized_scope(True):
@@ -39,7 +39,27 @@ class QuantSeparableConv2D(Layer):
                 print(f"Error: No support for layer with this arguments")
                 raise f"Error: No support for layer with this arguments"
 
+    @property
+    def depth_weights(self):
+        return self._wrapper.weights
 
+    @property
+    def point_weights(self):
+        return self._wrapper.point_weights
+
+    @property
+    def biases(self):
+        return self._wrapper.biases
+
+    @property
+    def weights(self):
+        return self._wrapper.weights
+
+    @property
+    def biases(self):
+        return self._wrapper.biases
+
+    @property
     def variable_declaration(self):
         if self.tipo_conv == 0:
             
@@ -50,6 +70,7 @@ class QuantSeparableConv2D(Layer):
             return f"quant_separable_conv2d_layer_t {self.name}_data;\n"
 
 
+    @property
     def function_prototype(self):
         if self.tipo_conv == 0:
             
@@ -58,15 +79,15 @@ class QuantSeparableConv2D(Layer):
             return f"quant_separable_conv2d_layer_t init_{self.name}_data(void);\n"
 
 
-    def adapt_weights(self, weights):
-        _row, _col, _can, _filt = weights.shape
-        arr = np.zeros((_filt, _can, _row, _col))
-        for row, elem in enumerate(weights):
-            for col, elem2 in enumerate(elem):
-                for chn, elem3 in enumerate(elem2):
-                    for filt, value in enumerate(elem3):
-                        arr[filt, chn, row, col] = value
-        return arr
+    # def adapt_weights(self, weights):
+    #     _row, _col, _can, _filt = weights.shape
+    #     arr = np.zeros((_filt, _can, _row, _col))
+    #     for row, elem in enumerate(weights):
+    #         for col, elem2 in enumerate(elem):
+    #             for chn, elem3 in enumerate(elem2):
+    #                 for filt, value in enumerate(elem3):
+    #                     arr[filt, chn, row, col] = value
+    #     return arr
 
  
     def calculate_MAC(self):
@@ -137,6 +158,11 @@ class QuantSeparableConv2D(Layer):
 
         struct_type = self.struct_data_type
         (data_type, macro_converter) = self.model.get_type_converter()
+        # temporary fix conversion for old implementation compatibility of get_type_converter
+        if self.options.data_type in [ModelDataType.FIXED8, ModelDataType.FIXED16, ModelDataType.FIXED32]:
+            macro_converter = lambda x: f'FL2FX({x})'
+        else:
+            macro_converter = lambda x: x
 
         if self.tipo_conv==0:   #separable normal
 

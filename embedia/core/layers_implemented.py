@@ -41,6 +41,16 @@ from embedia.wrappers.sklearn_wrappers import (
     SKLRobustScalerWrapper
 )
 
+from embedia.wrappers.larq_wrappers import (
+    LarqWrapper,
+    LarqQuantConv2DWrapper,
+    LarqQuantSeparableConv2DWrapper
+)
+
+from embedia.wrappers.embedia_wrappers import (
+    EmbediaSpectrumWrapper
+)
+
 dict_layers = {
     # Layers with No porpose in inference
     keras.layers.InputLayer: (DummyLayer, TensorflowWrapper),
@@ -60,9 +70,9 @@ dict_layers = {
     keras.layers.RandomTranslation: (DummyLayer, TensorflowWrapper),
     keras.layers.RandomWidth: (DummyLayer, TensorflowWrapper),
     keras.layers.RandomZoom: (DummyLayer, TensorflowWrapper),
-    lq.layers.QuantConv2D: (QuantConv2D, None),
-    lq.layers.QuantDense: (QuantDense, None),
-    lq.layers.QuantSeparableConv2D: (QuantSeparableConv2D, None),
+    lq.layers.QuantConv2D: (QuantConv2D, LarqQuantConv2DWrapper),
+    lq.layers.QuantDense: (QuantDense, LarqWrapper),
+    lq.layers.QuantSeparableConv2D: (QuantSeparableConv2D, LarqQuantSeparableConv2DWrapper),
     keras.layers.SeparableConv2D: (SeparableConv2D, TFSeparableConv2DWrapper),
     keras.layers.DepthwiseConv2D: (DepthwiseConv2D, TFConv2DWrapper),
     keras.layers.Conv2D: (Conv2D, TFConv2DWrapper),
@@ -87,5 +97,5 @@ dict_layers = {
     preprocessing.MaxAbsScaler: (Normalization, SKLMaxAbsScalerWrapper),
     preprocessing.RobustScaler: (Normalization, SKLRobustScalerWrapper),
     # signal processing
-    melspec.Melspec: (Spectrogram, None)
+    melspec.Melspec: (Spectrogram, EmbediaSpectrumWrapper)
 }

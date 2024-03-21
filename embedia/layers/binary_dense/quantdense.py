@@ -18,7 +18,7 @@ class QuantDense(Layer):
     "function_implementation" which returns the implementation of the initialization
     function in C code, retrieving the layer information and dumping it into
     the structure (defined in embedia.h") in an appropriate way. The second one
-    is "predict" where the programmer must invoke the EmbedIA function
+    is "invoke" where the programmer must invoke the EmbedIA function
     (implemented in "embedia.c") that must perform the processing of the layer.
     To avoid overlapping names, both the function name and the variable name
     are generated automatically using the layer name. The same happens with the
@@ -42,8 +42,8 @@ class QuantDense(Layer):
         self._use_data_structure = True  # this layer require data structure initialization
 
         # assign properties to be used in "function_implementation"
-        self.weights = wrapper.get_weights()[0]
-        self.biases = wrapper.get_weights()[1]
+        # self.weights = wrapper.get_weights()[0]
+        # self.biases = wrapper.get_weights()[1]
 
         # verificamos a que caso corresponde
         with lq.context.quantized_scope(True):
@@ -68,6 +68,15 @@ class QuantDense(Layer):
                 print("Error: No support for layer {layer} with this arguments")
                 raise "Error: No support for layer {layer} with this arguments"
 
+    @property
+    def weights(self):
+        return self._wrapper.weights
+
+    @property
+    def biases(self):
+        return self._wrapper.biases
+
+    @property
     def variable_declaration(self):
         if self.tipo_densa == 0:
 
@@ -77,6 +86,7 @@ class QuantDense(Layer):
 
             return f"quantdense_layer_t {self.name}_data;\n"
 
+    @property
     def function_prototype(self):
         if self.tipo_densa == 0:
 
@@ -170,6 +180,11 @@ class QuantDense(Layer):
 
             struct_type = 'dense_layer_t'
             (data_type, macro_converter) = self.model.get_type_converter()
+            # temporary fix conversion for old implementation compatibility of get_type_converter
+            if self.options.data_type in [ModelDataType.FIXED8, ModelDataType.FIXED16, ModelDataType.FIXED32]:
+                macro_converter = lambda x: f'FL2FX({x})'
+            else:
+                macro_converter = lambda x: x
 
             (n_input, n_neurons) = weights.shape
 

@@ -213,13 +213,14 @@ class EmbediaModel(object):
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
         if data_type is None:
             data_type = self.options.data_type
-        if data_type == ModelDataType.FLOAT or data_type == ModelDataType.BINARY:
-            return ('float', FloatConverter()) # binary layers dont use data_type, use block_type
+        if data_type == ModelDataType.FLOAT:
+            return ('float', FloatConverter())
+        elif data_type == ModelDataType.BINARY: # binary layers dont use data_type, use block_type
+            return ('float', FloatConverter())  # should use FloatConverter()?, test required
         elif data_type == ModelDataType.BINARY_FLOAT16:
-            return ('half', None) # should use Float16TypeConverter(), test required
-            # def macro_converter(s):
-            #    return f"half({s})"
-            # data_type = 'half'
+            return ('half', FloatConverter()) # should use Float16TypeConverter(), but not suppoerted in other layers?, test required
+        elif data_type == ModelDataType.BINARY_FIXED32:
+            return ('fixed', FixedTypeConverter(15, 17))  # should use Fixed32TypeConverter()?, test required
         elif data_type == ModelDataType.QUANT8:
             return ('quant8', QuantizedTypeConverter(8, False))
         elif data_type == ModelDataType.FIXED32:

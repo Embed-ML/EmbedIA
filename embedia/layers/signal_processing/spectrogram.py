@@ -148,14 +148,14 @@ spectrogram_layer_t init_melspec_data(void){{
     layer_spec.n_fft = {self.wrapper.n_fft};
     layer_spec.n_mels = {self.wrapper.n_mels};
     layer_spec.frame_length = {self.wrapper.input_length};
-    layer_spec.sample_rate = {self.wrapper.input_fs};
+    layer_spec.sample_rate = {self.wrapper.sample_rate};
     layer_spec.n_blocks = {self.wrapper.n_blocks};
     layer_spec.n_fft_table = {int(self.wrapper.n_fft / 2)};
     layer_spec.noverlap = {self.wrapper.noverlap};
     layer_spec.step = {self.wrapper.step};
     layer_spec.len_nfft_nmels = {(self.wrapper.n_fft // 2) // self.wrapper.n_mels};
     layer_spec.spec_size = {self.wrapper.shape[0] * self.wrapper.shape[1]};
-    layer_spec.ts_us = {int(1 / self.wrapper.input_fs * 1000 * 1000)};
+    layer_spec.ts_us = {int(1 / self.wrapper.sample_rate * 1000 * 1000)};
 
     return layer_spec;
 }}

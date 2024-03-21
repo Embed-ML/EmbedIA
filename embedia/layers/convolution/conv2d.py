@@ -52,19 +52,7 @@ class Conv2D(Layer):
         super().__init__(model, wrapper, **kwargs)
 
         self._use_data_structure = True  # this layer require data structure initialization
-        # assign properties to be used in "function_implementation"
-        #self.weights = self._adapt_weights(wrapper.get_weights()[0])
-        #self.biases = wrapper.get_weights()[1]
 
-    # def _adapt_weights(self, weights):
-    #     _row, _col, _chn, _filt = weights.shape
-    #     arr = np.zeros((_filt, _chn, _row, _col))
-    #     for row, elem in enumerate(weights):
-    #         for column, elem2 in enumerate(elem):
-    #             for channel, elem3 in enumerate(elem2):
-    #                 for filters, value in enumerate(elem3):
-    #                     arr[filters, channel, row, column] = value
-    #     return arr
 
     def calculate_MAC(self):
         """
