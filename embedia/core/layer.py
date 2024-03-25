@@ -410,6 +410,14 @@ class Layer(object):
             s *= d
         return s
 
+    @property
+    def required_files(self):
+        '''
+        retorna una lista de tuplas indicando los nombres de los archivos donde se encuentra la definicion de
+        tipos de datos (.h) y la implementación de las funciones (.c) requeridos por la capa/elemento
+        '''
+        return [('embedia.h', 'embedia.c')]
+
     def calculate_MAC(self):
         """
         calculates amount of multiplication and accumulation operations

@@ -62,6 +62,36 @@ class EmbediaModel(object):
     def options(self, options):
         self._options = options
 
+    def _get_data_type_file(self):
+        data_type = self.options.data_type
+        if data_type == ModelDataType.FIXED8:
+            return  ('fixed.h', 'fixed.c')
+        elif data_type == ModelDataType.FIXED16:
+            return  ('fixed.h', 'fixed.c')
+        elif data_type == ModelDataType.FIXED32:
+            return  ('fixed.h', 'fixed.c')
+        elif data_type == ModelDataType.QUANT8:
+            return ('quant8.h', 'quant8.c')
+        elif data_type == ModelDataType.BINARY:
+            return None
+        elif data_type == ModelDataType.BINARY_FIXED32:
+            return ('fixed.h', 'fixed.c')
+        elif data_type == ModelDataType.BINARY_FLOAT16:
+            return ('half.hpp', None)
+        return None
+
+    @property
+    def required_files(self):
+        result = set()
+        dt_files = self._get_data_type_file()
+        if dt_files is not None:
+            result.add(dt_files)
+        for layer in self._embedia_layers:
+            for files_tuple in layer.required_files:
+                result.add(files_tuple)
+        return list(result)
+
+
     def _create_embedia_layers(self, options_array=None):
         # options es la generica del proyecto
         # options_array es un vector con opciones para cada clase

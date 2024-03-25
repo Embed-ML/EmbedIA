@@ -66,20 +66,16 @@ class ProjectGenerator:
 
         # copy library files
         if ProjectFiles.LIBRARY in options.files:
-            embedia_files = generate_embedia_library(embedia_layers, self._datatype_folder, options)
+            embedia_files = generate_embedia_library(embedia_model, self._datatype_folder, self._dst_folder, h_ext, c_ext, options)
 
+            embedia_headers = ''
             for filename in embedia_files:
-                content = embedia_files[filename]
-
-                if filename.endswith('.c'):
-                    filename = filename.replace('.c', c_ext)
-                elif filename.endswith('.h'):
-                    filename = filename.replace('.h', h_ext)
-
-                file_management.save_to_file(os.path.join(self._dst_folder, filename), content)
+                if filename.endswith(h_ext):
+                    with open(os.path.join(self._datatype_folder, filename), 'r') as file:
+                        embedia_headers += file.read()
 
             # print layers memory size
-            model_info = self.build_model_info(embedia_model, embedia_files['embedia.h'])
+            model_info = self.build_model_info(embedia_model, embedia_headers)
             print(model_info)
 
         # create model files
@@ -207,7 +203,8 @@ class ProjectGenerator:
 
         return project_files
 
-    def build_model_info(self, embedia_model, embedia_decl):
+    def build_model_info(self, embedia_model, embedia_headers):
+        embedia_decl = embedia_headers
         layers_info = embedia_model.get_layers_info(embedia_decl)
         total_params = (0, 0)
         total_size = 0

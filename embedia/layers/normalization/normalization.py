@@ -104,7 +104,7 @@ class Normalization(Layer):
             amount of multiplication and accumulation operations
 
         """
-        MACs = self.input_shape()[0]
+        MACs = self.input_shape[0]
 
         return MACs
 
@@ -119,7 +119,7 @@ class Normalization(Layer):
         """
 
         # layer dimensions
-        n_input = self.input_shape()[0]
+        n_input = self.input_shape[0]
 
         # neuron structure size
         print(types_dict)

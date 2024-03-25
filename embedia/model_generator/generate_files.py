@@ -29,19 +29,30 @@ def indent(multi_ln_code, level=1, spaces=4):
     return re.sub("^", level*spaces*' ', code, flags=re.MULTILINE)
 
 
-def generate_embedia_library(embedia_layers, src_folder, options):
+def generate_embedia_library(embedia_model, src_folder, dst_folder, ext_h, ext_c, options):
 
-    embedia_files = dict()
+    # files to add "#include"
+    update_include_files = ['embedia.h']
 
     filenames = os.listdir(src_folder)
-    for filename in filenames:
-        embedia_files[filename] = file_management.read_from_file(src_folder+filename)
+    required_files = embedia_model.required_files
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
-    # Prepare includes
+    embedia_files = []
 
+    for (header_file, code_file) in required_files:
+        # check if project's files exists
+        if header_file is not None:
+            if header_file not in filenames:
+                raise FileNotFoundError(f'Missing file: {header_file} in {src_folder}')
+            embedia_files.append(header_file)
+        if code_file is not None:
+            if code_file not in filenames:
+                raise FileNotFoundError(f'Missing file: {code_file} in {src_folder}')
+            embedia_files.append(code_file)
+
+    # Prepare includes for files
+    includes_h = ''
     if options.data_type == ModelDataType.BINARY or options.data_type == ModelDataType.BINARY_FIXED32 or options.data_type == ModelDataType.BINARY_FLOAT16:
-
 
         if options.tamano_bloque == BinaryBlockSize.Bits8:
             tam_block = 8
@@ -54,25 +65,35 @@ def generate_embedia_library(embedia_layers, src_folder, options):
 
         if options.project_type == ProjectType.ARDUINO:
             includes_h = '#include "Arduino.h"\n'
-
             includes_h += f'\n#define binary_block_size {tam_block}\n'
-
         else:
             includes_h = '#include <stdlib.h>\n'
             includes_h += f'\n#define binary_block_size {tam_block}\n'
-
-
-        embedia_files['embedia.h'] = multi_replace({'{includes}': includes_h}, embedia_files['embedia.h'])
-
     else:
-
         if options.project_type == ProjectType.ARDUINO:
             includes_h = '#include "Arduino.h"\n'
         else:
             includes_h = '#include <stdlib.h>\n'
 
-        embedia_files['embedia.h'] = multi_replace({'{includes}': includes_h}, embedia_files['embedia.h'])
+    for i, filename in enumerate(embedia_files):
+        if filename.endswith('.c'):
+            new_name = filename.replace('.c', ext_c)
+        elif filename.endswith('.h'):
+            new_name = filename.replace('.h', ext_h)
+        else:
+            new_name = filename
 
+        src_file = os.path.join(src_folder, filename)
+        dst_file = os.path.join(dst_folder, new_name)
+        if filename in update_include_files:
+            content = file_management.read_from_file(src_file)
+            content = multi_replace({'{includes}': includes_h}, content)
+            file_management.save_to_file(dst_file, content)
+        else:
+            file_management.copy(src_file, dst_file)
+
+        # update with new filename
+        embedia_files[i] = new_name
 
     return embedia_files
 
