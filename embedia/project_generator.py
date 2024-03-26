@@ -13,6 +13,7 @@ from embedia.model_generator.generate_files import (
         generate_embedia_library,
         generate_embedia_model,
         generate_embedia_main,
+        generate_embedia_debug,
         generate_codeblock_project
     )
 
@@ -59,50 +60,24 @@ class ProjectGenerator:
 
         # prepare folders and extension of files to copy/create
         self._prepare_folders(output_folder, project_name, options)
-        if options.project_type in [ProjectType.C, ProjectType.CODEBLOCK]:
-            (h_ext, c_ext) = ('.h', '.c')
-        else:
-            (h_ext, c_ext) = ('.h', '.cpp')
+
+        c_ext, h_ext = self._get_files_extension()
 
         # copy library files
         if ProjectFiles.LIBRARY in options.files:
             embedia_files = generate_embedia_library(embedia_model, self._datatype_folder, self._dst_folder, h_ext, c_ext, options)
 
-            embedia_headers = ''
-            for filename in embedia_files:
-                if filename.endswith(h_ext):
-                    with open(os.path.join(self._datatype_folder, filename), 'r') as file:
-                        embedia_headers += file.read()
-
             # print layers memory size
-            model_info = self.build_model_info(embedia_model, embedia_headers)
+            model_info = self.build_model_info(embedia_model, self._extract_datatypes(embedia_files))
             print(model_info)
 
         # create model files
         if ProjectFiles.MODEL in options.files:
-            (text_model_h, text_model_c, filename) = generate_embedia_model(embedia_model, self._lib_folder, model.name, model_info, options)
-            file_management.save_to_file(os.path.join(self._dst_folder, filename + h_ext), text_model_h)
-            file_management.save_to_file(os.path.join(self._dst_folder, filename + c_ext), text_model_c)
+            (text_model_h, text_model_c, filename) = generate_embedia_model(embedia_model, self._lib_folder, self._dst_folder, h_ext, c_ext, model.name, model_info, options)
 
         # copy debug file
         if options.debug_mode != DebugMode.DISCARD:
-
-            # add debug mode macro to header file
-            content = file_management.read_from_file(os.path.join(self._src_dbg_folder,'embedia_debug.h'))
-            # add include
-            content = content.format(EMBEDIA_DEBUG='#define EMBEDIA_DEBUG %d\n' % options.debug_mode)
-
-            file_management.save_to_file(os.path.join(self._dst_folder, 'embedia_debug.h'),''.join(content))
-
-            # copy aditional debug file
-            if options.project_type == ProjectType.ARDUINO:
-                shutil.copy(os.path.join(self._src_dbg_folder, 'embedia_debug_def_arduino.h'), os.path.join(self._dst_folder, 'embedia_debug_def.h'))
-                # copy implementation file
-                shutil.copy(os.path.join(self._src_dbg_folder, 'embedia_debug.c'), os.path.join(self._dst_folder, 'embedia_debug.cpp'))
-            else:
-                shutil.copy(os.path.join(self._src_dbg_folder, 'embedia_debug_def_c.h'), os.path.join(self._dst_folder, 'embedia_debug_def.h'))
-                # copy implementation file
-                shutil.copy(os.path.join(self._src_dbg_folder, 'embedia_debug.c'), os.path.join(self._dst_folder, 'embedia_debug.c'))
+            generate_embedia_debug(self._src_dbg_folder, self._dst_folder, options)
 
         # create main file with an example
         if ProjectFiles.MAIN in options.files:
@@ -122,7 +97,23 @@ class ProjectGenerator:
             if text_example_h is not None:
                 file_management.save_to_file(os.path.join(self._dst_folder, 'example_file' + h_ext), text_example_h)
 
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
+    def _get_files_extension(self):
+        if self._options.project_type in [ProjectType.C, ProjectType.CODEBLOCK]:
+            (c_ext, h_ext) = ('.c', '.h')
+        else:
+            (c_ext, h_ext) = ('.cpp', '.h')
+        return c_ext, h_ext
+
+    def _extract_datatypes(self, embedia_files):
+        (c_ext, h_ext) = self._get_files_extension()
+        embedia_headers = ''
+        for filename in embedia_files:
+            if filename.endswith(h_ext):
+                with open(os.path.join(self._datatype_folder, filename), 'r') as file:
+                    embedia_headers += file.read()
+        return embedia_headers
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
     def _datatype_subfolder(self, data_type):
         # absolute path for copying files
         if data_type == ModelDataType.FIXED8:
@@ -163,13 +154,8 @@ class ProjectGenerator:
         project_files = list()
         hpp_ext = '.hpp'
         # main file and files extensions
-        if options.project_type in [ProjectType.C, ProjectType.CODEBLOCK]:
-            (h_ext, c_ext) = ('.h', '.c')
-            project_files.append('main.c')
-        else:
-            (h_ext, c_ext) = ('.h', '.cpp')
-            if options.project_type != ProjectType.ARDUINO:
-                project_files.append('main.cpp')
+        (c_ext, h_ext) = self._get_files_extension()
+        project_files.append('main'+c_ext)
 
         # embedia files
         project_files.append('embedia'+c_ext)

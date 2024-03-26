@@ -110,8 +110,7 @@ def get_input_const(input_shape):
     return None
 
 
-def generate_embedia_model(model, src_folder, model_name, model_info, options):
-
+def generate_embedia_model(model, src_folder, dst_folder, ext_h, ext_c, model_name, model_info, options):
     def format_model_name(model_name):
         model_name = model_name.lower()
         if not model_name.endswith('model'):
@@ -220,7 +219,7 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
         predict_class = '''//TO DO: argmax with data2d_t and data3d_t
     return -1; '''
 
-    h = file_management.read_from_file(src_h).format(
+    text_model_h = file_management.read_from_file(src_h).format(
             model_name_h=model_name_h,
             model_info=model_info,
             input_const=input_const,
@@ -228,7 +227,7 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
             output_data_type=output_data_type
         )
 
-    c = file_management.read_from_file(src_c).format(
+    text_model_c = file_management.read_from_file(src_c).format(
             includes=includes,
             filename=filename,
             prototypes_init=prototypes_init,
@@ -242,7 +241,9 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
             output_name=var_output
         )
 
-    return (h, c, filename)
+    file_management.save_to_file(os.path.join(dst_folder, filename + ext_h), text_model_h)
+    file_management.save_to_file(os.path.join(dst_folder, filename + ext_c), text_model_c)
+    return (text_model_h, text_model_c, filename)
 
 
 def generate_embedia_main(embedia_layers, src_folder, filename, options, embedia_model):
@@ -352,6 +353,26 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options, embedia
 
     return (h, c)
 
+
+def generate_embedia_debug(src_dbg_folder, dst_folder, options):
+    # add debug mode macro to header file
+    content = file_management.read_from_file(os.path.join(src_dbg_folder, 'embedia_debug.h'))
+    # add include
+    content = content.format(EMBEDIA_DEBUG='#define EMBEDIA_DEBUG %d\n' % options.debug_mode)
+    file_management.save_to_file(os.path.join(dst_folder, 'embedia_debug.h'), ''.join(content))
+    # copy aditional debug file
+    if options.project_type == ProjectType.ARDUINO:
+        file_management.copy(os.path.join(src_dbg_folder, 'embedia_debug_def_arduino.h'),
+                    os.path.join(dst_folder, 'embedia_debug_def.h'))
+        # copy implementation file
+        file_management.copy(os.path.join(src_dbg_folder, 'embedia_debug.c'),
+                    os.path.join(dst_folder, 'embedia_debug.cpp'))
+    else:
+        file_management.copy(os.path.join(src_dbg_folder, 'embedia_debug_def_c.h'),
+                    os.path.join(dst_folder, 'embedia_debug_def.h'))
+        # copy implementation file
+        file_management.copy(os.path.join(src_dbg_folder, 'embedia_debug.c'),
+                    os.path.join(dst_folder, 'embedia_debug.c'))
 
 def generate_codeblock_project(project_name, files, src_folder):
 

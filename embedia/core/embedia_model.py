@@ -378,7 +378,11 @@ typedef char size2d_t;
         embedia_decl = re.sub(r'^\s*#.*\n', '', embedia_decl, flags=re.MULTILINE)
         parser = pcp.CParser()
 
-        code = parser.parse(embedia_decl)
+        try:
+            code = parser.parse(embedia_decl)
+        except:
+            print(embedia_decl)
+            raise
         bytes_size4 = 2
         if(self.options.tamano_bloque==BinaryBlockSize.Bits8):
             bytes_size = 1
