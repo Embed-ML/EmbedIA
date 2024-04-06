@@ -73,7 +73,7 @@ class Conv2D(Layer):
 
         return MACs
 
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns
@@ -87,13 +87,15 @@ class Conv2D(Layer):
         n_filters, n_channels, n_rows, n_cols = self._wrapper.weights.shape
 
         # EmbedIA filter structure size
-        sz_filter_t = types_dict['filter_t']
+        # struct { float * weights; float bias; }filter_t;
+
+        sz_filter_t = 4
 
         # base data type in bits: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)
 
         mem_size = (n_channels * n_rows * n_cols *
-                    dt_size / 8 + sz_filter_t) * n_filters
+                    dt_size / 8 + sz_filter_t) * (n_filters+1)
 
         return mem_size
 

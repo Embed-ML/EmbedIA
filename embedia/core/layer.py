@@ -37,7 +37,7 @@ class LayerInfo(object):
 
         self.macs_ops = self.layer.calculate_MAC()
 
-        self.memory = self.layer.calculate_memory(self.types_dict)
+        self.memory = self.layer.calculate_memory()
 
 
 class Layer(object):
@@ -429,7 +429,7 @@ class Layer(object):
         """
         return 0
 
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns

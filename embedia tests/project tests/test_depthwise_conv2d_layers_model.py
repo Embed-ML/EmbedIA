@@ -37,7 +37,7 @@ OUTPUT_FOLDER = 'outputs/'
 PROJECT_NAME = 'Prj_Test_'
 SAMPLES_FILE = 'samples/MNIST_20samples_12x12.sav'
 
-model = build_all_layers_model()
+(model, x_test, y_test) = build_all_layers_model()
 
 model._name = "LayersTest01"
 

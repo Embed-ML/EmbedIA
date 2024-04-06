@@ -88,7 +88,7 @@ class SeparableConv2D(Layer):
 
         return MACs
 
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns
@@ -106,7 +106,7 @@ class SeparableConv2D(Layer):
         point_params = n_channels * n_filters * n_rows * n_cols
 
         # EmbedIA filter structure size
-        sz_filter_t = types_dict['filter_t']
+        sz_filter_t = 4 # 'filter_t'
 
         # base data type in bits: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)

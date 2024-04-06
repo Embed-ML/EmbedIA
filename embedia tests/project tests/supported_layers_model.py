@@ -78,4 +78,4 @@ def build_all_layers_model():
     # print(model.layers[idx].get_weights()[1].shape)
     # print(model.layers[idx].get_weights()[2].shape)
     # print(model.layers[idx].get_weights()[2])
-    return model
+    return (model, x_test, y_test)

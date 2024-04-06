@@ -112,7 +112,7 @@ class QuantDense(Layer):
         return MACs
 
 
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns
@@ -132,7 +132,7 @@ class QuantDense(Layer):
 
         # neuron structure size
         if(self.tipo_densa == 0):  # densa float
-            sz_neuron_t = types_dict['neuron_t']
+            sz_neuron_t = 4 # neuron_t
             
             mem_size = (n_input * dt_size/8 + sz_neuron_t) * n_neurons
         else:

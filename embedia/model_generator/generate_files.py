@@ -246,7 +246,7 @@ def generate_embedia_model(model, src_folder, dst_folder, ext_h, ext_c, model_na
     return (text_model_h, text_model_c, filename)
 
 
-def generate_embedia_main(embedia_layers, src_folder, filename, options, embedia_model):
+def generate_embedia_main(embedia_layers, src_folder, dst_embedia_folder, model_name, options, embedia_model):
 
     src_c = os.path.join(src_folder, 'main/main_')
 
@@ -260,14 +260,18 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options, embedia
         includes_c = '#include <stdio.h>\n'
         baud_rate = "\n"
 
-    includes_c += '#include "embedia.h"\n'
-    includes_c += '#include "'+filename+'.h"\n'
+    filename = os.path.join(dst_embedia_folder, 'embedia.h')
+    includes_c += f'#include "{filename}"\n'
+
+    filename = os.path.join(dst_embedia_folder, model_name+'.h')
+    includes_c += f'#include "{filename}"\n'
 
     example_var_name = 'sample_data'
     main_code = ''
 
     if options.example_data is not None:
-        includes_c += '#include "example_file.h"\n'
+        filename = os.path.join(dst_embedia_folder, 'example_file.h')
+        includes_c += f'#include "{filename}"\n'
         main_code += f'''
     // sample intitialization
     input.data = {example_var_name};
@@ -374,18 +378,24 @@ def generate_embedia_debug(src_dbg_folder, dst_folder, options):
         file_management.copy(os.path.join(src_dbg_folder, 'embedia_debug.c'),
                     os.path.join(dst_folder, 'embedia_debug.c'))
 
-def generate_codeblock_project(project_name, files, src_folder):
+def generate_codeblock_project(project_name, files, src_folder, _dst_embedia_folder_name):
 
+    embedia_output_folder = _dst_embedia_folder_name
     included_files = ''
     for filename in files:
         if filename[-2:].lower() == '.c':
+            if filename == 'main.c':
+                folder_filename = filename
+            else:
+                folder_filename = os.path.join(embedia_output_folder, filename)
             included_files += f'''
-        <Unit filename="{filename}">
+        <Unit filename="{folder_filename}">
             <Option compilerVar="CC" />
         </Unit>'''
         elif filename[-2:].lower() == '.h':
+            folder_filename = os.path.join(embedia_output_folder, filename)
             included_files += f'''
-        <Unit filename="{filename}" />'''
+        <Unit filename="{folder_filename}" />'''
 
     src_cbp = os.path.join(src_folder, 'main/codeblock_project.cbp')
     content = file_management.read_from_file(src_cbp)

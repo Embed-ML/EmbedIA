@@ -32,25 +32,40 @@ def format_model_name(model):
 class ProjectGenerator:
 
     def __init__(self, options):
-        self._dst_folder = None
+
         self._options = options
+
+        self._root_folder = None
+        self._src_lib_folder = None
+        self._src_datatype_folder = None
+        self._src_dbg_folder = None
+
+        self._dst_folder = None
+        self._dst_embedia_folder = None
+        if options.project_type == ProjectType.ARDUINO:
+            self._dst_embedia_folder_name = ''
+        else:
+            self._dst_embedia_folder_name = options.embedia_output_subfloder
 
         if options.embedia_folder is None or options.embedia_folder == '':
             self.set_embedia_folder('embedia/')
         else:
             self.set_embedia_folder(options.embedia_folder)
+
         if options.project_type==ProjectType.C and options.data_type == ModelDataType.BINARY_FLOAT16:
             raise ValueError("FLOAT16 is not compatible with C, only with C++ and Arduino!!")
         if options.project_type==ProjectType.CODEBLOCK and options.data_type == ModelDataType.BINARY_FLOAT16:
             raise ValueError("FLOAT16 is not compatible with CodeBlocks, only with C++ and Arduino!!")
 
+
     def set_embedia_folder(self, folder):
         if folder[-1] != '/':
             folder += '/'
         self._root_folder = os.path.abspath(folder) + '/'
-        self._lib_folder = self._root_folder + 'libraries/'
-        self._datatype_folder = self._lib_folder + self._datatype_subfolder(self._options.data_type)
-        self._src_dbg_folder = self._lib_folder + 'debug/'
+        self._src_lib_folder = self._root_folder + 'libraries/'
+        self._src_datatype_folder = self._src_lib_folder + self._datatype_subfolder(self._options.data_type)
+        self._src_dbg_folder = self._src_lib_folder + 'debug/'
+
 
     def create_project(self, output_folder, project_name, model, options):
 
@@ -65,23 +80,24 @@ class ProjectGenerator:
 
         # copy library files
         if ProjectFiles.LIBRARY in options.files:
-            embedia_files = generate_embedia_library(embedia_model, self._datatype_folder, self._dst_folder, h_ext, c_ext, options)
+            #embedia_files = generate_embedia_library(embedia_model, self._src_datatype_folder, self._dst_folder, h_ext, c_ext, options)
+            embedia_files = generate_embedia_library(embedia_model, self._src_datatype_folder, self._dst_embedia_folder, h_ext, c_ext, options)
 
             # print layers memory size
-            model_info = self.build_model_info(embedia_model, self._extract_datatypes(embedia_files))
+            model_info = self.build_model_info(embedia_model)
             print(model_info)
 
         # create model files
         if ProjectFiles.MODEL in options.files:
-            (text_model_h, text_model_c, filename) = generate_embedia_model(embedia_model, self._lib_folder, self._dst_folder, h_ext, c_ext, model.name, model_info, options)
+            (text_model_h, text_model_c, model_name) = generate_embedia_model(embedia_model, self._src_lib_folder, self._dst_embedia_folder, h_ext, c_ext, model.name, model_info, options)
 
         # copy debug file
         if options.debug_mode != DebugMode.DISCARD:
-            generate_embedia_debug(self._src_dbg_folder, self._dst_folder, options)
+            generate_embedia_debug(self._src_dbg_folder, self._dst_embedia_folder, options)
 
         # create main file with an example
         if ProjectFiles.MAIN in options.files:
-            (text_example_h, text_main_c) = generate_embedia_main(embedia_layers, self._lib_folder, filename, options, embedia_model)
+            (text_example_h, text_main_c) = generate_embedia_main(embedia_layers, self._src_lib_folder, self._dst_embedia_folder_name, model_name, options, embedia_model)
             if options.project_type == ProjectType.ARDUINO:
                 filename = project_name
                 c_ext = '.ino'
@@ -90,12 +106,12 @@ class ProjectGenerator:
                 if options.project_type == ProjectType.CODEBLOCK:
                     model_name = format_model_name(model)
                     files = self._get_project_files(model_name, options)
-                    project = generate_codeblock_project(project_name, files, self._lib_folder)
+                    project = generate_codeblock_project(project_name, files, self._src_lib_folder, self._dst_embedia_folder_name)
                     file_management.save_to_file(os.path.join(self._dst_folder, project_name+'.cbp'), project)
 
             file_management.save_to_file(os.path.join(self._dst_folder, filename + c_ext), text_main_c)
             if text_example_h is not None:
-                file_management.save_to_file(os.path.join(self._dst_folder, 'example_file' + h_ext), text_example_h)
+                file_management.save_to_file(os.path.join(self._dst_embedia_folder, 'example_file' + h_ext), text_example_h)
 
     def _get_files_extension(self):
         if self._options.project_type in [ProjectType.C, ProjectType.CODEBLOCK]:
@@ -103,15 +119,6 @@ class ProjectGenerator:
         else:
             (c_ext, h_ext) = ('.cpp', '.h')
         return c_ext, h_ext
-
-    def _extract_datatypes(self, embedia_files):
-        (c_ext, h_ext) = self._get_files_extension()
-        embedia_headers = ''
-        for filename in embedia_files:
-            if filename.endswith(h_ext):
-                with open(os.path.join(self._datatype_folder, filename), 'r') as file:
-                    embedia_headers += file.read()
-        return embedia_headers
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
     def _datatype_subfolder(self, data_type):
@@ -145,9 +152,16 @@ class ProjectGenerator:
         if options.clean_output:
             shutil.rmtree(path=output_folder, ignore_errors=True)
 
-        if not os.path.exists(output_folder):
-            os.mkdir(output_folder)
+
         self._dst_folder = os.path.abspath(output_folder)+'/'
+        if not os.path.exists(self._dst_folder):
+            os.mkdir(self._dst_folder)
+
+        self._dst_embedia_folder = os.path.join(self._dst_folder, self._dst_embedia_folder_name)
+        if not os.path.exists(self._dst_embedia_folder):
+            os.mkdir(self._dst_embedia_folder)
+
+
 
     def _get_project_files(self, model_filename, options):
 
@@ -189,9 +203,8 @@ class ProjectGenerator:
 
         return project_files
 
-    def build_model_info(self, embedia_model, embedia_headers):
-        embedia_decl = embedia_headers
-        layers_info = embedia_model.get_layers_info(embedia_decl)
+    def build_model_info(self, embedia_model):
+        layers_info = embedia_model.get_layers_info()
         total_params = (0, 0)
         total_size = 0
         total_MACs = 0

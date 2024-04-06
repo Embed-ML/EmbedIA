@@ -37,7 +37,7 @@ OUTPUT_FOLDER = 'outputs/'
 PROJECT_NAME = 'Prj_Test_'
 SAMPLES_FILE = 'samples/FASHION_MNIST_28x28_samples.sav'
 
-model = build_all_layers_model()
+(model, x_test, y_test) = build_all_layers_model()
 
 model._name = "LayersTest01"
 
@@ -92,19 +92,20 @@ current_dir = os.getcwd()
 
 # configuration of each project to export
 PROJECT_LIST = [
+    (ProjectType.CODEBLOCK, ModelDataType.FLOAT, 'CB_FLT'),
+    (ProjectType.CODEBLOCK, ModelDataType.FIXED32, 'CB_F32')
+    (ProjectType.CODEBLOCK, ModelDataType.FIXED16, 'CB_F16'),
+    (ProjectType.CODEBLOCK, ModelDataType.FIXED8, 'CB_F8'),
+    (ProjectType.CODEBLOCK, ModelDataType.QUANT8, 'CB_Q8'),
     (ProjectType.ARDUINO, ModelDataType.FLOAT, 'AR_FLT'),
     (ProjectType.ARDUINO, ModelDataType.FIXED32, 'AR_F32'),
     (ProjectType.ARDUINO, ModelDataType.FIXED16, 'AR_F16'),
     (ProjectType.ARDUINO, ModelDataType.FIXED8, 'AR_F8'),
-    (ProjectType.ARDUINO, ModelDataType.QUANT8, 'AR_Q8'),
-    (ProjectType.CODEBLOCK, ModelDataType.FLOAT, 'CB_FLT'),
-    (ProjectType.CODEBLOCK, ModelDataType.FIXED32, 'CB_F32'),
-    (ProjectType.CODEBLOCK, ModelDataType.FIXED16, 'CB_F16'),
-    (ProjectType.CODEBLOCK, ModelDataType.FIXED8, 'CB_F8'),
-    (ProjectType.CODEBLOCK, ModelDataType.QUANT8, 'CB_Q8')
+    (ProjectType.ARDUINO, ModelDataType.QUANT8, 'AR_Q8')
     ]
 
 results = []
+#options.embedia_output_subfloder = 'embedia'
 for (p_type, d_type, p_name) in PROJECT_LIST:
     options.project_type = p_type
     options.data_type = d_type

@@ -33,15 +33,17 @@ class UnimplementedLayerAction:
 
 class ProjectOptions:
     def __init__(self):
-        self.embedia_folder = None
-        self.project_type = ProjectType.C
-        self.data_type = ModelDataType.FLOAT
-        self.baud_rate = 9600
-        self.example_data = None
-        self.example_labels = None
-        self.files = ProjectFiles.ALL
-        self.debug_mode = DebugMode.DISABLED
-        self.clean_output = False
-        self.normalizer = None
-        self.tamano_bloque = BinaryBlockSize.Bits8
-        self.on_unimplemented_layer = UnimplementedLayerAction.IGNORE_KNOWN
+        self.embedia_folder = None           # embedia source folder
+        self.embedia_output_subfloder = ''   # subfolder in output folder to copy embedia files
+        self.project_type = ProjectType.C    # project type to export
+        self.data_type = ModelDataType.FLOAT # data type for data storage
+        self.baud_rate = 9600                # Arduino Only. Set Serial device speed
+        self.example_data = None             # list of examples to include in project
+        self.example_labels = None           # list of labels for examples (classification)
+        self.files = ProjectFiles.ALL        # set of files to export library, main or model
+        self.debug_mode = DebugMode.DISABLED # debug info to include and what to show
+        self.clean_output = False            # clear output folder before export (use carefully)
+        self.normalizer = None               # normalization object to add before start inference
+        self.tamano_bloque = BinaryBlockSize.Bits8 # block size for binary nets
+        self.on_unimplemented_layer = UnimplementedLayerAction.IGNORE_KNOWN # error action when find an unimplemented layer
+        self.output_subfolder = 'embedia'    # name of folder to store all embedia files

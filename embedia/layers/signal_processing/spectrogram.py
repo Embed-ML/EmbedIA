@@ -77,7 +77,7 @@ class Spectrogram(Layer):
         return 0
 
 
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns
@@ -95,7 +95,6 @@ class Spectrogram(Layer):
 
         # # base data type in bits: float, fixed (32/16/8)
         # dt_size = ModelDataType.get_size(self.options.data_type)
-
 
         # mem_size = (n_input * dt_size/8 + sz_neuron_t) * n_neurons
 

@@ -57,7 +57,7 @@ class Dense(Layer):
         return MACs
 
 
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns
@@ -71,7 +71,8 @@ class Dense(Layer):
         (n_input, n_neurons) = self._wrapper.weights.shape
 
         # neuron structure size
-        sz_neuron_t = types_dict['neuron_t']
+        # struct{ float * weights; float bias; }neuron_t;
+        sz_neuron_t = 4
 
         # base data type in bits: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)

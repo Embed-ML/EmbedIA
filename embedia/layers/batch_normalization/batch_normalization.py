@@ -56,7 +56,7 @@ class BatchNormalization(Layer):
     def struct_data_type(self):
         return 'batch_normalization_layer_t'
     
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns
@@ -73,7 +73,8 @@ class BatchNormalization(Layer):
         n_arrays = 4 - 2  # the four arrays are optimized into two (see below)
 
         # neuron structure size
-        sz_batch_norm_t = types_dict['batch_normalization_layer_t']
+        # struct {uint32_t length;  float *moving_inv_std_dev;  float *std_beta;} batch_normalization_layer_t;
+        sz_batch_norm_t = 12
 
         # base data type: float, fixed, binary (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)

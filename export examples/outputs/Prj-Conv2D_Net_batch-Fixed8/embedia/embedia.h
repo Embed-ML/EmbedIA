@@ -339,7 +339,6 @@ void normalization2(normalization_layer_t s, data1d_t input, data1d_t * output);
 /* Batch normalization */
 void batch_normalization_layer(batch_normalization_layer_t norm, uint32_t length, fixed *data);
 
-
 void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *data);
 
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data);

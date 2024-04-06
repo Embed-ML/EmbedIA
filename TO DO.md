@@ -1,30 +1,34 @@
 # Lista de Trabajo (en curso o próximo)
 
- - ** Soporte para max_pooling de multiples dimensiones para strides y pool_size
+ - **Soporte para max_pooling de multiples dimensiones para strides y pool_size**
 
- - **Implementar Capas Orientadas a Elementos:
-      - Add, Substract, Average, Multiply, Maximum?, Minimum?, Dot
-## LISTOS:
- - **Soporte de strides para capas convolucioneales: SeparableConv2D y DepthwiseConv2D**
- - **Soporte de padding para capas convolucioneales: Conv2D(ya implementada para float), SeparableConv2D y DepthwiseConv2D**
- - **Soporte para kernels asimetricos para Conv2D**
- - **Refactoring de propiedad kernel_size para llevarla a conv2d_layer desde filter_T
- - **Refactoring para dividir Model en EmbediaModel y TensorflowModel**
- - **Refactoring para posibilitar modelos basados en Scikit Learn**
-
-## Lista de Terminados recientes
-    - ** Soporte de padding, strides para Conv2D
+ - **Implementacion de Capas:**
+   - ***Capas Orientadas a Elementos:***
+        - Add, Substract, Average, Multiply, Maximum?, Minimum?, Dot
+   - ***Capas Orientadas a Elementos:***
+     - Add, Average, Dot, Substract, Maximum?, Minimum?, Multiply, 
+   - ***Capas de Transformación:***
+     - Agregar soporte para Capas de especiales que existen solo en entrenamiento
+     - Reescaling, Reshape, Resizing, CenterCrop, Concatenate, UpSampling1D, UpSampling2D, UpSampling3D, ZeroPadding1D, ZeroPadding2D, ZeroPadding3D
+ - **Bugs:**
+   - revisar información de número de parametros al mostrar informacion del modelo que aparece en 0
+   - revisar cálculo de cantidad de memoria requerida por capas
+ - **Modelos EmbedIA:**
+   - procesar modelos de modelos en tensorflow 
+ - **reestructurar carpetas/archivos Embedia**
+   - analizar archivo embedia.h/.c para determinar que queda en neural_nets.h/.c y si hay que crear common.h/.c (y que poner) 
+ - **Cuantizacion:**
+   - implementar  cuantización por clustering
+   - implementar versiones de computo para fixed32 y fixed16
 
 # Lista de tareas (sin orden particular)
 
 ## Modelos de Aprendizaje Automático
-  - **Refactoring de EmbedIA para soportar modelos de SkLearn**
+  - **Hacer ejemplo de Refactoring de EmbedIA para soportar modelos de SkLearn**
     - reestructurar carpetas pensando en los tipos de algoritmos por ejemplo embedia/nn/ o embedia/ml o embedia/svm
-    - refactoring de propiedades asociadas a TF/Keras para generalizacion. Ej: en general usamos layer como elemento que contiene parte del modelo, podría utilizarse component, element, block, module, etc.
     
 - **Incorporar modelos de aprendizaje automático basado en ML (Sklearn)**
-  - Crear una arquitectura de clases para incorporar Modelos ML de Sklearn a EmbedIA.
-  - Modificar EmbedIA para incluir los modelos ML de Sklearn.
+    - agregar modelos SKLEARN
 
 ## Modelos de Redes Neuronales
   - **Incorporar modelos (livianos) populares**
@@ -66,7 +70,7 @@
       - Lambda: aplica funcion en python a elementos
       
     
-  - **agregar padding y stride en capas convolucionales**
+
   - **agregar soporte para channel_last/first**
     - agregar versiones de versiones con la variante channel_first y channel_last (embedia trabaja con channel first y adapta la entrada para trabajar de esa manera). Considerar usar el mismo orden que tensorflow por simplicidad (mucho refactoring)
   
@@ -95,10 +99,7 @@
 
   - **Generar modelos robustos para tareas específicas**
     - Analizar problemas, conseguir datos y generar modelos para señales, imagenes y sonido.
-     
-  - **Refactoring para que cada "capa"/elemento/modelo de EmbedIA indique los archivos C/C++ que requiere**
-    - las capas especializadas como de procesamiento general podrían requerir de archivos especiales que deberían ser incluídos. Esto debería delegarse a la capa.
-        
+      
   - **Incorporar Microcontroladores**
     - Ver que se puede hacer. Incorporar RP2040 Wifi y ARM M4F.
 
@@ -141,5 +142,20 @@
   - Analizar la posibilidad de introducir para procesadores especiales optimizaciones basadas en funciones que realizan operaciones con punteros sobre datos.
   - 
 
+## LISTOS:
+ - **Soporte de strides para capas convolucioneales: SeparableConv2D y DepthwiseConv2D**
+ - **Soporte de padding para capas convolucioneales: Conv2D(ya implementada para float), SeparableConv2D y DepthwiseConv2D**
+ - **Soporte para kernels asimetricos para Conv2D**
+ - **Refactoring de propiedad kernel_size para llevarla a conv2d_layer desde filter_T**
+ - **Refactoring para dividir Model en EmbediaModel y TensorflowModel**
+ - **Refactoring para posibilitar modelos basados en Scikit Learn**
+ - **Crear una arquitectura de clases para incorporar Modelos ML de Sklearn a EmbedIA.**
+ - **Modificar EmbedIA para incluir los modelos ML de Sklearn.**
+ - **agregar padding y stride en capas convolucionales**
+ - **Refactoring para que cada "capa"/elemento/modelo de EmbedIA indique los archivos C/C++ que requiere**
+  - las capas especializadas como de procesamiento general podrían requerir de archivos especiales que deberían ser incluídos. Esto debería delegarse a la capa.
+ - ** eliminar calculo de tamaño de capas/estructuras. Actualmente se analiza código C y es muy sensible a errores
+ - **Refactoring de EmbedIA para soportar modelos de SkLearn** (p)
+ - (Se mantuvo en gral nombres actuales) refactoring de propiedades asociadas a TF/Keras para generalizacion. Ej: en general usamos layer como elemento que contiene parte del modelo, podría utilizarse component, element, block, module, etc.
 
       

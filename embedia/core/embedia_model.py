@@ -331,126 +331,9 @@ class EmbediaModel(object):
 
 
 
-    def _build_types_size_dict(self, embedia_decl):
-        """
-        Build a dictionary of types and their sizes in bytes from the EmbediA declaration.
 
-        Parameters:
-           embedia_decl (str): The EmbediA declaration.
 
-        Returns:
-           dict: Dictionary of types and their sizes in bytes.
-        """
-
-        # prepare to extract declaration of structures
-        # get code to first function definition in order to includes structures
-        if (self.options.data_type == ModelDataType.BINARY or self.options.data_type == ModelDataType.BINARY_FIXED32 or self.options.data_type == ModelDataType.BINARY_FLOAT16):
-            start = embedia_decl.find('endif')
-            start = start + 5
-        else:
-            start = embedia_decl.find('typedef')
-        end = embedia_decl.find('void')
-        embedia_decl = embedia_decl[start:end]
-
-         # remove comments, pycparser doesnt support them
-        pattern = re.compile(
-                r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
-                re.DOTALL | re.MULTILINE
-            )
-        embedia_decl = re.sub(pattern, '', embedia_decl)
-
-        # add dummy base data type declaration into EmbedIA code
-        embedia_decl = """
-typedef char uint8_t;
-typedef char uint16_t;
-typedef char uint32_t;
-typedef char uint64_t;
-typedef char xBITS;
-typedef char fixed;
-typedef char dfixed;
-typedef char half;
-typedef char quant8;
-typedef char qparam_t;
-typedef char size2d_t;
-""" + embedia_decl
-
-        # delete lines with '#' because parser doesnt support
-        embedia_decl = re.sub(r'^\s*#.*\n', '', embedia_decl, flags=re.MULTILINE)
-        parser = pcp.CParser()
-
-        try:
-            code = parser.parse(embedia_decl)
-        except:
-            print(embedia_decl)
-            raise
-        bytes_size4 = 2
-        if(self.options.tamano_bloque==BinaryBlockSize.Bits8):
-            bytes_size = 1
-        elif(self.options.tamano_bloque==BinaryBlockSize.Bits16):
-            bytes_size = 2
-        elif(self.options.tamano_bloque==BinaryBlockSize.Bits32):
-            bytes_size = 4
-        else:
-            bytes_size = 8
-        
-        bytes_size2 = 0
-        bytes_size3 = 0
-        if(self.options.data_type == ModelDataType.FIXED8):
-            bytes_size2 = 1
-            bytes_size3 = 2
-        elif(self.options.data_type == ModelDataType.FIXED16):
-            bytes_size2 = 2
-            bytes_size3 = 4
-        elif(self.options.data_type == ModelDataType.FIXED32 or self.options.data_type == ModelDataType.BINARY_FIXED32):
-            bytes_size2 = 4
-            bytes_size3 = 8
-        # base types sizes in bytes
-        self._types_dict = {
-            'uint8_t': 1,
-            'uint16_t': 2,
-            'uint32_t': 4,
-            'uint64_t': 8,
-            'float': 4,
-            'quant8': 1,
-            'qparam_t': 5,
-            'size2d_t': 4,
-            'xBITS': bytes_size,
-            'fixed': bytes_size2,
-            'dfixed': bytes_size3,
-            'half': bytes_size4
-        }
-
-        for node in code.ext:
-            if type(node) is pcp.c_ast.Typedef and not node.name in  self._types_dict:
-                dt_type = node.name
-                dt_size = self._explore_type(node)
-                self._types_dict[dt_type] = dt_size
-
-        return self._types_dict
-
-    def _explore_type(self, node):
-        """
-        Explore the size of a data type.
-
-        Parameters:
-            node (object): The abstract syntax tree node representing the data type.
-
-        Returns:
-            int: The size in bytes of the data type.
-        """
-        if type(node.type.type) is pcp.c_ast.Struct:
-            size = 0
-            for d in node.type.type.decls:
-                size += self._explore_type(d)
-            return size
-        elif type(node.type) is pcp.c_ast.PtrDecl:
-            return 4  # always return 4 bytes for now
-        elif node.type.type.names[0] in self._types_dict:
-            return self._types_dict[node.type.type.names[0]]
-
-        raise Exception(node.type)
-
-    def get_layers_info(self, embedia_decl):
+    def get_layers_info(self):
         """
         Get the information of the model's layers.
 
@@ -461,9 +344,6 @@ typedef char size2d_t;
           list: List of tuples with information for each layer (name, type, activation, parameters,
                 output shape, MACs, memory size).
         """
-
-        if len(self._types_dict) == 0:
-            self._build_types_size_dict(embedia_decl)
 
         layers_info = []
         for layer in self.embedia_layers:

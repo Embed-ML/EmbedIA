@@ -126,7 +126,7 @@ class QuantConv2D(Layer):
 
         return MACs
 
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns
@@ -144,7 +144,7 @@ class QuantConv2D(Layer):
 
         # EmbedIA filter structure size
         if(self.tipo_conv == 0):  # conv2d float
-            sz_filter_t = types_dict['filter_t']
+            sz_filter_t = 4 # filter_t size
 
             mem_size = (n_channels * n_rows * n_cols * dt_size / 8 + sz_filter_t) * n_filters
         else:    #semi-cuantizada o full binary

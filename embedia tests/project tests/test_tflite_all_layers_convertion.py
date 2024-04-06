@@ -9,7 +9,7 @@ from supported_layers_model import build_all_layers_model
 TFLITE_FILE = 'full_model.tflite'
 TF_OUTFILE = 'full_model_reconverted.h5'
 
-model = build_all_layers_model()
+(model, x_test, y_test)  = build_all_layers_model()
 
 model._name = "Layers_tflite"
 

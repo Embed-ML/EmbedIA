@@ -131,7 +131,7 @@ void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
 void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
     int32_t delta, i,j,k,l, f_pos, i_pos;
     int16_t f, c, i_pad, j_pad, pad_h, pad_w;
-    dfixed value;
+    fixed value;
 
     // calculate output size and allocate memory
     calc_alloc_conv2d_output(layer.n_filters, layer.kernel, layer.strides, layer.padding, input, output);
@@ -154,22 +154,15 @@ void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
                             if (i_pad >= 0 && i_pad < input.height && j_pad >= 0 && j_pad < input.width) {
                                 f_pos = (c * layer.kernel.h * layer.kernel.w) + k * layer.kernel.w + l;
                                 i_pos = (c * input.height * input.width) + i_pad * input.width + j_pad;
-                                value += DFIXED_MUL(layer.filters[f].weights[f_pos], input.data[i_pos]);
+                                value += FIXED_MUL(layer.filters[f].weights[f_pos], input.data[i_pos]);
                             }
                         }
                     }
                 }
-                value = value + FIXED_TO_DFIXED(layer.filters[f].bias);
-                if (value > DFIX_MAX)
-                    value = FIX_MAX;
-                else if (value < DFIX_MIN)
-                    value = FIX_MIN;
-                else value = DFIXED_TO_FIXED(value);
-
-                output->data[delta + i*output->width + j] = value;
-		    }
-		}
-	}
+                output->data[delta + i*output->width + j] = value + layer.filters[f].bias;
+            }
+        }
+    }
 }
 
 /*
@@ -225,7 +218,7 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
  */
 static void depthwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t input, data3d_t *output) {
     uint32_t i, j, k, l, c, f_pos, i_pos, pad_h, pad_w, j_pad, i_pad;
-    dfixed sum;
+    fixed sum;
 
     pad_h = compute_padding(layer.strides.h, input.height, layer.depth_kernel_sz.h, output->height);
     pad_w = compute_padding(layer.strides.w, input.width,  layer.depth_kernel_sz.w, output->width);
@@ -242,20 +235,14 @@ static void depthwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t 
                             if (i_pad >= 0 && i_pad < input.height && j_pad >= 0 && j_pad < input.width) {
                                 f_pos = (c * layer.depth_kernel_sz.h * layer.depth_kernel_sz.w) + k * layer.depth_kernel_sz.w + l;
                                 i_pos = (c * input.height * input.width) + i_pad * input.width + j_pad;
-                                sum += DFIXED_MUL(filter.weights[f_pos], input.data[i_pos]);
+                                sum += FIXED_MUL(filter.weights[f_pos], input.data[i_pos]);
                             }
                     }
                 }
-				if (sum > DFIX_MAX)
-					sum = FIX_MAX;
-				else if (sum < DFIX_MIN)
-					sum = FIX_MIN;
-				else sum = DFIXED_TO_FIXED(sum);
-
-				output->data[c*output->width*output->height + i*output->width + j] = sum;
-			}
-		}
-	}
+                output->data[c * output->width * output->height + i * output->width + j] = sum;
+            }
+        }
+    }
 }
 
 /*
@@ -270,23 +257,16 @@ static void depthwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t 
  */
 static void pointwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t input, data3d_t *output, uint32_t delta) {
     uint32_t i, j, c, i_pos;
-    dfixed sum;
+    fixed sum;
 
     for (i = 0; i < output->height; i++) {
         for (j = 0; j < output->width; j++) {
             sum = 0;
             for (c = 0; c < layer.point_channels; c++) {
                 i_pos = (c * input.height * input.width) + (i * 1) * input.width + (j * 1);
-                sum += DFIXED_MUL(filter.weights[c], input.data[i_pos]);
+                sum += FIXED_MUL(filter.weights[c], input.data[i_pos]);
             }
-			sum = sum + FIXED_TO_DFIXED(filter.bias);
-			if (sum > DFIX_MAX)
-				sum = FIX_MAX;
-			else if (sum < DFIX_MIN)
-				sum = FIX_MIN;
-			else sum = DFIXED_TO_FIXED(sum);
-			
-			output->data[delta + i*output->width + j] = sum;
+            output->data[delta + i * output->width + j] = sum + filter.bias;
         }
     }
 }
@@ -392,19 +372,13 @@ void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data
 
 static float neuron_forward(neuron_t neuron, data1d_t input){
     uint32_t i;
-    dfixed result = 0;
+    fixed result = 0;
 
     for(i=0;i<input.length;i++){
-        result += DFIXED_MUL(input.data[i],neuron.weights[i]);
+        result += FIXED_MUL(input.data[i], neuron.weights[i]);
     }
 
-	result =  result + FIXED_TO_DFIXED(neuron.bias);
-
-	if (result > DFIX_MAX)
-		return FIX_MAX;
-	else if (result < DFIX_MIN)
-		return FIX_MIN;
-	return DFIXED_TO_FIXED(result);
+    return result + neuron.bias;
 }
 
 /*
@@ -715,41 +689,21 @@ void normalization2(normalization_layer_t n, data1d_t input, data1d_t * output){
 
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data) {
     uint32_t i;
-	dfixed d_data;
 
-	for(i = 0; i < data->length; i++) {
-		d_data = DFIXED_MUL(data->data[i], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
-
-		if (d_data > DFIX_MAX)
-			d_data = FIX_MAX;
-		else if (d_data < DFIX_MIN)
-			d_data = FIX_MIN;
-		else 
-			d_data = DFIXED_TO_FIXED(d_data);
-
-		data->data[i] = d_data;
-	}
+    for(i = 0; i < data->length; i++) {
+        data->data[i] = FIXED_MUL(data->data[i], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
+    }
 }
 
 
 void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *data) {
     uint32_t i, j, ilen = 0;
     uint32_t length = data->height * data->width;
-	dfixed d_data;
 
     for(i = 0; i < data->channels; i++, ilen += length) {
         for(j = 0; j < length; j++) {
-            d_data = DFIXED_MUL(data->data[ilen+j], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
-			
-			if (d_data > DFIX_MAX)
-				d_data = FIX_MAX;
-			else if (d_data < DFIX_MIN)
-				d_data = FIX_MIN;
-			else 
-				d_data = DFIXED_TO_FIXED(d_data);
-
-			data->data[ilen+j] = d_data;
-		}
+            data->data[ilen+j] = FIXED_MUL(data->data[ilen+j], layer.moving_inv_std_dev[i]) + layer.std_beta[i];
+        }
     }
 }
 
