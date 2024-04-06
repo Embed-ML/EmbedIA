@@ -1,12 +1,14 @@
 import numpy as np
-from sklearn.datasets import load_digits
 import pickle
 import pathlib, os
 import librosa
+import tensorflow as tf
+import urllib.request, zipfile
+from sklearn.datasets import load_digits
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import load_model
-from embedia.utils.melspec import Melspec
 
+from embedia.utils.melspec import Melspec
 from embedia.model_generator.project_options import *
 from embedia.project_generator import ProjectGenerator
 from embedia.layers.signal_processing.spectrogram import Spectrogram
@@ -21,11 +23,16 @@ def create_dataset(fs, PATH):
 
     data_dir = pathlib.Path(PATH)
     if not data_dir.exists():
-        tf.keras.utils.get_file(
-            'mini_speech_commands.zip',
-            origin="http://storage.googleapis.com/download.tensorflow.org/data/mini_speech_commands.zip",
-            extract=True,
-            cache_dir='.', cache_subdir='data')
+        # tf.keras.utils.get_file(
+        #     'mini_speech_commands.zip',
+        #     origin="http://storage.googleapis.com/download.tensorflow.org/data/mini_speech_commands.zip",
+        #     extract=True,
+        #     cache_dir='.', cache_subdir='data')
+
+        url = "http://storage.googleapis.com/download.tensorflow.org/data/mini_speech_commands.zip"
+        urllib.request.urlretrieve(url, "mini_speech_commands.zip")
+        with zipfile.ZipFile("mini_speech_commands.zip", 'r') as zip_ref:
+            zip_ref.extractall(".")
 
     # labels = ['yes', 'no', 'up', 'down', 'right', 'left', 'stop', 'go']
     # labels = ['yes', 'no', 'up', 'down', 'right', 'left','go']

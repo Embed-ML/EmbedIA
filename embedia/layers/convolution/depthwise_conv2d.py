@@ -1,29 +1,54 @@
-from embedia.layers.data_layer import DataLayer
+from embedia.core.layer import Layer
 from embedia.model_generator.project_options import ModelDataType
-from embedia.utils import file_management
 import numpy as np
 
 
-class DepthwiseConv2D(DataLayer):
+class DepthwiseConv2D(Layer):
+    """
+     Develop info:
+     This class must define the behavior of an EmdedIA layer/element. It defines
+     methods/properties to obtain information related to the inputs and outputs of
+     the layer/element such as its shape, number of elements, EmbedIA associated
+     data type.
+     It also implements methods to generate the C code necessary for debugging
+     function and invocation of the C function associated to the layer/element.
+     This function must be implemented in some .c file its prototype declared
+     in respective .h. The name of function can be anything but an EmbedIA naming
+     rule is recomended: LayerClassName+"_layer". Example for DepthwiseConv2D class should
+     be named depthwise_conv2d_layer.
+     The invoke function receives an input and an output parameter with the parameter's
+     name that are used in the predict function of the model.
 
-    def __init__(self, model, layer, options, **kwargs):
+     The DepthwiseConv2D convolutional layer is a layer that requires additional data structure
+     (weights to be initialized) in addition to the input data. For this reason
+     sets "_use_data_structure" to True. Because ot this, code generator generates C code
+     automatically based on the content of the properties that store c code:
+     - struct_data_type [automatic named]: name of data type of structure to store parameters
+       like filters, kernel size, padding, etc. This structure must be declared in some .h file.
+       Example: for Classname+"_layer_t" generates depthwise_conv2d_layer_t
+     - variable_declaration [automatic generated]: variable declaration to store parameters.
+       Example: for Classname+"_layer_t" LayerName+"_data" generates depthwise_conv2d_layer_t depthwise_conv2d_0_data
+     - function_prototype [automatic generated]: function prototype to invoke on data initialization.
+       Example: for struct_data_type "init_"+LayerName+"_data"(void)' generates
+       depthwise_conv2d_layer_t init_conv2d_data(void)
+     - variable_initialization [automatic generated]: code to initialize structure variable via
+       initialization function. Example: for LayerName+"_data" = "init_"+LayerName+"_data(void)"
+       generates conv2d_0_data = init_depthwise_conv2d_0_data(void).
+     - function_implementation [user generated]: full code of initialization function. User must
+       generate code to initialize the data structure.
 
-        super().__init__(model, layer, options, **kwargs)
-        # the type defined in "struct_data_type" must exists in "embedia.h"
-        # self.struct_data_type = self.get_type_name().lower()+'_layer_t'
-        w = layer.get_weights()
-        self.weights = self._adapt_weights(w[0])
-        self.biases = w[1]
+     Layer wrapper required properties:
+         - padding => 0=valid, 1=same
+         - strides => (height, width)
+         - depth_weights => 4d array formatted: filters, channel, row, column
+         - point_weights => 4d array formatted: filters, channel, row, column
+         - biases => 1d array
+    """
+    def __init__(self, model, wrapper, **kwargs):
 
-    def _adapt_weights(self, weights):
-        _row, _col, _can, _filt = weights.shape
-        arr = np.zeros((_filt, _can, _row, _col))
-        for row, elem in enumerate(weights):
-            for col, elem2 in enumerate(elem):
-                for chn, elem3 in enumerate(elem2):
-                    for filt, value in enumerate(elem3):
-                        arr[filt, chn, row, col] = value
-        return arr
+        super().__init__(model, wrapper, **kwargs)
+
+        self._use_data_structure = True  # this layer require data structure initialization
 
     def calculate_MAC(self):
         """
@@ -35,10 +60,10 @@ class DepthwiseConv2D(DataLayer):
 
         """
         # estimate amount multiplication and addition operations
-        out_size = self.get_output_size()
+        out_size = self.output_size
 
         # layer dimensions
-        n_channels, n_filters, n_rows, n_cols = self.weights.shape
+        n_channels, n_filters, n_rows, n_cols = self._wrapper.weights.shape
         MACs = out_size*n_cols*n_rows*n_channels
 
         #n_channels, n_filters, n_rows, n_cols = self.point_weights.shape
@@ -46,7 +71,7 @@ class DepthwiseConv2D(DataLayer):
 
         return MACs
 
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns
@@ -57,14 +82,14 @@ class DepthwiseConv2D(DataLayer):
         """
 
         # layer dimensions
-        n_channels, n_filters, n_rows, n_cols = self.weights.shape
+        n_channels, n_filters, n_rows, n_cols = self._wrapper.weights.shape
         depth_params = n_channels * n_filters * n_rows * n_cols
 
         #n_channels, n_filters, n_rows, n_cols = self.point_weights.shape
         #point_params = n_channels * n_filters * n_rows * n_cols
 
         # EmbedIA filter structure size
-        sz_filter_t = types_dict['filter_t']
+        sz_filter_t = 4 # 'filter_t'
 
         # base data type in bits: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)
@@ -76,37 +101,33 @@ class DepthwiseConv2D(DataLayer):
 
         return mem_size
 
-    def functions_init(self):
+    @property
+    def function_implementation(self):
 
         (data_type, data_converter) = self.model.get_type_converter()
 
-        # data_converter.fit(np.concatenate((self.weights.ravel(), self.biases.ravel())))
-        #
-        # conv_weights = data_converter.transform(self.weights)
-        # conv_biases = data_converter.transform(self.biases)
-
         qparams = ''
 
-        conv_weights = data_converter.fit_transform(self.weights)
-        if self.is_data_quantized():
+        conv_weights = data_converter.fit_transform(self._wrapper.weights)
+        if self.is_data_quantized:
             qparams += f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
-        conv_biases = data_converter.fit_transform(self.biases)
-        if self.is_data_quantized():
+        conv_biases = data_converter.fit_transform(self._wrapper.biases)
+        if self.is_data_quantized:
             qparams += f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
 
 
         # add original comment values
         comm_values = self.options.data_type != ModelDataType.FLOAT
 
-        depth_filters, depth_channels, depth_rows, depth_columns = self.weights.shape  # Getting layer info from it's weights
+        depth_filters, depth_channels, depth_rows, depth_columns = self._wrapper.weights.shape  # Getting layer info from it's weights
 
         kernel_size = f'{{ {depth_rows}, {depth_columns} }}'  # Defining kernel size
 
         # padding
-        padding = 1 if self.layer.padding == 'same' else 0
+        padding = self._wrapper.padding
 
         # strides
-        (strd_rows, strd_cols) = (self.layer.strides[-2], self.layer.strides[-1])
+        (strd_rows, strd_cols) = (self._wrapper.strides[-2], self._wrapper.strides[-1])
         assert strd_rows == strd_cols  # only supports equal length strides in the row and column dimensions
         strides = f'{{{strd_rows}, {strd_cols}}}'
 
@@ -126,7 +147,7 @@ class DepthwiseConv2D(DataLayer):
                 for c in range(depth_columns):
                     d_weights += f'''{conv_weights[0,ch,r,c]}, '''
                 if comm_values:
-                    d_weights += f'/* {self.weights[0, ch, r, 0:depth_columns]} */'
+                    d_weights += f'/* {self._wrapper.weights[0, ch, r, 0:depth_columns]} */'
             d_weights += '\n'
 
         if comm_values:
@@ -137,7 +158,7 @@ class DepthwiseConv2D(DataLayer):
         for ch in range(depth_channels):
             b_weights += identation + f'{conv_biases[ch]}, '
             if comm_values:
-                b_weights += f'/* {self.biases[ch]} */'
+                b_weights += f'/* {self._wrapper.biases[ch]} */'
             b_weights += '\n'
         id = b_weights.rfind(',')
         b_weights = b_weights[0:id] + b_weights[id+1:] # remove last comma
@@ -158,14 +179,14 @@ class DepthwiseConv2D(DataLayer):
 
         return init_conv_layer
 
-    def predict(self, input_name, output_name):
+    def invoke(self, input_name, output_name):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously
         implemented in "embedia.c" and by convention should be called
         "class name" + "_layer".
-        For example, for the EmbedIA Dense class associated to the Keras
-        Dense layer, the function "dense_layer" must be implemented in
+        For example, for the EmbedIA DepthwiseConv2D class associated to the Keras
+        Dense layer, the function "depthwise_conv2d_layer" must be implemented in
         "embedia.c"
 
         Parameters

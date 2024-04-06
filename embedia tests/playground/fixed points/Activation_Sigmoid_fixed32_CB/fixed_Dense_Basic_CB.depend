@@ -1,0 +1,53 @@
+# depslib dependency file v1.0
+1708397486 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\output\fixed16_dense_basic_cb\main.c
+	<stdlib.h>
+	<stdio.h>
+	"../embedia/fixed16/embedia.h"
+	"../embedia/fixed16/fixed.h"
+	<math.h>
+
+1708388060 c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\output\embedia\fixed16\embedia.h
+	<stdint.h>
+	"fixed.h"
+
+1708397540 c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\output\embedia\fixed16\fixed.h
+	<stdint.h>
+
+1707616366 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\output\embedia\fixed16\fixed.c
+	"fixed.h"
+
+1708396568 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\output\embedia\fixed16\embedia.c
+	"embedia.h"
+	<stdlib.h>
+	<math.h>
+
+1708747485 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\output\embedia\fixed32\fixed.c
+	"fixed.h"
+
+1708747677 c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\output\embedia\fixed32\fixed.h
+	<stdint.h>
+
+1708729550 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\output\embedia\fixed32\embedia.c
+	"embedia.h"
+	<stdlib.h>
+	<math.h>
+
+1708316694 c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\output\embedia\fixed32\embedia.h
+	<stdint.h>
+	"fixed.h"
+
+1708746971 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\output\_fixed_dense_basic_cb\main.c
+	<stdlib.h>
+	<stdio.h>
+	<math.h>
+	<time.h>
+	"../embedia/fixed32/embedia.h"
+	"../embedia/fixed32/fixed.h"
+
+1708749442 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\output\activation_sigmoid_fixed32_cb\main.c
+	<stdlib.h>
+	<stdio.h>
+	<math.h>
+	"../embedia/fixed32/embedia.h"
+	"../embedia/fixed32/fixed.h"
+

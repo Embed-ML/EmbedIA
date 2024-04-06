@@ -1,3 +1,5 @@
+import shutil
+
 def save_to_file(filename, content):
     file = open(filename, 'w', encoding='utf-8')
     file.write(content)
@@ -9,3 +11,7 @@ def read_from_file(filename):
     content = file.read()
     file.close()  
     return content
+
+
+def copy(src_file, dst_file):
+    shutil.copy(src_file, dst_file)

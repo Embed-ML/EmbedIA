@@ -88,13 +88,4 @@ import larq
 
 larq.models.summary(model)
 
-from embedia.utils.model_inspector import ModelInspector
-inspector = ModelInspector(model)
-
-s_id = 4
-# print(inspector.as_string(samples[s_id]))
-
-sample = samples[s_id]
-
-inspector.save('PruebaInspeccion'+f'sample{s_id}.txt', sample, ln_break=-1)
 

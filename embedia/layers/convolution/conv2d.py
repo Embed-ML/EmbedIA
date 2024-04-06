@@ -1,57 +1,58 @@
 
-from embedia.layers.data_layer import DataLayer
-from embedia.layers.layer import UnsupportedFeatureError
+from embedia.core.layer import Layer
 from embedia.model_generator.project_options import ModelDataType
 
 import numpy as np
 
 
-class Conv2D(DataLayer):
+class Conv2D(Layer):
     """
-    The Conv2D convolutional layer is a layer that requires additional data
+
+    Develop info:
+    This class must define the behavior of an EmdedIA layer/element. It defines
+    methods/properties to obtain information related to the inputs and outputs of
+    the layer/element such as its shape, number of elements, EmbedIA associated
+    data type.
+    It also implements methods to generate the C code necessary for debugging
+    function and invocation of the C function associated to the layer/element.
+    This function must be implemented in some .c file its prototype declared
+    in respective .h. The name of function can be anything but an EmbedIA naming
+    rule is recomended: LayerClassName+"_layer". Example for Conv2D class should
+    be named conv2d_layer.
+    The invoke function receives an input and an output parameter with the parameter's
+    name that are used in the predict function of the model.
+
+    The Conv2D convolutional layer is a layer that requires additional data structure
     (weights to be initialized) in addition to the input data. For this reason
-    it inherits from DataLayer which generates C code automatically with the
-    variable that will store the data, the declaration of the prototype of the
-    initialization function and the call to it.
-    Normally the programmer must implement two methods. The first one is
-    "functions_init" which returns the implementation of the initialization
-    function in C code, retrieving the layer information and dumping it into
-    the structure (defined in embedia.h") in an appropriate way. The second one
-    is "predict" where the programmer must invoke the EmbedIA function
-    (implemented in "embedia.c") that must perform the processing of the layer.
-    To avoid overlapping names, both the function name and the variable name
-    are generated automatically using the layer name. The same happens with the
-    data type of the structure to be completed whose name comes from the name
-    of the Python class that implements the layer.
-    Ex: As this class is called Conv2D, the type of the additional structure
-    will be called "conv2d_datat" and must be defined previously in the
-    "embedia.h" file.
-    If the name of the layer is conv2d0, it will automatically be generated in
-    the C file of the model, the declaration of the variable
-    "conv2d_datat conv2d0_data", the prototype of the initialization function
-    "conv2d_datat init_conv2d0_data(void)" and the invocation
-    "conv2d0_data = init_conv2d0_data()". This way of naming must be taken into
-    account in the implementation of the initialization function in the
-    "functions_init" method    """
+    sets "_use_data_structure" to True. Because ot this, code generator generates C code
+    automatically based on the content of the properties that store c code:
+    - struct_data_type [automatic named]: name of data type of structure to store parameters
+      like filters, kernel size, padding, etc. This structure must be declared in some .h file.
+      Example: for Classname+"_layer_t" generates conv2d_layer_t
+    - variable_declaration [automatic generated]: variable declaration to store parameters.
+      Example: for Classname+"_layer_t" LayerName+"_data" generates conv2d_layer_t conv2d_0_data
+    - function_prototype [automatic generated]: function prototype to invoke on data initialization.
+      Example: for struct_data_type "init_"+LayerName+"_data"(void)' generates
+      conv2d_layer_t init_conv2d_data(void)
+    - variable_initialization [automatic generated]: code to initialize structure variable via
+      initialization function. Example: for LayerName+"_data" = "init_"+LayerName+"_data(void)"
+      generates conv2d_0_data = init_conv2d_0_data(void).
+    - function_implementation [user generated]: full code of initialization function. User must
+      generate code to initialize the data structure.
 
-    def __init__(self, model, layer, options=None, **kwargs):
-        super().__init__(model, layer, options, **kwargs)
-        self.input_data_type = "data3d_t"
-        self.output_data_type = "data3d_t"
+    Layer wrapper required properties:
+        - padding => 0=valid, 1=same
+        - strides => (height, width)
+        - weights => 4d array formatted: filters, channel, row, column
+        - biases => 1d array
 
-        # assign properties to be used in "functions_init"
-        self.weights = self._adapt_weights(layer.get_weights()[0])
-        self.biases = layer.get_weights()[1]
+   """
 
-    def _adapt_weights(self, weights):
-        _row, _col, _chn, _filt = weights.shape
-        arr = np.zeros((_filt, _chn, _row, _col))
-        for row, elem in enumerate(weights):
-            for column, elem2 in enumerate(elem):
-                for channel, elem3 in enumerate(elem2):
-                    for filters, value in enumerate(elem3):
-                        arr[filters, channel, row, column] = value
-        return arr
+    def __init__(self, model, wrapper, **kwargs):
+        super().__init__(model, wrapper, **kwargs)
+
+        self._use_data_structure = True  # this layer require data structure initialization
+
 
     def calculate_MAC(self):
         """
@@ -63,16 +64,16 @@ class Conv2D(DataLayer):
 
         """
         # layer dimensions
-        n_filters, n_channels, n_rows, n_cols = self.weights.shape
+        n_filters, n_channels, n_rows, n_cols = self._wrapper.weights.shape
 
         # estimate amount multiplication and addition operations
-        out_size = self.get_output_size()
+        out_size = self.output_size
         # MACs =  (n_rows * n_cols *  n_filters) * in_size
         MACs = out_size*n_cols*n_rows*n_channels
 
         return MACs
 
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns
@@ -83,36 +84,24 @@ class Conv2D(DataLayer):
         """
 
         # layer dimensions
-        n_filters, n_channels, n_rows, n_cols = self.weights.shape
+        n_filters, n_channels, n_rows, n_cols = self._wrapper.weights.shape
 
         # EmbedIA filter structure size
-        sz_filter_t = types_dict['filter_t']
+        # struct { float * weights; float bias; }filter_t;
+
+        sz_filter_t = 4
 
         # base data type in bits: float, fixed (32/16/8)
         dt_size = ModelDataType.get_size(self.options.data_type)
 
         mem_size = (n_channels * n_rows * n_cols *
-                    dt_size / 8 + sz_filter_t) * n_filters
+                    dt_size / 8 + sz_filter_t) * (n_filters+1)
 
         return mem_size
 
-    def _get_padding_and_strides(self):
-        """
-        Gets the padding and strides for the current layer.
 
-        Args:
-            None.
-
-        Returns:
-            A tuple of two tuples, the first containing the padding and the second containing the strides.
-        """
-        conv_layer = self.layer
-        strides = conv_layer.strides
-        padding = 1 if conv_layer.padding == 'same' else 0
-        return (padding, strides)
-
-
-    def functions_init(self):
+    @property
+    def function_implementation(self):
         """
         Generate C code with the initialization function of the additional
         structure (defined in "embedia.h") required by the layer.
@@ -127,25 +116,20 @@ class Conv2D(DataLayer):
 
         (data_type, data_converter) = self.model.get_type_converter()
 
-        conv_weights = data_converter.fit_transform(self.weights)
-        conv_biases = data_converter.transform(self.biases)
-        padding, strides = self._get_padding_and_strides()
-        padding = f'%d' % padding
-        strides = f'{{%d, %d}}' % strides
+        conv_weights = data_converter.fit_transform(self._wrapper.weights)
+        conv_biases = data_converter.transform(self._wrapper.biases)
+        padding = f'%d' % self._wrapper.padding
+        strides = f'{{%d, %d}}' % self._wrapper.strides
 
-        if self.is_data_quantized():
+        if self.is_data_quantized:
             qparams = f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
         else:
             qparams = ''
 
         comm_values = self.options.data_type != ModelDataType.FLOAT # add original values as comment?
 
-        n_filters, n_channels, n_rows, n_cols = self.weights.shape
-        # if n_rows != n_cols:  # WORKING WITH SQUARE KERNELS FOR NOW
-        #     raise UnsupportedFeatureError(
-        #         self.layer, 'different kernel rows and columns')
-        #if self.layer.padding != 'valid':  # no support for padding FOR NOW
-        #    raise UnsupportedFeatureError(self.layer, 'padding')
+        n_filters, n_channels, n_rows, n_cols = self._wrapper.weights.shape
+
         kernel_size = f'{{ {n_rows}, {n_cols} }}' # Defining kernel size
 
         identation = ' '*8
@@ -166,14 +150,14 @@ class Conv2D(DataLayer):
                     for c in range(n_cols):
                         o_weights += f'   {conv_weights[i, ch, r, c]}, '
                     if comm_values:
-                        o_weights += f'/* {self.weights[i, ch, r, 0:n_cols]} */'
+                        o_weights += f'/* {self._wrapper.weights[i, ch, r, 0:n_cols]} */'
                     o_weights += '\n'
 
             id = o_weights.rfind(',')
             o_weights = o_weights[0:id] + o_weights[id+1:]  # remove last comma
 
             if comm_values:
-                bias_weight = f' //{self.biases[i]}'
+                bias_weight = f' //{self._wrapper.biases[i]}'
             else:
                 bias_weight = ''
 
@@ -192,7 +176,7 @@ class Conv2D(DataLayer):
 
         return ret
 
-    def predict(self, input_name, output_name):
+    def invoke(self, input_name, output_name):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously
@@ -219,9 +203,9 @@ class Conv2D(DataLayer):
 
         """
         # change function name for some optimizations
-        if self.layer.padding == 'same':
+        if self._wrapper.padding == 1: #same
             opt_name = '_padding'
-        elif self.layer.strides[0]>1 or self.layer.strides[1]>1:
+        elif self._wrapper.strides[0]>1 or self._wrapper.strides[1]>1:
             opt_name = '_strides'
         else:
             opt_name = ''

@@ -1,25 +1,26 @@
-from embedia.layers.data_layer import DataLayer
-from embedia.layers.layer import Layer
-from embedia.layers.normalization.normalization import Normalization
-from embedia.utils.c_helper import declare_array
-from embedia.model_generator.project_options import ModelDataType
+from embedia.core.layer import Layer
 
-class Spectrogram(DataLayer):
+
+class Spectrogram(Layer):
 
     """
     
     """
 
-    def __init__(self, model, layer, options=None, **kwargs):
+    def __init__(self, model, wrapper, **kwargs):
         # super().__init__(model, layer, options, **kwargs)
         # self.name = 'spectrogram'
         # self.class_name = 'spectrogram'
         # layer._class.name_ = 'spectrogram'
         # self.input_shape = self.layer.input_shape
         # self.output_shape = self.layer.output_shape
-        super().__init__(model, layer, options, **kwargs)
+        super().__init__(model, wrapper, **kwargs)
         self.input_data_type = "data1d_t"
         self.output_data_type = "data3d_t"
+
+        self._use_data_structure = True  # this layer require data structure initialization
+
+
         # self.output_shape = layer.shape
 
         # self.input_shape = (self.layer.input_length,)
@@ -29,7 +30,7 @@ class Spectrogram(DataLayer):
 
         # self.struct_data_type = 'normalization_t'
 
-        # assign properties to be used in "functions_init"
+        # assign properties to be used in "function_implementation"
         # self.weights = layer.get_weights()[0]
         # self.biases = layer.get_weights()[1]
 
@@ -45,7 +46,7 @@ class Spectrogram(DataLayer):
             shape of the input data
         """
         
-        return self.layer.input_shape
+        return self.wrapper.input_shape
 
     def get_output_shape(self):
         """
@@ -56,7 +57,7 @@ class Spectrogram(DataLayer):
         n-tuple
             shape of the output data
         """
-        return self.layer.output_shape
+        return self.wrapper.output_shape
 
     def calculate_MAC(self):
         """
@@ -76,7 +77,7 @@ class Spectrogram(DataLayer):
         return 0
 
 
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns
@@ -95,13 +96,13 @@ class Spectrogram(DataLayer):
         # # base data type in bits: float, fixed (32/16/8)
         # dt_size = ModelDataType.get_size(self.options.data_type)
 
-
         # mem_size = (n_input * dt_size/8 + sz_neuron_t) * n_neurons
 
         # return mem_size
         return 0
 
-    def functions_init(self):
+    @property
+    def function_implementation(self):
         """
         Generate C code with the initialization function of the additional
         structure (defined in "embedia.h") required by the layer.
@@ -143,24 +144,24 @@ class Spectrogram(DataLayer):
 spectrogram_layer_t init_melspec_data(void){{
     spectrogram_layer_t layer_spec;
     layer_spec.convert_to_db = {0};
-    layer_spec.n_fft = {self.layer.n_fft};
-    layer_spec.n_mels = {self.layer.n_mels};
-    layer_spec.frame_length = {self.layer.input_length};
-    layer_spec.sample_rate = {self.layer.input_fs};
-    layer_spec.n_blocks = {self.layer.n_blocks};
-    layer_spec.n_fft_table = {int(self.layer.n_fft/2)};
-    layer_spec.noverlap = {self.layer.noverlap};
-    layer_spec.step = {self.layer.step};
-    layer_spec.len_nfft_nmels = {(self.layer.n_fft//2)//self.layer.n_mels};
-    layer_spec.spec_size = {self.layer.shape[0]*self.layer.shape[1]};
-    layer_spec.ts_us = {int(1/self.layer.input_fs*1000*1000)};
+    layer_spec.n_fft = {self.wrapper.n_fft};
+    layer_spec.n_mels = {self.wrapper.n_mels};
+    layer_spec.frame_length = {self.wrapper.input_length};
+    layer_spec.sample_rate = {self.wrapper.sample_rate};
+    layer_spec.n_blocks = {self.wrapper.n_blocks};
+    layer_spec.n_fft_table = {int(self.wrapper.n_fft / 2)};
+    layer_spec.noverlap = {self.wrapper.noverlap};
+    layer_spec.step = {self.wrapper.step};
+    layer_spec.len_nfft_nmels = {(self.wrapper.n_fft // 2) // self.wrapper.n_mels};
+    layer_spec.spec_size = {self.wrapper.shape[0] * self.wrapper.shape[1]};
+    layer_spec.ts_us = {int(1 / self.wrapper.sample_rate * 1000 * 1000)};
 
     return layer_spec;
 }}
         '''
         return text
 
-    def predict(self, input_name, output_name):
+    def invoke(self, input_name, output_name):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously

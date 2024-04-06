@@ -2,21 +2,21 @@
 #include "embedia_debug.h"
 
 // Initialization function prototypes
-normalization_layer_t init_standard_scaler_data(void);
+normalization_layer_t init_s_k_l_standard_scaler_wrapper_data(void);
 dense_layer_t init_dense_data(void);
 dense_layer_t init_dense_1_data(void);
 dense_layer_t init_dense_2_data(void);
 
 
 // Global Variables
-normalization_layer_t standard_scaler_data;
+normalization_layer_t s_k_l_standard_scaler_wrapper_data;
 dense_layer_t dense_data;
 dense_layer_t dense_1_data;
 dense_layer_t dense_2_data;
 
 
 void model_init(){
-    standard_scaler_data = init_standard_scaler_data();
+    s_k_l_standard_scaler_wrapper_data = init_s_k_l_standard_scaler_wrapper_data();
     dense_data = init_dense_data();
     dense_1_data = init_dense_1_data();
     dense_2_data = init_dense_2_data();
@@ -27,31 +27,35 @@ void model_predict(data1d_t input, data1d_t * output){
   
     prepare_buffers();
     
-    //*************** LAYER 0 **************//
-    // Layer name: standard_scaler
+    //******************** LAYER 0 *******************//
+    // Layer name: s_k_l_standard_scaler_wrapper
     data1d_t output0;
-    standard_norm_layer(standard_scaler_data, input, &output0);
-    // Debug function for layer standard_scaler
-    print_data1d_t("standard_scaler", output0);
+    standard_norm_layer(s_k_l_standard_scaler_wrapper_data, input, &output0);
+    // Debug function for layer s_k_l_standard_scaler_wrapper
+    print_data1d_t("s_k_l_standard_scaler_wrapper", output0);
     
-    //*************** LAYER 1 **************//
+    //******************** LAYER 1 *******************//
     // Layer name: dense
     input = output0;
     dense_layer(dense_data, input, &output0);
     
-    // Activation layer for dense
-    relu_activation(output0.data, 16);
     // Debug function for layer dense
     print_data1d_t("dense", output0);
     
-    //*************** LAYER 2 **************//
+    //******************** LAYER 2 *******************//
+    // Layer name: dense1
+    relu_activation(output0.data, 16);
+    // Debug function for layer dense1
+    print_data1d_t("dense1", output0);
+    
+    //******************** LAYER 3 *******************//
     // Layer name: dropout
     input = output0;
     
     // Debug function for layer dropout
     
     
-    //*************** LAYER 3 **************//
+    //******************** LAYER 4 *******************//
     // Layer name: dense_1
     input = output0;
     dense_layer(dense_1_data, input, &output0);
@@ -59,29 +63,38 @@ void model_predict(data1d_t input, data1d_t * output){
     // Debug function for layer dense_1
     print_data1d_t("dense_1", output0);
     
-    //*************** LAYER 4 **************//
+    //******************** LAYER 5 *******************//
+    // Layer name: dense_11
+    
+    // Debug function for layer dense_11
+    print_data1d_t("dense_11", output0);
+    
+    //******************** LAYER 6 *******************//
     // Layer name: activation
-    relu_activation(output0.data, 8);
     relu_activation(output0.data, 8);
     // Debug function for layer activation
     print_data1d_t("activation", output0);
     
-    //*************** LAYER 5 **************//
+    //******************** LAYER 7 *******************//
     // Layer name: dropout_1
     input = output0;
     
     // Debug function for layer dropout_1
     
     
-    //*************** LAYER 6 **************//
+    //******************** LAYER 8 *******************//
     // Layer name: dense_2
     input = output0;
     dense_layer(dense_2_data, input, &output0);
     
-    // Activation layer for dense_2
-    sigmoid_activation(output0.data, 1);
     // Debug function for layer dense_2
     print_data1d_t("dense_2", output0);
+    
+    //******************** LAYER 9 *******************//
+    // Layer name: dense_21
+    sigmoid_activation(output0.data, 1);
+    // Debug function for layer dense_21
+    print_data1d_t("dense_21", output0);
     
 
     *output = output0;
@@ -101,7 +114,7 @@ int model_predict_class(data1d_t input, data1d_t * results){
 // Implementation of initialization functions
 
 
-normalization_layer_t init_standard_scaler_data(void){
+normalization_layer_t init_s_k_l_standard_scaler_wrapper_data(void){
     /*[ 2.59901768e+01  1.17721022e+01  1.00964173e+03  6.70353635e+01
   2.22318271e+01  3.25088409e+01  1.95186640e+01  1.59666012e+01
   7.16895874e+00  1.01242633e+03  1.00540668e+03 -6.54297191e-02

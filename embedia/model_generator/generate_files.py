@@ -4,14 +4,11 @@ import numpy as np
 from embedia.model_generator.project_options import (
         ModelDataType,
         ProjectType,
-        DebugMode,
-        BinaryBlockSize
-    )
+        DebugMode
+)
 from embedia.utils import file_management
-from embedia.layers.data_layer import DataLayer
-from embedia.layers.activation.activation import Activation
 from embedia.model_generator.project_options import BinaryBlockSize
-from embedia.layers.unimplemented_layer import UnimplementedLayer
+from embedia.core.unimplemented_layer import UnimplementedLayer
 
 def multi_replace(adict, text):
     # Create a regular expression from all of the dictionary keys
@@ -32,19 +29,30 @@ def indent(multi_ln_code, level=1, spaces=4):
     return re.sub("^", level*spaces*' ', code, flags=re.MULTILINE)
 
 
-def generate_embedia_library(embedia_layers, src_folder, options):
+def generate_embedia_library(embedia_model, src_folder, dst_folder, ext_h, ext_c, options):
 
-    embedia_files = dict()
+    # files to add "#include"
+    update_include_files = ['embedia.h']
 
     filenames = os.listdir(src_folder)
-    for filename in filenames:
-        embedia_files[filename] = file_management.read_from_file(src_folder+filename)
+    required_files = embedia_model.required_files
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
-    # Prepare includes
+    embedia_files = []
 
+    for (header_file, code_file) in required_files:
+        # check if project's files exists
+        if header_file is not None:
+            if header_file not in filenames:
+                raise FileNotFoundError(f'Missing file: {header_file} in {src_folder}')
+            embedia_files.append(header_file)
+        if code_file is not None:
+            if code_file not in filenames:
+                raise FileNotFoundError(f'Missing file: {code_file} in {src_folder}')
+            embedia_files.append(code_file)
+
+    # Prepare includes for files
+    includes_h = ''
     if options.data_type == ModelDataType.BINARY or options.data_type == ModelDataType.BINARY_FIXED32 or options.data_type == ModelDataType.BINARY_FLOAT16:
-
 
         if options.tamano_bloque == BinaryBlockSize.Bits8:
             tam_block = 8
@@ -57,25 +65,35 @@ def generate_embedia_library(embedia_layers, src_folder, options):
 
         if options.project_type == ProjectType.ARDUINO:
             includes_h = '#include "Arduino.h"\n'
-
             includes_h += f'\n#define binary_block_size {tam_block}\n'
-
         else:
             includes_h = '#include <stdlib.h>\n'
             includes_h += f'\n#define binary_block_size {tam_block}\n'
-
-
-        embedia_files['embedia.h'] = multi_replace({'{includes}': includes_h}, embedia_files['embedia.h'])
-
     else:
-
         if options.project_type == ProjectType.ARDUINO:
             includes_h = '#include "Arduino.h"\n'
         else:
             includes_h = '#include <stdlib.h>\n'
 
-        embedia_files['embedia.h'] = multi_replace({'{includes}': includes_h}, embedia_files['embedia.h'])
+    for i, filename in enumerate(embedia_files):
+        if filename.endswith('.c'):
+            new_name = filename.replace('.c', ext_c)
+        elif filename.endswith('.h'):
+            new_name = filename.replace('.h', ext_h)
+        else:
+            new_name = filename
 
+        src_file = os.path.join(src_folder, filename)
+        dst_file = os.path.join(dst_folder, new_name)
+        if filename in update_include_files:
+            content = file_management.read_from_file(src_file)
+            content = multi_replace({'{includes}': includes_h}, content)
+            file_management.save_to_file(dst_file, content)
+        else:
+            file_management.copy(src_file, dst_file)
+
+        # update with new filename
+        embedia_files[i] = new_name
 
     return embedia_files
 
@@ -92,8 +110,7 @@ def get_input_const(input_shape):
     return None
 
 
-def generate_embedia_model(model, src_folder, model_name, model_info, options):
-
+def generate_embedia_model(model, src_folder, dst_folder, ext_h, ext_c, model_name, model_info, options):
     def format_model_name(model_name):
         model_name = model_name.lower()
         if not model_name.endswith('model'):
@@ -113,9 +130,9 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
 
     model_name_h = filename.upper()
     # macros_first_shape = embedia_layers[0].get_macros_first_shape()
-    input_data_type = embedia_layers[0].get_input_data_type()
-    output_data_type = embedia_layers[-1].get_output_data_type()
-    input_shape = embedia_layers[0].get_input_shape()
+    input_data_type = embedia_layers[0].input_data_type
+    output_data_type = embedia_layers[-1].output_data_type
+    input_shape = embedia_layers[0].input_shape
 
     # prepare input dimension constant
     input_dict = get_input_const(input_shape)
@@ -127,10 +144,10 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
     input_const += f'\n#define INPUT_SIZE {total_size}\n'
 
     prototypes_init = ""
-    var = ""
-    init = ""
-    functions_init = ""
-    predict = "prepare_buffers();\n"
+    var_decl = ""
+    data_init = ""
+    func_impl = ""
+    predict_fn = "prepare_buffers();\n"
 
     data_layers_input = [{'type': input_data_type, 'var_name': 'input'}, ]
     data_layers_output = []
@@ -138,71 +155,59 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
     first_layer = True
 
     for layer in embedia_layers:
-        if layer.layer is None:
-            predict += f'\n//<<<<<<<<<<<<<<<<<<<<< INTERNAL LAYER >>>>>>>>>>>>>>>>>>>>>//'
+        if layer.wrapper is None:
+            predict_fn += f'\n//<<<<<<<<<<<<<<<<<<<<< INTERNAL LAYER >>>>>>>>>>>>>>>>>>>>>//'
         else:
             layer_id += 1
-            predict += f'\n//******************** LAYER {layer_id} *******************//'
+            predict_fn += f'\n//******************** LAYER {layer_id} *******************//'
 
-        predict += f'\n// Layer name: {layer.name}\n'
-
+        predict_fn += f'\n// Layer name: {layer.name}\n'
 
         implemented_layer = not isinstance(layer, UnimplementedLayer)
 
-
         if implemented_layer:
             # Initialization
-            if isinstance(layer, DataLayer):
-                prototypes_init += layer.prototypes_init()
-                var += layer.var()
-                init += layer.init()
-                functions_init += layer.functions_init()
+            if layer.use_data_structure:
+                prototypes_init += layer.function_prototype      # data init function prototype declaration
+                var_decl += layer.variable_declaration      # data variable declaration
+                data_init += layer.variable_initialization  # variable initialization via data init function
+                func_impl += layer.function_implementation  # data init function implementation
 
             # layer section of predict function
-
             if not layer.inplace_output:
 
-                input_layer_type = layer.get_input_data_type()
+                input_layer_type = layer.input_data_type
                 if data_layers_input[-1]['type'] != input_layer_type:
                     var_input = f'input{len(data_layers_input)}'
-                    predict += f'{input_layer_type} {var_input};\n'
+                    predict_fn += f'{input_layer_type} {var_input};\n'
                     data_layers_input.append({'type': input_layer_type, 'var_name': var_input})
 
                 if not first_layer:
-                    predict += f'{data_layers_input[-1]["var_name"]} = {data_layers_output[-1]["var_name"]};\n'
+                    predict_fn += f'{data_layers_input[-1]["var_name"]} = {data_layers_output[-1]["var_name"]};\n'
                 else:
                     first_layer = False
 
-                output_layer_type = layer.get_output_data_type()
+                output_layer_type = layer.output_data_type
                 if data_layers_output == [] or data_layers_output[-1]['type'] != output_layer_type:
                     var_output = f'output{len(data_layers_output)}'
-                    predict += f'{output_layer_type} {var_output};\n'
+                    predict_fn += f'{output_layer_type} {var_output};\n'
                     data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
-
 
             param_in = data_layers_input[-1]['var_name']
             param_out = data_layers_output[-1]['var_name']
-            predict += f'{layer.predict(param_in, param_out)}\n'
-
-            # Add activation function
-            act_fn = layer.activation_function(var_output)
-            if act_fn != '':
-                if not isinstance(layer, Activation):
-                    predict += f'// Activation layer for {layer.name}\n'
-                predict += f'{act_fn}\n'
+            predict_fn += f'{layer.invoke(param_in, param_out)}\n'
 
             # Add debug function if is enabled
             if options.debug_mode != DebugMode.DISCARD:
                 dbg_fn = layer.debug_function(var_output)
-                predict += f'// Debug function for layer {layer.name}\n'
-                predict += f'{dbg_fn}\n'
+                predict_fn += f'// Debug function for layer {layer.name}\n'
+                predict_fn += f'{dbg_fn}\n'
         else:
             # message of unimplemented layer
-            predict += '// ' + layer.message + '\n'
-
+            predict_fn += '// ' + layer.message + '\n'
 
     # indent code
-    predict = indent(predict)
+    predict_fn = indent(predict_fn)
     # improve code in order to include the correct model funcion
     if output_data_type == 'data1d_t':
         n_classes = model.identify_target_classes()  # determine model classes, 0=regression, 1=binary, >1=multiclass
@@ -214,7 +219,7 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
         predict_class = '''//TO DO: argmax with data2d_t and data3d_t
     return -1; '''
 
-    h = file_management.read_from_file(src_h).format(
+    text_model_h = file_management.read_from_file(src_h).format(
             model_name_h=model_name_h,
             model_info=model_info,
             input_const=input_const,
@@ -222,24 +227,26 @@ def generate_embedia_model(model, src_folder, model_name, model_info, options):
             output_data_type=output_data_type
         )
 
-    c = file_management.read_from_file(src_c).format(
+    text_model_c = file_management.read_from_file(src_c).format(
             includes=includes,
             filename=filename,
             prototypes_init=prototypes_init,
-            var=var,
-            init=init,
-            predict=predict,
+            var=var_decl,
+            init=data_init,
+            predict=predict_fn,
             predict_class=predict_class,
-            functions_init=functions_init,
+            functions_init=func_impl,
             input_data_type=input_data_type,
             output_data_type=output_data_type,
             output_name=var_output
         )
 
-    return (h, c, filename)
+    file_management.save_to_file(os.path.join(dst_folder, filename + ext_h), text_model_h)
+    file_management.save_to_file(os.path.join(dst_folder, filename + ext_c), text_model_c)
+    return (text_model_h, text_model_c, filename)
 
 
-def generate_embedia_main(embedia_layers, src_folder, filename, options, embedia_model):
+def generate_embedia_main(embedia_layers, src_folder, dst_embedia_folder, model_name, options, embedia_model):
 
     src_c = os.path.join(src_folder, 'main/main_')
 
@@ -253,14 +260,18 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options, embedia
         includes_c = '#include <stdio.h>\n'
         baud_rate = "\n"
 
-    includes_c += '#include "embedia.h"\n'
-    includes_c += '#include "'+filename+'.h"\n'
+    filename = os.path.join(dst_embedia_folder, 'embedia.h')
+    includes_c += f'#include "{filename}"\n'
+
+    filename = os.path.join(dst_embedia_folder, model_name+'.h')
+    includes_c += f'#include "{filename}"\n'
 
     example_var_name = 'sample_data'
     main_code = ''
 
     if options.example_data is not None:
-        includes_c += '#include "example_file.h"\n'
+        filename = os.path.join(dst_embedia_folder, 'example_file.h')
+        includes_c += f'#include "{filename}"\n'
         main_code += f'''
     // sample intitialization
     input.data = {example_var_name};
@@ -272,8 +283,8 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options, embedia
 '''
 
     # prepare data for model input and output
-    input_data_type = embedia_layers[0].get_input_data_type()
-    output_data_type = embedia_layers[-1].get_output_data_type()
+    input_data_type = embedia_layers[0].input_data_type
+    output_data_type = embedia_layers[-1].output_data_type
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado no se usa igual por ahora
 
@@ -285,15 +296,13 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options, embedia
         model_data_type = 'fixed'
 
 
-    input_const = get_input_const(embedia_layers[0].get_input_shape())
+    input_const = get_input_const(embedia_layers[0].input_shape)
     input_dim = ''
     for k in input_const:
         input_dim += f'{k}, '
 
     input_data = f'''{input_data_type} input = {{ {input_dim} NULL}};\n'''
     output_data = f'''{output_data_type} results;\n'''
-
-
 
     main_code += '''
 
@@ -349,18 +358,44 @@ def generate_embedia_main(embedia_layers, src_folder, filename, options, embedia
     return (h, c)
 
 
-def generate_codeblock_project(project_name, files, src_folder):
+def generate_embedia_debug(src_dbg_folder, dst_folder, options):
+    # add debug mode macro to header file
+    content = file_management.read_from_file(os.path.join(src_dbg_folder, 'embedia_debug.h'))
+    # add include
+    content = content.format(EMBEDIA_DEBUG='#define EMBEDIA_DEBUG %d\n' % options.debug_mode)
+    file_management.save_to_file(os.path.join(dst_folder, 'embedia_debug.h'), ''.join(content))
+    # copy aditional debug file
+    if options.project_type == ProjectType.ARDUINO:
+        file_management.copy(os.path.join(src_dbg_folder, 'embedia_debug_def_arduino.h'),
+                    os.path.join(dst_folder, 'embedia_debug_def.h'))
+        # copy implementation file
+        file_management.copy(os.path.join(src_dbg_folder, 'embedia_debug.c'),
+                    os.path.join(dst_folder, 'embedia_debug.cpp'))
+    else:
+        file_management.copy(os.path.join(src_dbg_folder, 'embedia_debug_def_c.h'),
+                    os.path.join(dst_folder, 'embedia_debug_def.h'))
+        # copy implementation file
+        file_management.copy(os.path.join(src_dbg_folder, 'embedia_debug.c'),
+                    os.path.join(dst_folder, 'embedia_debug.c'))
 
+def generate_codeblock_project(project_name, files, src_folder, _dst_embedia_folder_name):
+
+    embedia_output_folder = _dst_embedia_folder_name
     included_files = ''
     for filename in files:
         if filename[-2:].lower() == '.c':
+            if filename == 'main.c':
+                folder_filename = filename
+            else:
+                folder_filename = os.path.join(embedia_output_folder, filename)
             included_files += f'''
-        <Unit filename="{filename}">
+        <Unit filename="{folder_filename}">
             <Option compilerVar="CC" />
         </Unit>'''
         elif filename[-2:].lower() == '.h':
+            folder_filename = os.path.join(embedia_output_folder, filename)
             included_files += f'''
-        <Unit filename="{filename}" />'''
+        <Unit filename="{folder_filename}" />'''
 
     src_cbp = os.path.join(src_folder, 'main/codeblock_project.cbp')
     content = file_management.read_from_file(src_cbp)
@@ -398,7 +433,7 @@ def generate_examples(src_folder, var_name, options, embedia_model):
     #         return f"FL2FX({s})"
     #     data_type = 'fixed'
 
-    if embedia_model.is_data_quantized():
+    if embedia_model.is_data_quantized:
         (data_type, data_converter) = embedia_model.get_type_converter(ModelDataType.FLOAT)
     else:
         (data_type, data_converter) = embedia_model.get_type_converter()

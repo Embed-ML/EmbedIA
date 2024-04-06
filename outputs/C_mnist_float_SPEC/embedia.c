@@ -151,7 +151,7 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
 }
 
 
-/*static void depthwise_new(depthwise_conv2d_layer_t filters, data3d_t input, data3d_t * output){
+/*static void depthwise_bias(depthwise_conv2d_layer_t filters, data3d_t input, data3d_t * output){
     uint32_t i,j,k,l,c;
     float suma;
 
@@ -171,7 +171,7 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
 }
 */
 
-static void depthwise_new(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
+static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
     int i, j, k, l, m, n, o;
     int kernel_size = layer.filters.kernel_size;
     int output_height = output->height;
@@ -217,7 +217,7 @@ void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data
     output->width    = input.width - layer.filters.kernel_size + 1;
     output->data     = (float*)swap_alloc( sizeof(float)*output->height*output->width*output->channels );
 
-    depthwise_new(layer, input, output);
+    depthwise_bias(layer, input, output);
 }
 
 /*
@@ -569,14 +569,14 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
 }
 
 
-/* image_adapt_layer()
+/* channel_adapt_layer()
  *  Converts Tensorflow/Keras Image (Height, Width, Channel) to Embedia format (Channel, Height, Width).
  *  Usually required for first convolutional layer
  * Parameters:
  *  input   => input data of type data3d_t.
  *  *output => pointer to the data3d_t structure where the result will be stored.
  */
-void image_adapt_layer(data3d_t input, data3d_t * output){
+void channel_adapt_layer(data3d_t input, data3d_t * output){
 
     uint32_t i, j, c, l;
 

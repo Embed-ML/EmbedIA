@@ -4,18 +4,21 @@
 
 /*
 
-+-------------------+----------------+------------+-------+------+------------+
-| Layer(activation) | Name           | #Param(NT) | Shape | MACs | Size (KiB) |
-+-------------------+----------------+------------+-------+------+------------+
-| StandardScaler    | StandardScaler |          0 | (13,) |   13 |     0.021  |
-| Dense(relu)       | dense          |        224 | (16,) |  208 |     0.359  |
-| Dropout           | dropout        |          0 | (16,) |    0 |     0.000  |
-| Dense(linear)     | dense_1        |        136 |  (8,) |  128 |     0.203  |
-| Activation(relu)  | activation     |          0 |  (8,) |    0 |     0.000  |
-| Dropout           | dropout_1      |          0 |  (8,) |    0 |     0.000  |
-| Dense(sigmoid)    | dense_2        |          9 |  (1,) |    8 |     0.018  |
-+-------------------+----------------+------------+-------+------+------------+
-Total params (NT)....: 369
++---------------+-------------------------------+------------+-------+------+------------+
+| EmbedIA Layer | Name                          | #Param(NT) | Shape | MACs | Size (KiB) |
++---------------+-------------------------------+------------+-------+------+------------+
+| Normalization | s_k_l_standard_scaler_wrapper |          0 | (13,) |   13 |     0.021  |
+| Dense         | dense                         |          0 | (16,) |  208 |     0.359  |
+| Activation    | dense1                        |          0 | (16,) |    0 |     0.000  |
+| DummyLayer    | dropout                       |          0 | (16,) |    0 |     0.000  |
+| Dense         | dense_1                       |          0 |  (8,) |  128 |     0.203  |
+| Activation    | dense_11                      |          0 |  (8,) |    0 |     0.000  |
+| Activation    | activation                    |          0 |  (8,) |    0 |     0.000  |
+| DummyLayer    | dropout_1                     |          0 |  (8,) |    0 |     0.000  |
+| Dense         | dense_2                       |          0 |  (1,) |    8 |     0.018  |
+| Activation    | dense_21                      |          0 |  (1,) |    0 |     0.000  |
++---------------+-------------------------------+------------+-------+------+------------+
+Total params (NT)....: 0
 Total size in KiB....: 0.601
 Total MACs operations: 357
 
