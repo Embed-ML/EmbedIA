@@ -1,7 +1,7 @@
 #ifndef _EXAMPLE_FILE_H
 #define _EXAMPLE_FILE_H
 
-#include "embedia.h"
+#include "common.h"
 
 
 {examples}

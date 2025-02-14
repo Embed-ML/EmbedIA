@@ -1,6 +1,6 @@
 from embedia.core.layer import Layer
 
-class DummyLayer(Layer):
+class DummyLayer(Layer ):
     """
     This class defines the behavior of an EmdedIA layer/element that does not
     play any purpose in the inference process

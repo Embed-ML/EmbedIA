@@ -1,9 +1,9 @@
-from embedia.core.layer import Layer
+from embedia.core.neural_net_layer import NeuralNetLayer
 from embedia.layers.activation.activation_functions import ActivationFunctions
 from tensorflow.keras.layers import Activation as KerasActivation
 
 
-class Activation(Layer):
+class Activation(NeuralNetLayer):
     """
     Normally all layers can directly incorporate activation functions. However,
     sometimes this functionality can appear as an independent layer. The EmbedIA
@@ -28,10 +28,10 @@ class Activation(Layer):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be implemented in
-        "embedia.c" and by convention should be called
+        "neural_net.c" and by convention should be called
         "class name" + "_activation" or "function name" + "_activation".
         For example, for the Keras Sigmoid Activation, the function
-        "sigmoid_activation" must be implemented in "embedia.c"
+        "sigmoid_activation" must be implemented in "neural_net.c"
         Parameters
         ----------
         input_name : str
@@ -45,7 +45,7 @@ class Activation(Layer):
         -------
         str
             C code with the invocation of the activation function in the file
-            "embedia.c" that performs the processing of the layer
+            "neural_net.c" that performs the processing of the layer
         """
         output_size = self.output_size # number of elements number
 

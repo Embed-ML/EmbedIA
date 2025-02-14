@@ -1,4 +1,4 @@
-from embedia.core.layer import Layer
+from embedia.core.neural_net_layer import NeuralNetLayer
 from embedia.model_generator.project_options import ModelDataType
 from embedia.utils.binary_helper import BinaryGlobalMask
 from embedia.model_generator.project_options import BinaryBlockSize
@@ -6,12 +6,12 @@ import numpy as np
 import larq as lq
 import math
 
-class QuantSeparableConv2D(Layer):
+class QuantSeparableConv2D(NeuralNetLayer):
 
     def __init__(self, model, wrapper, **kwargs):
 
         super().__init__(model, wrapper, **kwargs)
-        # the type defined in "struct_data_type" must exists in "embedia.h"
+        # the type defined in "struct_data_type" must exists in "neural_net.h"
         # self.struct_data_type = self.get_type_name().lower()+'_layer_t'
         # self.input_data_type = "data3d_t"
         # self.output_data_type = "data3d_t"
@@ -103,7 +103,7 @@ class QuantSeparableConv2D(Layer):
 
         return MACs
 
-    def calculate_memory(self, types_dict):
+    def calculate_memory(self):
         """
         calculates amount of memory required to store the data of layer
         Returns
@@ -126,13 +126,13 @@ class QuantSeparableConv2D(Layer):
         if (self.tipo_conv==0):
 
             # EmbedIA filter structure size
-            sz_filter_t = types_dict['filter_t']
+            sz_filter_t = 4
 
             mem_size = ((depth_params * dt_size / 8 + sz_filter_t) + ((point_params * dt_size / 8 + sz_filter_t) * n_filters))
 
         else:
             # EmbedIA filter structure size
-            sz_filter_t = types_dict['quant_filter_t']
+            sz_filter_t = 4
 
             if self.options.tamano_bloque == BinaryBlockSize.Bits8:
                 dt_size = 8
@@ -320,11 +320,11 @@ class QuantSeparableConv2D(Layer):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously
-        implemented in "embedia.c" and by convention should be called
+        implemented in "neural_net.c" and by convention should be called
         "class name" + "_layer".
         For example, for the EmbedIA Dense class associated to the Keras
         Dense layer, the function "dense_layer" must be implemented in
-        "embedia.c"
+        "neural_net.c"
 
         Parameters
         ----------
@@ -339,7 +339,7 @@ class QuantSeparableConv2D(Layer):
         -------
         str
             C code with the invocation of the function that performs the
-            processing of the layer in the file "embedia.c".
+            processing of the layer in the file "neural_net.c".
 
         """
         if self.tipo_conv==0:

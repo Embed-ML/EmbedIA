@@ -1,10 +1,10 @@
-from embedia.core.layer import Layer
+from embedia.core.neural_net_layer import NeuralNetLayer
 from embedia.utils.c_helper import declare_array
 from embedia.model_generator.project_options import ModelDataType
 import numpy as np
 
 
-class Dense(Layer):
+class Dense(NeuralNetLayer):
     """
     The Dense layer is a layer that requires additional data (weights to be
     initialized) in addition to the input data. For this reason it inherits
@@ -14,16 +14,16 @@ class Dense(Layer):
     Normally the programmer must implement two methods. The first one is
     "function_implementation" which returns the implementation of the initialization
     function in C code, retrieving the layer information and dumping it into
-    the structure (defined in embedia.h") in an appropriate way. The second one
+    the structure (defined in neural_net.h") in an appropriate way. The second one
     is "predict" where the programmer must invoke the EmbedIA function
-    (implemented in "embedia.c") that must perform the processing of the layer.
+    (implemented in "neural_net.c") that must perform the processing of the layer.
     To avoid overlapping names, both the function name and the variable name
     are generated automatically using the layer name. The same happens with the
     data type of the structure to be completed whose name comes from the name
     of the Python class that implements the layer.
     Ex: As this class is called Dense, the type of the additional structure
     will be called "dense_datat" and must be defined previously in the
-    "embedia.h" file.
+    "neural_net.h" file.
     If the name of the layer is dense0, it will automatically be generated in
     the C file of the model, the declaration of the variable
     "dense_datat dense0_data", the prototype of the initialization function
@@ -86,7 +86,7 @@ class Dense(Layer):
     def function_implementation(self):
         """
         Generate C code with the initialization function of the additional
-        structure (defined in "embedia.h") required by the layer.
+        structure (defined in "neural_net.h") required by the layer.
         Note: it is important to note the automatically generated function
         prototype (defined in the DataLayer class).
 
@@ -137,11 +137,11 @@ class Dense(Layer):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously
-        implemented in "embedia.c" and by convention should be called
+        implemented in "neural_net.c" and by convention should be called
         "class name" + "_layer".
         For example, for the EmbedIA Dense class associated to the Keras
         Dense layer, the function "dense_layer" must be implemented in
-        "embedia.c"
+        "neural_net.c"
 
         Parameters
         ----------
@@ -156,7 +156,7 @@ class Dense(Layer):
         -------
         str
             C code with the invocation of the function that performs the
-            processing of the layer in the file "embedia.c".
+            processing of the layer in the file "neural_net.c".
 
         """
 

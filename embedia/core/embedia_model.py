@@ -62,6 +62,13 @@ class EmbediaModel(object):
     def options(self, options):
         self._options = options
 
+    @property
+    def model_name(self):
+        model_name = self._model.name.lower()
+        if not model_name.endswith('model'):
+            model_name += '_model'
+        return model_name
+
     def _get_data_type_file(self):
         data_type = self.options.data_type
         if data_type == ModelDataType.FIXED8:

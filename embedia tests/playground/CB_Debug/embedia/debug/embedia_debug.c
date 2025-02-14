@@ -118,6 +118,7 @@ void print_data3d_t(const char *head_text, data3d_t data){
  * Parámetros:
  *                filter_t filter => filter a imprimir
  */
+ /*
 void print_filter_t(const char *head_text, filter_t filter, uint16_t channels, size2d_t kernel_size){
 
     #if EMBEDIA_DEBUG > 0
@@ -149,3 +150,4 @@ void print_filter_t(const char *head_text, filter_t filter, uint16_t channels, s
 
     #endif // EMBEDIA_DEBUG 0
 }
+*/

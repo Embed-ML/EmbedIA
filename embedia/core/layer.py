@@ -160,7 +160,7 @@ class Layer(object):
         that must initialize the data structure required by the layer
         (e.g. neuron weights). The return value must match the type
         indicated by the property "struct_data_type" and function name must
-        have the name "init_"+"layer name "+"_data" and defined in "embedia.c"
+        have the name "init_"+"layer name "+"_data" and defined in "neural_net.c"
         file (e.g.: "dense_data_t init_dense0_data();").
         Returns
         -------
@@ -177,7 +177,7 @@ class Layer(object):
         initialize the data structure required by the layer (e.g. neuron
         weights). The return value must match the type indicated by the
         property "struct_data_type". The function must be named
-        "init_"+"layer name "+"_data" and must be implemented in "embedia.c"
+        "init_"+"layer name "+"_data" and must be implemented in "neural_net.c"
         file (e.g.: "dense_data_t init_dense0_data() {....}").
         Note that data types such as arrays must be declared as "static" to
         persist in memory after the function has been invoked.
@@ -226,7 +226,7 @@ class Layer(object):
         """
         generates an automatic EmbedIA name for data type assosiated to the
         class that implements layer/element function. This name must exits in
-        "embedia.h" and has snake case format
+        "neural_net.h" and has snake case format
         Returns
         -------
         str
@@ -416,7 +416,7 @@ class Layer(object):
         retorna una lista de tuplas indicando los nombres de los archivos donde se encuentra la definicion de
         tipos de datos (.h) y la implementación de las funciones (.c) requeridos por la capa/elemento
         '''
-        return [('embedia.h', 'embedia.c')]
+        return [('common.h', 'common.c')]
 
     def calculate_MAC(self):
         """
@@ -457,9 +457,9 @@ class Layer(object):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be implemented in
-        "embedia.c" and by convention should be called "class name" + "_layer".
+        "neural_net.c" and by convention should be called "class name" + "_layer".
         For example, for the EmbedIA Dense class associated to the Keras Dense
-        layer, the function "dense_layer" must be implemented in "embedia.c"
+        layer, the function "dense_layer" must be implemented in "neural_net.c"
         Parameters
         ----------
         input_name : str
@@ -472,7 +472,7 @@ class Layer(object):
         -------
         str
             C code with the invocation of the function that performs the
-            processing of the layer in the file "embedia.c".
+            processing of the layer in the file "neural_net.c".
         """
         return ''
 
@@ -492,7 +492,7 @@ class Layer(object):
         -------
         str
             C code with the invocation of the function that performs the
-            processing of the layer in the file "embedia.c".
+            processing of the layer in the file "neural_net.c".
         """
         name = self.name
         dbg_fn = 'print_' + self.output_data_type

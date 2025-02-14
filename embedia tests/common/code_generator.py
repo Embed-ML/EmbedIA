@@ -70,7 +70,8 @@ class CodeGenerator:
         repl_dict = {
             '{include}': '#include "embedia_debug.h"',
             '{EMBEDIA_DEBUG}': '#define EMBEDIA_DEBUG 2',
-            'embedia.h': f'../{datatype_folder}/embedia.h'
+            'neural_net.h': f'../{datatype_folder}/neural_net.h',
+            'common.h': f'../{datatype_folder}/common.h'
         }
         self._copy_file_with_replace(filename, filename, repl_dict)
 
@@ -92,24 +93,27 @@ class CodeGenerator:
 
         save_to_file(os.path.join(self.get_project_folder(), 'main.c'), content)
 
-    def _get_embedia_include_headers(self):
+    def _get_embedia_include_headers(self, embedia_model):
         if self._embedia_type == ModelDataType.FIXED32:
-            type_file = 'fixed32/fixed'
-            embedia_file = 'fixed32/embedia'
+            folder = 'fixed32'
+            type_file = f'{folder}/fixed'
         elif self._embedia_type == ModelDataType.FIXED16:
-            type_file = 'fixed16/fixed'
-            embedia_file = 'fixed16/embedia'
+            folder = 'fixed16'
+            type_file = f'{folder}/fixed'
         elif self._embedia_type == ModelDataType.FIXED8:
-            type_file = 'fixed8/fixed'
-            embedia_file = 'fixed8/embedia'
+            folder = 'fixed8'
+            type_file = f'{folder}/fixed'
         elif self._embedia_type == ModelDataType.QUANT8:
-            type_file = 'quant8/quant8'
-            embedia_file = 'quant8/embedia'
+            folder = 'quant8'
+            type_file = f'{folder}/quant8'
         else:
+            folder = 'float'
             type_file = ''
-            embedia_file = 'float/embedia'
 
-        headers = ['../embedia/' + embedia_file + '.h']
+        headers = []
+        for (head_file, code_file) in embedia_model.required_files:
+            if head_file is not None:
+                headers.append(f'../embedia/{folder}/{head_file}')
 
         if type_file != '':
             headers.append('../embedia/' + type_file + '.h')
@@ -295,7 +299,7 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float bnd_error, measures_
 
         main_code = '#include <stdlib.h>\n#include <stdio.h>\n#include <math.h>\n'
 
-        for header in self._get_embedia_include_headers():
+        for header in self._get_embedia_include_headers(embedia_model):
             main_code += f'#include "{header}"\n'
 
         (proto_decl, var_decl, data_init, func_impl, predict) = self._generate_code_for_layers(embedia_model.embedia_layers)

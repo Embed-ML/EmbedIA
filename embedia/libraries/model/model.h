@@ -6,7 +6,7 @@
 {model_info}
 */
 
-#include "embedia.h"
+#include "common.h"
 
 {input_const}
 

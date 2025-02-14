@@ -2,12 +2,6 @@ from tensorflow.keras.layers import Activation, Dense, ReLU, LeakyReLU, Softmax
 from tensorflow.keras.activations import relu, tanh, sigmoid
 
 
-# Tests list
-# TESTS_LIST = [
-#     {'name': 'Linear',
-#      'element': Activation('linear', input_shape=(1,10))
-#      }
-# ]
 
 def init_tests_lists():
 
@@ -44,6 +38,17 @@ def init_tests_lists():
 
 
 # Tests list
+# TESTS_LIST = [
+#     {'name': 'Linear',
+#      'element': Activation('linear', input_shape=(1,10))
+#      }
+# ]
+# TESTS_LIST = [
+#     {'name': 'Linear',
+#      'element': Dense(units=10, input_dim=10, activation='linear')
+#      }
+# ]
+
 TESTS_LIST = init_tests_lists()
 
 if __name__ == '__main__':

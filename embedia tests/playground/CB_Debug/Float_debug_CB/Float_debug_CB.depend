@@ -90,3 +90,36 @@
 	"../embedia/float/embedia.h"
 	"../embedia/debug/embedia_debug.h"
 
+1712717491 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\playground\cb_debug\float_debug_cb\main.c
+	<stdlib.h>
+	<stdio.h>
+	<math.h>
+	"../embedia/float/common.h"
+	"../embedia/debug/embedia_debug.h"
+
+1712717647 c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\playground\cb_debug\embedia\debug\embedia_debug.h
+	"../float/common.h"
+
+1712520956 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\playground\cb_debug\embedia\float\common.c
+	"common.h"
+
+1712520885 c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\playground\cb_debug\embedia\float\common.h
+	<stdlib.h>
+	<stdint.h>
+
+1712717495 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\playground\cb_debug\embedia\debug\embedia_debug.c
+	"embedia_debug.h"
+	"embedia_debug_def_c.h"
+
+1712455996 c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\playground\cb_debug\embedia\float\neural_net.h
+	<stdint.h>
+	"common.h"
+
+1707616366 c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\playground\cb_debug\embedia\debug\embedia_debug_def_c.h
+	<stdio.h>
+
+1712667422 source:c:\users\cesar\documents\gitlab\embedia-dev\embedia tests\playground\cb_debug\embedia\float\neural_net.c
+	<stdlib.h>
+	<math.h>
+	"neural_net.h"
+

@@ -1,9 +1,9 @@
-from embedia.core.layer import Layer
+from embedia.core.neural_net_layer import NeuralNetLayer
 from embedia.model_generator.project_options import ModelDataType
 import numpy as np
 
 
-class DepthwiseConv2D(Layer):
+class DepthwiseConv2D(NeuralNetLayer):
     """
      Develop info:
      This class must define the behavior of an EmdedIA layer/element. It defines
@@ -183,11 +183,11 @@ class DepthwiseConv2D(Layer):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously
-        implemented in "embedia.c" and by convention should be called
+        implemented in "neural_net.c" and by convention should be called
         "class name" + "_layer".
         For example, for the EmbedIA DepthwiseConv2D class associated to the Keras
         Dense layer, the function "depthwise_conv2d_layer" must be implemented in
-        "embedia.c"
+        "neural_net.c"
 
         Parameters
         ----------
@@ -202,7 +202,7 @@ class DepthwiseConv2D(Layer):
         -------
         str
             C code with the invocation of the function that performs the
-            processing of the layer in the file "embedia.c".
+            processing of the layer in the file "neural_net.c".
 
         """
 

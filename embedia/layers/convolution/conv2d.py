@@ -1,11 +1,11 @@
 
-from embedia.core.layer import Layer
+from embedia.core.neural_net_layer import NeuralNetLayer
 from embedia.model_generator.project_options import ModelDataType
 
 import numpy as np
 
 
-class Conv2D(Layer):
+class Conv2D(NeuralNetLayer):
     """
 
     Develop info:
@@ -104,7 +104,7 @@ class Conv2D(Layer):
     def function_implementation(self):
         """
         Generate C code with the initialization function of the additional
-        structure (defined in "embedia.h") required by the layer.
+        structure (defined in "neural_net.h") required by the layer.
         Note: it is important to note the automatically generated function
         prototype (defined in the DataLayer class).
 
@@ -180,11 +180,11 @@ class Conv2D(Layer):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously
-        implemented in "embedia.c" and by convention should be called
+        implemented in "neural_net.c" and by convention should be called
         "class name" + "_layer".
         For example, for the EmbedIA Conv2D class associated to the Keras
         Conv2D layer, the function "conv2d_layer" must be implemented in
-        "embedia.c"
+        "neural_net.c"
 
         Parameters
         ----------
@@ -199,7 +199,7 @@ class Conv2D(Layer):
         -------
         str
             C code with the invocation of the function that performs the
-            processing of the layer in the file "embedia.c".
+            processing of the layer in the file "neural_net.c".
 
         """
         # change function name for some optimizations

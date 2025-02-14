@@ -38,19 +38,20 @@ options.embedia_folder = '../embedia/'
 options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
 
-options.data_type = ModelDataType.FLOAT
+# options.data_type = ModelDataType.FLOAT
 # options.data_type = ModelDataType.FIXED32
 # options.data_type = ModelDataType.FIXED16
 # options.data_type = ModelDataType.FIXED8
+options.data_type = ModelDataType.QUANT8
 
 # options.debug_mode = DebugMode.DISCARD
 # options.debug_mode = DebugMode.DISABLED
-# options.debug_mode = DebugMode.HEADERS
-options.debug_mode = DebugMode.DATA
+options.debug_mode = DebugMode.HEADERS
+# options.debug_mode = DebugMode.DATA
 
 (samples, ids) = joblib.load(SAMPLES_FILE)
 
-res = model.predict(samples,,
+res = model.predict(samples)
 print((res*100).astype('int'))
 
 
@@ -72,5 +73,8 @@ generator.create_project(OUTPUT_FOLDER, PROJECT_NAME, model, options)
 
 print("Project", PROJECT_NAME, "exported in", OUTPUT_FOLDER)
 
-import larq
-larq.models.summary(model)
+try:
+    import larq
+    larq.models.summary(model)
+except:
+    pass

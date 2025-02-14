@@ -36,10 +36,14 @@
 		</Unit>
 		<Unit filename="../embedia/debug/embedia_debug.h" />
 		<Unit filename="../embedia/debug/embedia_debug_def_c.h" />
-		<Unit filename="../embedia/float/embedia.c">
+		<Unit filename="../embedia/float/common.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="../embedia/float/embedia.h" />
+		<Unit filename="../embedia/float/common.h" />
+		<Unit filename="../embedia/float/neural_net.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../embedia/float/neural_net.h" />
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>

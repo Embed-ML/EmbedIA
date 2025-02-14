@@ -1,10 +1,10 @@
 from math import sqrt
-from embedia.core.layer import Layer
+from embedia.core.neural_net_layer import NeuralNetLayer
 from embedia.utils.c_helper import declare_array
 from embedia.model_generator.project_options import ModelDataType
 
 
-class BatchNormalization(Layer):
+class BatchNormalization(NeuralNetLayer):
     """
     The normalization layer is a layer that requires additional data
     (coefficients and averages values to be initialized) in addition to the
@@ -15,16 +15,16 @@ class BatchNormalization(Layer):
     Normally the programmer must implement two methods. The first one is
     "function_implementation" which returns the implementation of the initialization
     function in C code, retrieving the layer information and dumping it into
-    the structure (defined in embedia.h) appropriately. The second one is
+    the structure (defined in neural_net.h) appropriately. The second one is
     "invoke", where the programmer must invoke the function EmbedIA function
-    (implemented in "embedia.c") that should perform the layer processing.
+    (implemented in "neural_net.c") that should perform the layer processing.
     To avoid overlapping names, both the function name and the variable name
     are automatically generated using the layer name. The same is true for the
     data type of the structure to be completed whose name comes from the name
     of the Python class that implements the layer.
     Ex: Since this class is called Normalization, the type of the additional
     structure must be called "normalization_datat" and must be previously
-    defined in the "embedia.h" file.
+    defined in the "neural_net.h" file.
     If the name of the layer is normalization0, it will be automatically
     generated in the model's C file, the declaration of the variable
     "normalization_datat normalization0_data", the prototype of the

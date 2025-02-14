@@ -1,12 +1,12 @@
-from embedia.core.layer import Layer
+from embedia.core.neural_net_layer import NeuralNetLayer
 
 
-class ChannelsAdapter(Layer):
+class ChannelsAdapter(NeuralNetLayer):
 
     """
     Normally the programmer must implement the method "predict",
     where the programmer must invoke the function EmbedIA function
-    (implemented in "embedia.c") that should perform the layer processing.
+    (implemented in "neural_net.c") that should perform the layer processing.
     To avoid overlapping names, both the function name and the variable name
     are automatically generated using the layer name.
 """

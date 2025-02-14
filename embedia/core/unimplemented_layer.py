@@ -1,10 +1,10 @@
-from embedia.core.layer import Layer as EmbediaLayer
+from embedia.core.layer import Layer
 from embedia.core.exceptions import UnsupportedLayerError
 from embedia.model_generator.project_options import UnimplementedLayerAction
-from tensorflow.keras.layers import Layer
+from tensorflow.keras.layers import Layer as TFKLayer
 
 
-class UnimplementedLayer(EmbediaLayer):
+class UnimplementedLayer(Layer):
     """
     This class defines the behavior of an EmdedIA layer/element that has not
     been implemented. Sometimes the lack of this element may be considered an
@@ -45,7 +45,7 @@ class UnimplementedLayer(EmbediaLayer):
                 raise UnsupportedLayerError(self.wrapper)
 
     def is_known_layer(self):
-        known = (isinstance(self.wrapper, Layer)
+        known = (isinstance(self.wrapper, TFKLayer)
                  and self.wrapper.__class__.__name__.startswith('Random'))
 
         return known

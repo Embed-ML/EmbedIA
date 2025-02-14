@@ -1,7 +1,7 @@
-from embedia.core.layer import Layer
+from embedia.core.neural_net_layer import NeuralNetLayer
 
 
-class Spectrogram(Layer):
+class Spectrogram(NeuralNetLayer):
 
     """
     
@@ -105,7 +105,7 @@ class Spectrogram(Layer):
     def function_implementation(self):
         """
         Generate C code with the initialization function of the additional
-        structure (defined in "embedia.h") required by the layer.
+        structure (defined in "neural_net.h") required by the layer.
         Note: it is important to note the automatically generated function
         prototype (defined in the DataLayer class).
 
@@ -165,11 +165,11 @@ spectrogram_layer_t init_melspec_data(void){{
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously
-        implemented in "embedia.c" and by convention should be called
+        implemented in "neural_net.c" and by convention should be called
         "class name" + "_layer".
         For example, for the EmbedIA Dense class associated to the Keras
         Dense layer, the function "dense_layer" must be implemented in
-        "embedia.c"
+        "neural_net.c"
 
         Parameters
         ----------
@@ -184,7 +184,7 @@ spectrogram_layer_t init_melspec_data(void){{
         -------
         str
             C code with the invocation of the function that performs the
-            processing of the layer in the file "embedia.c".
+            processing of the layer in the file "neural_net.c".
 
         """
 

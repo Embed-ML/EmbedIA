@@ -1,22 +1,126 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include "../embedia/float/embedia.h"
+#include "../embedia/float/common.h"
+#include "../embedia/float/neural_net.h"
 #include "../embedia/debug/embedia_debug.h"
 
-normalization_layer_t init_standard_normalization_data(void){
-    /*[0.4 1.2 1.  1.  1. ]*/
-    static const float sub_val[] ={
-    0.4, 1.2, 1.0, 1.0, 1.0
-    };
-    /*[1.25       2.5        1.58113883 1.11803399 1.11803399]*/
-    static const float inv_div_val[] ={
-    1.2499999999999998, 2.5, 1.5811388300841895, 1.118033988749895, 1.118033988749895,
+dense_layer_t init_dense_data(void){
 
-    };
+    static neuron_t neurons[10];
 
-    static const normalization_layer_t norm = { sub_val, inv_div_val  };
-    return norm;
+    /* [-0.48923254 -0.15338725  0.4241283   0.5087273  -0.01801896 -0.01702416
+  0.5171485   0.10863811  0.01469445 -0.10496682] 0.0*/
+    static const float weights0[] ={
+    -0.48923254013061523, -0.15338724851608276, 0.42412829399108887, 0.5087273120880127, 
+    -0.01801896095275879, -0.01702415943145752, 0.517148494720459, 0.10863810777664185, 
+    0.014694452285766602, -0.10496681928634644
+    };
+    
+    static const neuron_t neuron0 = {weights0, 0.0  };
+    neurons[0]=neuron0;
+
+    /* [-0.2797803   0.1362747  -0.11620006  0.25875574 -0.49334344 -0.03638643
+  0.10166502  0.13491267  0.11992884  0.04669541] 0.0*/
+    static const float weights1[] ={
+    -0.2797802984714508, 0.13627469539642334, -0.11620005965232849, 0.25875574350357056, 
+    -0.49334344267845154, -0.03638643026351929, 0.10166501998901367, 0.1349126696586609, 
+    0.11992883682250977, 0.04669541120529175
+    };
+    
+    static const neuron_t neuron1 = {weights1, 0.0  };
+    neurons[1]=neuron1;
+
+    /* [-0.47492906 -0.3251835   0.05123496  0.06292605  0.5025023  -0.48869988
+  0.19330436 -0.30391175 -0.18339881  0.08177412] 0.0*/
+    static const float weights2[] ={
+    -0.4749290645122528, -0.3251835107803345, 0.05123496055603027, 0.06292605400085449, 
+    0.5025023221969604, -0.48869988322257996, 0.19330435991287231, -0.3039117455482483, 
+    -0.18339881300926208, 0.08177411556243896
+    };
+    
+    static const neuron_t neuron2 = {weights2, 0.0  };
+    neurons[2]=neuron2;
+
+    /* [ 0.15014726 -0.0111255  -0.49466485 -0.15314946  0.28778017 -0.39894557
+  0.5449345   0.47485423 -0.37359023  0.04604739] 0.0*/
+    static const float weights3[] ={
+    0.15014725923538208, -0.011125504970550537, -0.49466484785079956, -0.15314945578575134, 
+    0.28778016567230225, -0.39894556999206543, 0.5449345111846924, 0.4748542308807373, 
+    -0.37359023094177246, 0.0460473895072937
+    };
+    
+    static const neuron_t neuron3 = {weights3, 0.0  };
+    neurons[3]=neuron3;
+
+    /* [ 0.07524395 -0.17893049  0.3953855   0.27145654 -0.4344333   0.19069642
+  0.40134305  0.03929007 -0.5229074  -0.37137455] 0.0*/
+    static const float weights4[] ={
+    0.07524394989013672, -0.17893049120903015, 0.3953855037689209, 0.2714565396308899, 
+    -0.43443331122398376, 0.19069641828536987, 0.40134304761886597, 0.03929007053375244, 
+    -0.5229073762893677, -0.37137454748153687
+    };
+    
+    static const neuron_t neuron4 = {weights4, 0.0  };
+    neurons[4]=neuron4;
+
+    /* [-0.13319337  0.2903567  -0.49457777 -0.15004969  0.19215178 -0.5236885
+ -0.05901733  0.04507321 -0.18860453  0.08255845] 0.0*/
+    static const float weights5[] ={
+    -0.13319337368011475, 0.29035669565200806, -0.4945777654647827, -0.15004968643188477, 
+    0.19215178489685059, -0.5236884951591492, -0.059017330408096313, 0.04507321119308472, 
+    -0.18860453367233276, 0.08255845308303833
+    };
+    
+    static const neuron_t neuron5 = {weights5, 0.0  };
+    neurons[5]=neuron5;
+
+    /* [ 0.23291242 -0.49973974 -0.258335   -0.431642   -0.05934185  0.29560524
+  0.41441822 -0.34803066 -0.01275641  0.05283296] 0.0*/
+    static const float weights6[] ={
+    0.23291242122650146, -0.49973973631858826, -0.2583349943161011, -0.43164199590682983, 
+    -0.05934184789657593, 0.29560524225234985, 0.41441822052001953, -0.3480306565761566, 
+    -0.012756407260894775, 0.052832961082458496
+    };
+    
+    static const neuron_t neuron6 = {weights6, 0.0  };
+    neurons[6]=neuron6;
+
+    /* [-0.07867908 -0.4807791  -0.16684988  0.41289115  0.12837756  0.04948914
+  0.49638164 -0.29310057 -0.40716815 -0.48941422] 0.0*/
+    static const float weights7[] ={
+    -0.07867908477783203, -0.48077911138534546, -0.16684988141059875, 0.412891149520874, 
+    0.12837755680084229, 0.04948914051055908, 0.49638164043426514, -0.2931005656719208, 
+    -0.4071681499481201, -0.4894142150878906
+    };
+    
+    static const neuron_t neuron7 = {weights7, 0.0  };
+    neurons[7]=neuron7;
+
+    /* [-0.01386327  0.5269022   0.46749616  0.5285349   0.3084126   0.11603057
+ -0.49248534  0.3499899  -0.12607703 -0.21666408] 0.0*/
+    static const float weights8[] ={
+    -0.01386326551437378, 0.5269021987915039, 0.4674961566925049, 0.5285348892211914, 
+    0.3084126114845276, 0.11603057384490967, -0.4924853444099426, 0.3499898910522461, 
+    -0.12607702612876892, -0.21666407585144043
+    };
+    
+    static const neuron_t neuron8 = {weights8, 0.0  };
+    neurons[8]=neuron8;
+
+    /* [-0.25480416 -0.31291914 -0.5002327  -0.5008355  -0.16544607 -0.14390454
+  0.52444494 -0.10082966 -0.07650846 -0.3469784 ] 0.0*/
+    static const float weights9[] ={
+    -0.25480416417121887, -0.31291913986206055, -0.5002326965332031, -0.5008354783058167, 
+    -0.16544607281684875, -0.14390453696250916, 0.5244449377059937, -0.10082966089248657, 
+    -0.07650846242904663, -0.34697839617729187
+    };
+    
+    static const neuron_t neuron9 = {weights9, 0.0  };
+    neurons[9]=neuron9;
+
+    dense_layer_t layer= { 10, neurons};
+    return layer;
 }
 
 
@@ -26,15 +130,15 @@ typedef struct{
     int total;
 } measures_info_t;
 
-float measure_error(data1d_t o_real, data1d_t o_pred, float bnd_error, measures_info_t* info){
+float measure_error(data2d_t o_real, data2d_t o_pred, float bnd_error, measures_info_t* info){
     int i;
     float error;
 
-    info->total=o_real.length;
+    info->total=o_real.width*o_real.height;
     info->match=0;
     info->acc_error=0;
 
-    for (i=0; i<o_real.length; i++){
+    for (i=0; i<o_real.width*o_real.height; i++){
         printf("%f   %f\n", o_real.data[i], o_pred.data[i]);
         error = fabs(o_real.data[i]-o_pred.data[i]);
         info->acc_error += error;
@@ -43,39 +147,36 @@ float measure_error(data1d_t o_real, data1d_t o_pred, float bnd_error, measures_
     }
 }
 
-data1d_t input = { 5, (float[]){ 0, 1, 1, 2, 0, 0, 1, 2, 2, 1, 2, 1, 1, 0, 2, 0, 2, 1, 1, 2, 0, 1, 0, 0, 0 } };
+data2d_t input = { 1, 10, (float[]){ 2, 1, 2, 0, 1, 0, 0, 2, 0, 0 } };
 
-data1d_t real_output = { 5, (float[]){ -0.5       , -0.5       ,  0.        ,  1.11803399, -1.11803399,
- -0.5       , -0.5       ,  1.58113883,  1.11803399,  0.        ,
-  2.        , -0.5       ,  0.        , -1.11803399,  1.11803399,
- -0.5       ,  2.        ,  0.        ,  0.        ,  1.11803399,
- -0.5       , -0.5       , -1.58113883, -1.11803399, -1.11803399 } };
+data2d_t real_output = { 1, 10, (float[]){ -0.08433855, -0.87920415, -1.2778928 ,  0.53732795,  0.40647522,
+ -0.6828874 , -1.3059881 , -1.4296606 ,  2.4425604 , -2.1900983  } };
 
-normalization_layer_t standard_normalization_data;
+dense_layer_t dense_data;
 
-data1d_t output;
+data2d_t output;
 
 
 #define ERROR_BOUND 1e-05
 
-measures_info_t info;
-
+measures_info_t info; 
+  
 int main(){
 
-        standard_normalization_data = init_standard_normalization_data();
+        dense_data = init_dense_data();
 
-
+    
     //************************ LAYER  0 ***********************//
+    dense_layer(dense_data, input, &output);
 
 
-// Debug function for layer dummy_layer
-
+// Debug function for layer dense
+print_data2d_t("dense", output);
     //************************ LAYER  1 ***********************//
-    //  input = output;
-    standard_norm_layer(standard_normalization_data, input, &output);
+    
 
-// Debug function for layer standard_normalization
-print_data1d_t("standard_normalization", output);
+// Debug function for layer dense1
+print_data2d_t("dense1", output);
 
     measure_error(real_output, output, ERROR_BOUND, & info);
     printf("Test result: %7.3f %%\n", 100.0 * info.match / info.total);

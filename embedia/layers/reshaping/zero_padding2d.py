@@ -1,14 +1,14 @@
-from embedia.core.layer import Layer
+from embedia.core.neural_net_layer import NeuralNetLayer
 
 
-class ZeroPadding2D(Layer):
+class ZeroPadding2D(NeuralNetLayer):
     """
     The ZeroPadding2D layer is a layer that does not require additional data beyond
     the input data (have padding size, but are parameters of the related function.
     For this reason it inherits from the "Layer" class that
     implements the basic behavior of an EmbedIA layer/element.
     Normally, the programmer must implement the "predict" method, with the
-    invocation to the EmbedIA function (previously implemented in "embedia.c")
+    invocation to the EmbedIA function (previously implemented in "neural_net.c")
     which performs the processing of the layer.
 
     Layer wrapper required properties:
@@ -25,11 +25,11 @@ class ZeroPadding2D(Layer):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously
-        implemented in "embedia.c" and by convention should be called
+        implemented in "neural_net.c" and by convention should be called
         "class name"+"input dimension" + "d_layer".
         For example, for the EmbedIA Flatten class associated to the Keras
         Flatten layer with an input size of 3, the function "flatten3d_layer"
-        must be implemented in "embedia.c"
+        must be implemented in "neural_net.c"
 
         Parameters
         ----------
@@ -44,7 +44,7 @@ class ZeroPadding2D(Layer):
         -------
         str
             C code with the invocation of the function that performs the
-            processing of the layer in the file "embedia.c".
+            processing of the layer in the file "neural_net.c".
 
         """
 

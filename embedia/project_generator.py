@@ -97,15 +97,14 @@ class ProjectGenerator:
 
         # create main file with an example
         if ProjectFiles.MAIN in options.files:
-            (text_example_h, text_main_c) = generate_embedia_main(embedia_layers, self._src_lib_folder, self._dst_embedia_folder_name, model_name, options, embedia_model)
+            (text_example_h, text_main_c) = generate_embedia_main(embedia_model, self._src_lib_folder, self._dst_embedia_folder_name, model_name, options)
             if options.project_type == ProjectType.ARDUINO:
                 filename = project_name
                 c_ext = '.ino'
             else:
                 filename = "main"
                 if options.project_type == ProjectType.CODEBLOCK:
-                    model_name = format_model_name(model)
-                    files = self._get_project_files(model_name, options)
+                    files = self._get_project_files(embedia_model, options)
                     project = generate_codeblock_project(project_name, files, self._src_lib_folder, self._dst_embedia_folder_name)
                     file_management.save_to_file(os.path.join(self._dst_folder, project_name+'.cbp'), project)
 
@@ -163,23 +162,26 @@ class ProjectGenerator:
 
 
 
-    def _get_project_files(self, model_filename, options):
+    def _get_project_files(self, embedia_model, options):
 
         project_files = list()
-        hpp_ext = '.hpp'
+
         # main file and files extensions
         (c_ext, h_ext) = self._get_files_extension()
         project_files.append('main'+c_ext)
 
         # embedia files
-        project_files.append('embedia'+c_ext)
-        project_files.append('embedia'+h_ext)
+        for (head_file, code_file) in embedia_model.required_files:
+            project_files.append(code_file[0:-2] + c_ext)
+            project_files.append(head_file[0:-2] + h_ext)
 
         # model files
+        model_filename = embedia_model.model_name
         project_files.append(model_filename+c_ext)
         project_files.append(model_filename+h_ext)
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! editado
+        hpp_ext = '.hpp'
         #half file
         if options.data_type == ModelDataType.BINARY_FLOAT16:
             project_files.append('half'+hpp_ext)

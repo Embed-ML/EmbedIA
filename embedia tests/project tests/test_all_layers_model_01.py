@@ -93,7 +93,7 @@ current_dir = os.getcwd()
 # configuration of each project to export
 PROJECT_LIST = [
     (ProjectType.CODEBLOCK, ModelDataType.FLOAT, 'CB_FLT'),
-    (ProjectType.CODEBLOCK, ModelDataType.FIXED32, 'CB_F32')
+    (ProjectType.CODEBLOCK, ModelDataType.FIXED32, 'CB_F32'),
     (ProjectType.CODEBLOCK, ModelDataType.FIXED16, 'CB_F16'),
     (ProjectType.CODEBLOCK, ModelDataType.FIXED8, 'CB_F8'),
     (ProjectType.CODEBLOCK, ModelDataType.QUANT8, 'CB_Q8'),

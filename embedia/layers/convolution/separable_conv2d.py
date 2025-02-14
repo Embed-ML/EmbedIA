@@ -1,9 +1,9 @@
-from embedia.core.layer import Layer
+from embedia.core.neural_net_layer import NeuralNetLayer
 from embedia.model_generator.project_options import ModelDataType
 import numpy as np
 
 
-class SeparableConv2D(Layer):
+class SeparableConv2D(NeuralNetLayer):
     """
 
      Develop info:
@@ -47,7 +47,7 @@ class SeparableConv2D(Layer):
     def __init__(self, model, wrapper, **kwargs):
 
         super().__init__(model, wrapper, **kwargs)
-        # the type defined in "struct_data_type" must exists in "embedia.h"
+        # the type defined in "struct_data_type" must exists in "neural_net.h"
         # self.struct_data_type = self.get_type_name().lower()+'_layer_t'
 
         self._use_data_structure = True  # this layer require data structure initialization
@@ -209,11 +209,11 @@ class SeparableConv2D(Layer):
         """
         Generates C code for the invocation of the EmbedIA function that
         implements the layer/element. The C function must be previously
-        implemented in "embedia.c" and by convention should be called
+        implemented in "neural_net.c" and by convention should be called
         "class name" + "_layer".
         For example, for the EmbedIA Dense class associated to the Keras
         Dense layer, the function "dense_layer" must be implemented in
-        "embedia.c"
+        "neural_net.c"
 
         Parameters
         ----------
@@ -228,7 +228,7 @@ class SeparableConv2D(Layer):
         -------
         str
             C code with the invocation of the function that performs the
-            processing of the layer in the file "embedia.c".
+            processing of the layer in the file "neural_net.c".
 
         """
         return f'''separable_conv2d_layer({self.name}_data, {input_name}, &{output_name});'''

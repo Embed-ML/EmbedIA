@@ -14,7 +14,7 @@ class MaxAbsNormalization(Normalization):
     Normally the programmer should only assign the "sub_values" properties with
     the mean values, the "div_values" property with the division
     coefficients and the "norm_function_name" property with the name of
-    EmbedIA function declared in "embedia.h"
+    EmbedIA function declared in "neural_net.h"
     """
 
     def __init__(self, model, wrapper, **kwargs):
