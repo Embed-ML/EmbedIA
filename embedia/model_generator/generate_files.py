@@ -33,7 +33,7 @@ def indent(multi_ln_code, level=1, spaces=4):
 def generate_embedia_library(embedia_model, src_folder, dst_folder, ext_h, ext_c, options):
 
     # files to add "#include"
-    update_include_files = ['neural_net.h']
+    update_include_files = ['common.h']
 
     filenames = os.listdir(src_folder)
     required_files = embedia_model.required_files

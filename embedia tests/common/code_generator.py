@@ -124,10 +124,16 @@ class CodeGenerator:
     def _generate_data_structure(self, datatype, var_name, conv_datatype, data_converter, data):
         conv_data = data_converter.fit_transform(data.flatten())
         str_data = np.array2string(conv_data, separator=', ', threshold=np.inf)[1:-1]
-        shape = data.shape[1:]
+        # shape = data.shape[1:] #vieja linea, hay que probar todos los test de nuevo
+        shape = data.shape
+        if len(shape)==4:
+            shape = shape[1:]
         if len(shape) == 3: # tf:channel last => embedia: channel first
             shape = (shape[2], shape[1], shape[0])
-
+        # check & try to correct dimension mismatch between datatype & array dim
+        dt_n = int(datatype[4])
+        if  dt_n < len(shape):
+            shape = shape[len(shape)-dt_n:]
 
         str_dim = ', '.join(map(str, shape))
         return f'{datatype} {var_name} = {{ {str_dim}, ({conv_datatype}[]){{ {str_data} }} }}'

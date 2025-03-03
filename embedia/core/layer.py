@@ -25,13 +25,7 @@ class LayerInfo(object):
 
         self.output_shape = self.layer.output_shape
 
-        k_layer = self.layer.wrapper
-        if hasattr(k_layer, 'trainable_weights'):
-            trainable = int(np.sum([K.count_params(p) for p in k_layer.trainable_weights]))
-            non_trainable = int(np.sum([K.count_params(p) for p in k_layer.non_trainable_weights]))
-        else:
-            trainable = 0
-            non_trainable = 0
+        (trainable, non_trainable) = self.layer.calculate_params()
 
         self.params = (trainable, non_trainable)
 
@@ -417,6 +411,10 @@ class Layer(object):
         tipos de datos (.h) y la implementación de las funciones (.c) requeridos por la capa/elemento
         '''
         return [('common.h', 'common.c')]
+
+
+    def calculate_params(self):
+        return (0, 0)
 
     def calculate_MAC(self):
         """

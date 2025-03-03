@@ -145,12 +145,29 @@ class TestSummary:
 class Tester:
     def __init__(self):
         self._config = TestsConfig()
-        self._update()
+        cfg = self._config
+        self._code_generator = CodeGenerator(cfg.EMBEDIA_PATH, cfg.OUTPUT_PATH)
+        self._data_generator = DataGenerator()
+        self._compiler = GccCompiler()
+        self._test_element = None
+
+    @property
+    def test_element(self):
+        return self._test_element
+    @test_element.setter
+    def test_element(self, element):
+        self._test_element = element
+
+
+
+    @property
+    def data_generator(self):
+        return TFLayerDataGenerator()
 
     def _update(self):
         cfg = self._config
         self._code_generator = CodeGenerator(cfg.EMBEDIA_PATH, cfg.OUTPUT_PATH)
-        self._data_generator = TFLayerDataGenerator()
+        self._data_generator = TSimpleDataGenerator()
         self._compiler = GccCompiler()
 
     def _inspect(self, model, input_data, filename):
@@ -209,6 +226,7 @@ class Tester:
 
             base_project_name = f'{data_gen.test_element.__class__.__name__}_{test_name}'
 
+            # print('Testing:', base_project_name)
             for datatype in cfg.DATA_TYPES:
 
                 error_bound = cfg.DATA_TYPE_BOUND_ERROR[datatype]
@@ -287,3 +305,17 @@ class Tester:
             tf.config.run_functions_eagerly(False)
 
         return results
+
+
+
+
+class SkLearnTester(Tester):
+    def __init__(self):
+        self._config = TestsConfig()
+        self._update()
+
+    def _update(self):
+        cfg = self._config
+        self._code_generator = CodeGenerator(cfg.EMBEDIA_PATH, cfg.OUTPUT_PATH)
+        self._data_generator = TClassificationDataGenerator()
+        self._compiler = GccCompiler()

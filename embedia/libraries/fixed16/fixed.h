@@ -58,8 +58,11 @@ typedef int32_t dfixed;
 #define DFIXED_TO_FIXED(A)      \
     ((dfixed)A >> FIX_FRC_SZ)
 
-#define FIXED_DIV(A,B)           \
-    ((fixed)(((dfixed)(A) << FIX_FRC_SZ) / (dfixed)(B)))
+#define FIXED_DIV(A,B) \
+    ((fixed)((((dfixed)(A) << FIX_FRC_SZ) + ((dfixed)(B) >> 1)) / (dfixed)(B)))
+
+#define DFIXED_DIV(A,B) \
+    ((dfixed)((((dfixed)(A) << FIX_FRC_SZ) + ((dfixed)(B) >> 1)) / (dfixed)(B)))
 
 //////////////////////////////////// Macros adicionales ////////////////////////////////////
 
@@ -68,23 +71,23 @@ typedef int32_t dfixed;
 #define FIXED_FLOOR(A) ( FIXED_INT(A) )
 
 //////////////////////////////////// funciones de conversion de tipos ////////////////////////////////////
-		
+
 	// Devuelve un numero en punto fijo a partir de uno en punto flotante
 	fixed float_to_fixed(float f);
- 
+
 	// Devuelve un numero en punto fijo a partir de un entero
 	fixed int_to_fixed(int32_t i);
- 
+
 	// Devuelve la representacion en punto flotante de doble precision de un numero en punto fijo
 	double fixed_to_double(fixed f);
-	
+
 	// Devuelve la representacion en punto flotante de un numero en punto fijo
 	float fixed_to_float(fixed f);
-	
+
 	// Devuelve el entero a partir de un numero en punto fijo
 	int32_t fixed_to_int(fixed f);
 
-	
+
 //////////////////////////////////// funciones aritmeticas ////////////////////////////////////
 
     // Devuelve la suma en punto fijo entre a y b

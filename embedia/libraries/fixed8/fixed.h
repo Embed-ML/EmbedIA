@@ -58,8 +58,11 @@ typedef int16_t dfixed;
 #define DFIXED_TO_FIXED(A)      \
     ((dfixed)A >> FIX_FRC_SZ)
 
-#define FIXED_DIV(A,B)           \
-    ((fixed)(((dfixed)(A) << FIX_FRC_SZ) / (dfixed)(B)))
+#define FIXED_DIV(A,B) \
+    ((fixed)((((dfixed)(A) << FIX_FRC_SZ) + ((dfixed)(B) >> 1)) / (dfixed)(B)))
+
+#define DFIXED_DIV(A,B) \
+    ((dfixed)((((dfixed)(A) << FIX_FRC_SZ) + ((dfixed)(B) >> 1)) / (dfixed)(B)))
 
 //////////////////////////////////// Macros adicionales ////////////////////////////////////
 

@@ -1,6 +1,6 @@
 import larq as lq
 from tensorflow import keras
-from sklearn import preprocessing
+from sklearn import preprocessing, neighbors
 from embedia.utils import melspec
 
 from embedia.core.dummy_layer import DummyLayer
@@ -22,6 +22,8 @@ from embedia.layers.normalization.max_abs_scaler import MaxAbsNormalization
 from embedia.layers.normalization.robust_scaler import RobustNormalization
 from embedia.layers.signal_processing.spectrogram import Spectrogram
 from embedia.layers.normalization.standard_scaler import Normalization
+from embedia.layers.knn.k_neighbors_classifier import KNeighborsClassifier
+from embedia.layers.knn.k_neighbors_regressor import KNeighborsRegressor
 
 from embedia.wrappers.tensorflow_wrappers import (
     TensorflowWrapper,
@@ -38,7 +40,8 @@ from embedia.wrappers.sklearn_wrappers import (
     SKLMaxAbsScalerWrapper,
     SKLMinMaxScalerWrapper,
     SKLStandardScalerWrapper,
-    SKLRobustScalerWrapper
+    SKLRobustScalerWrapper,
+    SKLKnnWrapper
 )
 
 from embedia.wrappers.larq_wrappers import (
@@ -97,5 +100,8 @@ dict_layers = {
     preprocessing.MaxAbsScaler: (Normalization, SKLMaxAbsScalerWrapper),
     preprocessing.RobustScaler: (Normalization, SKLRobustScalerWrapper),
     # signal processing
-    melspec.Melspec: (Spectrogram, EmbediaSpectrumWrapper)
+    melspec.Melspec: (Spectrogram, EmbediaSpectrumWrapper),
+    # KNN
+    neighbors.KNeighborsClassifier: (KNeighborsClassifier, SKLKnnWrapper),
+    neighbors.KNeighborsRegressor: (KNeighborsRegressor, SKLKnnWrapper),
 }

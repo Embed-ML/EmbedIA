@@ -13,8 +13,12 @@ class LayerWrapper:
     @property
     def name(self):
         if hasattr(self._target, 'name'):
-            return self._.target.name
-        return self.target.__name__
+            return self._target.name
+        if hasattr(self._target, '__name__'):
+            return self._target.__name__
+        if hasattr(self._target, '__class__'):
+            return self._target.__class__.__name__
+        return self.__class__.__name__.removesuffix('Wrapper')
 
     @property
     def input_shape(self):

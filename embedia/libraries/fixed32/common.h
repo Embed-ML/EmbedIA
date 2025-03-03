@@ -6,7 +6,7 @@
 #include "fixed.h"
 
 /*
- * Structure that stores an array of float data (float * data) in vector form.
+ * Structure that stores an array of fixed data (fixed * data) in vector form.
  * Specifies the number of channels, the width and the height of the array.
  */
 typedef fixed compute_t;
@@ -39,5 +39,16 @@ typedef struct{
 void prepare_buffers();
 
 void * swap_alloc(size_t s);
+
+/*
+ * argmax()
+ * Finds the index of the largest value within a vector of data (data1d_t)
+ * Parameters:
+ *  - data => data of type data1d_t to search for max.
+ * Returns:
+ *  - search result - index of the maximum value
+ */
+uint32_t argmax(data1d_t data);
+
 
 #endif

@@ -221,7 +221,7 @@ class EmbediaModel(object):
             else:
                 name = obj.__class__.__name__
 
-        name = re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+        name = re.sub(r'(?<=[a-zA-Z])(?=[A-Z][a-z])', '_', name)
         num = self.names[name]
         self.names[name] += 1
         if num == 0:

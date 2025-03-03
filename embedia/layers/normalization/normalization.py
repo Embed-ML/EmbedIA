@@ -95,6 +95,22 @@ class Normalization(NeuralNetLayer):
     #     """
     #     return self.get_input_shape()
 
+    def calculate_params(self):
+        """
+         calculates trainable and non trainable parameters of layer
+         Returns
+
+         -------
+         int
+             tuple (#trainable params, # non trainable params)
+
+         """
+
+        trainable = 0
+        non_trainable = 2 * self._wrapper.input_shape[-1]
+
+        return (trainable, non_trainable)
+
     def calculate_MAC(self):
         """
         calculates amount of multiplication and accumulation operations

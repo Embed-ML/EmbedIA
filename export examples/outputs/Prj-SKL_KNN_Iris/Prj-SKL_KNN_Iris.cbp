@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Prj-SKL_KNN_Iris" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/Prj-SKL_KNN_Iris" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/Prj-SKL_KNN_Iris" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+    
+        <Unit filename="main.c">
+            <Option compilerVar="CC" />
+        </Unit>
+        <Unit filename="fixed.c">
+            <Option compilerVar="CC" />
+        </Unit>
+        <Unit filename="fixed.h" />
+        <Unit filename="knn.c">
+            <Option compilerVar="CC" />
+        </Unit>
+        <Unit filename="knn.h" />
+        <Unit filename="common.c">
+            <Option compilerVar="CC" />
+        </Unit>
+        <Unit filename="common.h" />
+        <Unit filename="distances.c">
+            <Option compilerVar="CC" />
+        </Unit>
+        <Unit filename="distances.h" />
+        <Unit filename="neural_net.c">
+            <Option compilerVar="CC" />
+        </Unit>
+        <Unit filename="neural_net.h" />
+        <Unit filename="skl_knn_iris_model.c">
+            <Option compilerVar="CC" />
+        </Unit>
+        <Unit filename="skl_knn_iris_model.h" />
+        <Unit filename="fixed.c">
+            <Option compilerVar="CC" />
+        </Unit>
+        <Unit filename="fixed.h" />
+        <Unit filename="embedia_debug.c">
+            <Option compilerVar="CC" />
+        </Unit>
+        <Unit filename="embedia_debug.h" />
+        <Unit filename="embedia_debug_def.h" />
+        <Unit filename="example_file.h" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

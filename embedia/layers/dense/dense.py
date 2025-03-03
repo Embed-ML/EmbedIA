@@ -40,6 +40,27 @@ class Dense(NeuralNetLayer):
         self._use_data_structure = True  # this layer require data structure initialization
 
 
+    def calculate_params(self):
+        """
+         calculates trainable and non trainable parameters of layer
+         Returns
+         TO DO: calculate params MUST depend of layer or wrappers properties
+         -------
+         int
+             tuple (#trainable params, # non trainable params)
+
+         """
+
+        k_layer = self.wrapper
+        if hasattr(k_layer, 'trainable_weights'):
+            trainable = int(np.sum([K.count_params(p) for p in k_layer.trainable_weights]))
+            non_trainable = int(np.sum([K.count_params(p) for p in k_layer.non_trainable_weights]))
+        else:
+            trainable = 0
+            non_trainable = 0
+
+        return (trainable, non_trainable)
+
     def calculate_MAC(self):
         """
         calculates amount of multiplication and accumulation operations

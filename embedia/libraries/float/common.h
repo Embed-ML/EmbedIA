@@ -39,4 +39,17 @@ void prepare_buffers();
 
 void * swap_alloc(size_t s);
 
+
+/*
+ * argmax()
+ * Finds the index of the largest value within a vector of data (data1d_t)
+ * Parameters:
+ *  - data => data of type data1d_t to search for max.
+ * Returns:
+ *  - search result - index of the maximum value
+ */
+uint32_t argmax(data1d_t data);
+
+
+
 #endif

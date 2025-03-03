@@ -256,16 +256,6 @@ void avg_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  */
  void flatten3d_layer(data3d_t input, data1d_t * output);
 
-/*
- * argmax()
- * Finds the index of the largest value within a vector of data (data1d_t)
- * Parameters:
- *  - data => data of type data1d_t to search for max.
- * Returns:
- *  - search result - index of the maximum value
- */
-uint32_t argmax(data1d_t data);
-
 
 /***************************************************************************************************************************/
 /* Activation functions/layers */
