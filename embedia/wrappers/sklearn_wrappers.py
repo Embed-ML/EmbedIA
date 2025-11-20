@@ -259,7 +259,6 @@ class SKLSvmWrapper(ScikitLearnWrapper):
         return OutputPredictionType.CLASS_PROBABILITIES
 
 
-
 class SKLSvmLinearWrapper(ScikitLearnWrapper):
 
     @property
@@ -397,3 +396,57 @@ class SKLDecisionTreeClassifierWrapper(ScikitLearnWrapper):
         return OutputPredictionType.DIRECT_CLASS_ID
 
 
+class SKLLogisticRegressionWrapper(ScikitLearnWrapper):
+    
+    """
+    Wrapper para el modelo LogisticRegression de scikit-learn."
+    Extrae los parámetros que la implementacione en C necesita
+    """ 
+    @property
+    def n_classes(self):
+        """Numero de clases de salida"""
+        return len(self._target.classes_)
+
+    @property
+    def n_features(self):
+        """Numero de características de entrada"""
+        return self._target.n_features_in_
+
+    @property
+    def classes(self):
+        """Array con las etiquetas de las clases"""
+        return self._target.classes_
+
+    @property
+    def weights(self):
+        """
+        Puntero a los pesos del modelo.
+        Shape: (n_classes, n_features).
+        """
+        return self._target.coef_
+    
+    @property
+    def bias(self):
+        """
+        Puntero a los sesgos/bias del modelo
+        Shape: (n_classes,)
+        """
+        return self._target.intercept_
+    
+    @property
+    def input_shape(self):
+        """
+        La forma de una sola muestra de entada
+        """
+        return (self.n_features,)
+
+    @property
+    def output_shape(self):
+        """
+        La forma de salida va a ser una predicción
+        """
+        return (1, )
+
+    def actuvation(self):
+        return None
+    

@@ -1,6 +1,6 @@
 
 from tensorflow import keras
-from sklearn import preprocessing, neighbors, svm, tree
+from sklearn import preprocessing, neighbors, svm, tree, linear_model
 from embedia.native.signals.transforms import stft
 from embedia.utils import messages
 
@@ -26,6 +26,7 @@ from embedia.layers.svm.svm_classfier import SvmClassifier
 from embedia.layers.svm.svm_linear_classfier import SvmLinearClassifier
 from embedia.layers.decision_tree.decision_tree_classifier import DecisionTreeClasifier
 from embedia.layers.signal_processing.stft import STFT
+from embedia.layers.logistic_regression.logisticRegression import LogisticRegressionLayer
 
 from embedia.wrappers.tensorflow_wrappers import (
     TensorflowWrapper,
@@ -46,7 +47,8 @@ from embedia.wrappers.sklearn_wrappers import (
     SKLKnnWrapper,
     SKLSvmWrapper,
     SKLSvmLinearWrapper,
-    SKLDecisionTreeClassifierWrapper
+    SKLDecisionTreeClassifierWrapper,
+    SKLLogisticRegressionWrapper
 )
 
 from embedia.wrappers.larq_wrappers import (
@@ -110,8 +112,13 @@ dict_layers = {
     svm.SVC: (SvmClassifier, SKLSvmWrapper),
     svm.LinearSVC: (SvmLinearClassifier, SKLSvmLinearWrapper),
     # DTC
-    tree.DecisionTreeClassifier: (DecisionTreeClasifier, SKLDecisionTreeClassifierWrapper)
+    tree.DecisionTreeClassifier: (DecisionTreeClasifier, SKLDecisionTreeClassifierWrapper),
+    # Logistic regression
+    linear_model.LogisticRegression: (LogisticRegressionLayer, SKLLogisticRegressionWrapper)
+
 }
+
+
 
 # register larq related layers only if larq module is installed
 try:

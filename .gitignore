@@ -12,3 +12,5 @@ mini_speech_commands/
 /embedia tests/output/
 mini_speech_commands.zip
 *.ps1
+.venv/
+__pycache__/

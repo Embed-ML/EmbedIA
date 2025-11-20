@@ -51,8 +51,8 @@ OUTPUT_FOLDER = 'outputs/'
 PROJECT_NAME  = 'Prj-SKL_KNN_Iris'
 
 model = knn
-model.name = "SKL_KNN_iris_model"
-#model.name = "KNN_model"
+model.name = "SKL_LogisticRegression_iris_model"
+
 
 options = ProjectOptions()
 
