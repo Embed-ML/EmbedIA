@@ -14,7 +14,10 @@ class LogisticRegressionLayer(LogisticRegressionBaseLayer):
         # Llama al __init__ del padre (BaseLayer -> Layer)
         # Esto guarda self.model, self._wrapper, y self.name
         super().__init__(model, wrapper, **kwargs)
-    
+
+        self._use_data_structure = True  # this layer require data structure initialization
+
+
     @property
     def function_implementation(self):
         """
@@ -39,7 +42,7 @@ static float {self.name}_classes[] ={{ {classes_str} }};
 logistic_regression_layer_t init_{self.name}_data(void)
 {{
     logistic_regression_layer_t lr = {{
-        .n_features= {self._wrapper.n_fetures},
+        .n_features= {self._wrapper.n_features},
         .n_classes= {self._wrapper.n_classes},
         .weights= {self.name}_weights,
         .bias= {self.name}_bias,
@@ -61,16 +64,5 @@ logistic_regression_layer_t init_{self.name}_data(void)
         init_func = f"init_{self.name}_data()"
 
 
-        return f"""
-
-static logistic_regression_layer_t lr;
-static int initialized = 0; // Bandera
-
-if ({self.name}_initialized == 0) {{
-        {self.name}_layer = {init_func};
-        {self.name}_initialized= 1;
-}}  
-
-    logistic_regression_layer({self.name}_layer,{input_name}, {output_name};
-"""
+        return f"""logistic_regression_layer({self.name}_data,{input_name}, &{output_name});"""
 

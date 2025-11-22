@@ -15,7 +15,7 @@ from embedia.model_generator.project_options import *
 from embedia.project_generator import ProjectGenerator
 
 
-##############  Cración del modelo ###############
+############## Creación del modelo ###############
 
 # Cargar el dataset Iris
 data = load_iris()
@@ -49,16 +49,19 @@ OUTPUT_FOLDER = 'outputs/'
 PROJECT_NAME  = 'Prj-SKL_LogisticRegression_Iris'
 
 
-model = lr 
+model = lr
+
+#model.name = PROJECT_NAME
 
 samples = X_test_raw[0:10]
 ids = y_test_raw[0:10]
 
 options = ProjectOptions()
 
+options.embedia_folder='../embedia/'
 # options.project_type = ProjectType.ARDUINO
-options.project_type = ProjectType.C
-# options.project_type = ProjectType.CODEBLOCK
+# options.project_type = ProjectType.C
+options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
 
 options.data_type = ModelDataType.FLOAT

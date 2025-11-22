@@ -251,6 +251,8 @@ class Layer(object):
         """
         if hasattr(self, '_struct_data_type'):
             return self._struct_data_type
+        if self.embedia_type_name.endswith('_layer'):
+            return self.embedia_type_name + '_t'
         return self.embedia_type_name + '_layer_t'
 
 

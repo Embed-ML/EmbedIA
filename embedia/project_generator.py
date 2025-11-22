@@ -24,7 +24,7 @@ from embedia.utils import file_management, messages
 from prettytable import PrettyTable
 
 def format_model_name(model):
-    model_name = model.name.lower()
+    model_name = model.model_name.lower()
     if not model_name.endswith('model'):
         model_name += '_model'
 
@@ -89,6 +89,7 @@ class ProjectGenerator:
             model = DummyModel('No Model')
 
         embedia_model = ModelFactory.create_model(model, options)
+        model_name = format_model_name(embedia_model)
 
         #embedia_layers = embedia_model.embedia_layers
 
@@ -111,7 +112,7 @@ class ProjectGenerator:
 
         # create model files
         if ProjectFiles.MODEL in options.files:
-            (text_model_h, text_model_c, model_name) = generate_embedia_model(embedia_model, self._src_lib_folder, self._dst_embedia_folder, h_ext, c_ext, model.name, model_info, options)
+            (text_model_h, text_model_c, model_name) = generate_embedia_model(embedia_model, self._src_lib_folder, self._dst_embedia_folder, h_ext, c_ext, model_name, model_info, options)
 
         # copy debug file
         if options.debug_mode != DebugMode.DISCARD:

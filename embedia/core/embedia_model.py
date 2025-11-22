@@ -6,6 +6,7 @@ from embedia.core.unimplemented_layer import UnimplementedLayer
 from embedia.core.type_converters import *
 from embedia.core.exceptions import *
 from embedia.core.layer_wrapper import OutputPredictionType
+from embedia.utils import string_utils
 from enum import Enum
 
 class EmbediaModel(object):
@@ -64,7 +65,14 @@ class EmbediaModel(object):
 
     @property
     def model_name(self):
-        model_name = self._model.name.lower()
+        model = self._model
+        if hasattr(model, 'name'):
+            model_name = model.name
+        else:
+            model_name = string_utils.CamelCaseToSnakeCase(type(model).__name__)
+
+        model_name = model_name.lower()
+
         if not model_name.endswith('model'):
             model_name += '_model'
         return model_name
