@@ -7,8 +7,8 @@
  * Originally developed with student contributions
  *
  * Licensed under the BSD 3-Clause License. See LICENSE file for details.
- * GitHub: https://github.com/Embed-ML/EmbedIA
  */
+
 #include <stdlib.h>
 #include <math.h>
 #include "neural_net.h"
@@ -45,7 +45,7 @@ static uint16_t compute_padding(int stride, int in_size, int filter_size, int ou
  * output => Pointer to store the output data
  */
 static void calc_alloc_conv2d_output(uint16_t n_filters, size2d_t kernel_sz, size2d_t strides, uint8_t padding, data3d_t input, data3d_t *output){
-/*    if (padding == PAD_VALID){
+    if (padding == PAD_VALID){
         // effective_filter_size = (filter_size - 1) * dilation_rate + 1 for dilation_rate=1 => kernel size
         output->height = (input.height + strides.h - kernel_sz.h) / strides.h;
         output->width  = (input.width  + strides.w - kernel_sz.w) / strides.w;
@@ -55,7 +55,7 @@ static void calc_alloc_conv2d_output(uint16_t n_filters, size2d_t kernel_sz, siz
     }
     output->channels = n_filters; // total of output channels
     output->data = (float*)swap_alloc( sizeof(float)*output->channels*output->height*output->width );
-*/}
+}
 
 /*
  * conv2d_strides_layer()
@@ -68,7 +68,7 @@ static void calc_alloc_conv2d_output(uint16_t n_filters, size2d_t kernel_sz, siz
  *   output => Pointer to store the output data
  */
 void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
- /*   int32_t delta, i,j,k,l, f_pos, i_pos;
+    int32_t delta, i,j,k,l, f_pos, i_pos;
     int16_t f, c;
     float value;
 
@@ -96,7 +96,7 @@ void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
                 output->data[delta + i*output->width + j] = value + DEQUANTIZE(layer.filters[f].bias, layer.qparam);
             }
         }
-    }*/
+    }
 }
 
 /*
@@ -109,7 +109,7 @@ void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
  *   output => Pointer to store the output data
  */
 void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
- /*   int32_t delta, i,j,k,l, f_pos, i_pos;
+    int32_t delta, i,j,k,l, f_pos, i_pos;
     int16_t f, c, i_pad, j_pad, pad_h, pad_w;
     float value;
 
@@ -142,7 +142,7 @@ void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
                 output->data[delta + i*output->width + j] = value + DEQUANTIZE(layer.filters[f].bias, layer.qparam);
             }
         }
-    }*/
+    }
 }
 
 /*
@@ -156,7 +156,7 @@ void conv2d_padding_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
  *   *output => pointer to the data3d_t structure where the result will be saved.
  */
 void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
- /*   int32_t delta, i,j,k,l, f_pos, i_pos;
+    int32_t delta, i,j,k,l, f_pos, i_pos;
     int16_t f, c;
     float value;
 
@@ -184,7 +184,7 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
                 output->data[delta + i*output->width + j] = value + DEQUANTIZE(layer.filters[f].bias,layer.qparam);
             }
         }
-    }*/
+    }
 }
 
 /*
@@ -197,7 +197,7 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
  *   *output => Pointer to store the output data
  */
  static void depthwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t input, data3d_t * output){
-  /*  uint32_t i,j,k,l,c, f_pos, i_pos, i_pad, j_pad;
+    uint32_t i,j,k,l,c, f_pos, i_pos, i_pad, j_pad;
     uint8_t pad_h, pad_w;
     float sum, value;
 
@@ -223,7 +223,7 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
                 output->data[c*output->width*output->height + i*output->width + j] = sum;
             }
         }
-    }*/
+    }
 }
 
 /*
@@ -237,7 +237,7 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
  *   delta => Offset for writing to the output data
  */
  static void pointwise(separable_conv2d_layer_t layer, filter_t filter, data3d_t input, data3d_t * output, uint32_t delta){
-  /*  uint32_t i, j, c, i_pos;
+    uint32_t i, j, c, i_pos;
     float sum;
 
     for (i = 0; i < output->height; i++) {
@@ -249,7 +249,7 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
             }
             output->data[delta + i*output->width + j] = sum + DEQUANTIZE(filter.bias, layer.qparam);
         }
-    }*/
+    }
 }
 
 
@@ -264,7 +264,7 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output){
  */
 
 void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data3d_t * output){
- /*   uint32_t delta, i;
+    uint32_t delta, i;
     data3d_t depth_output;
 
     calc_alloc_conv2d_output(layer.depth_channels, layer.depth_kernel_sz, layer.strides, layer.padding, input, &depth_output);
@@ -279,7 +279,7 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
     for(i=0; i<layer.n_filters; i++){
         delta = i*(output->height)*(output->width);
         pointwise(layer, layer.point_filters[i], depth_output,output,delta);
-    }*/
+    }
 }
 
 /*
@@ -291,7 +291,7 @@ void separable_conv2d_layer(separable_conv2d_layer_t layer, data3d_t input, data
  *   *output => Pointer to store the output data
  */
 static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3d_t * output){
- /*   uint32_t i, j, k, l, c, f_pos, i_pos, pad_h, pad_w, j_pad, i_pad;
+    uint32_t i, j, k, l, c, f_pos, i_pos, pad_h, pad_w, j_pad, i_pad;
     float sum;
 
     pad_h = compute_padding(layer.strides.h, input.height, layer.kernel_sz.h, output->height);
@@ -319,7 +319,7 @@ static void depthwise_bias(depthwise_conv2d_layer_t layer, data3d_t input, data3
                 output->data[c*output->width*output->height + i*output->width + j]= sum + DEQUANTIZE(layer.bias[c], layer.b_qparam);
             }
         }
-    }*/
+    }
 }
 
 
@@ -342,6 +342,27 @@ void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data
 
 
 /*
+ * neuron_forward()
+ *  Function that performs the forward of a neuron in front of a given set of input data.
+ * Parameters:
+ *  neuron_t neuron => neuron with its weights and bias loaded.
+ *  flatten_data_t input => input data in vector form (flatten_data_t).
+ * Returns:
+ *  float => result of the operation
+ */
+
+static float neuron_forward(neuron_t neuron, data1d_t input){
+    uint32_t i;
+    float result = 0;
+
+    for(i=0;i<input.length;i++){
+        result += input.data[i]*neuron.weights[i];
+    }
+
+    return result + neuron.bias;
+}
+
+/*
  * dense_layer()
  *  Performs feed forward of a dense layer (dense_layer_t) on a given input data set.
  * Parameters:
@@ -349,70 +370,20 @@ void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data
  *  input       => structure data1d_t with the input data to process.
  *  *output     => structure data1d_t to store the output result.
  */
-/*void dense_layer(dense_layer_t *layer, data1d_t *input, data1d_t * output){
-    // Configurar salida
-    output->length = layer->output_size;
-    output->qparam = layer->output_qparam;
-    output->data = (quant8*)swap_alloc(sizeof(quant8)*output->length);
+void dense_layer(dense_layer_t * dense_layer, data1d_t * input, data1d_t * output){
+    uint32_t i,j;
+    float result;
+    output->length = dense_layer->n_neurons;
+    output->data = (float*)swap_alloc(sizeof(float)*dense_layer->n_neurons);
 
-    // MAC (Multiply-Accumulate) vectorizado
-    for (uint16_t i = 0; i < layer->output_size; i++) {
-        int32_t acc = 0;
-
-        // Descuantizar bias (una vez por neurona)
-        int32_t bias = (layer->biases[i] - layer->weights_qparam.zero_point)
-                      * layer->weights_qparam.scale;
-
-        // Producto punto input · weights_col
-        for (uint16_t j = 0; j < layer->input_size; j++) {
-            int32_t w = layer->weights[i * layer->input_size + j] - layer->weights_qparam.zero_point;
-            int32_t x = input->data[j] - input->qparam.zero_point;
-            acc += (w * x) >> Q_FRAC_BITS;
+    for(i=0;i<dense_layer->n_neurons;i++){
+        result = 0;
+        for(j=0;j<input->length; j++) {
+            result += DEQUANTIZE(dense_layer->neurons[i].weights[j], dense_layer->neurons[i].qparam) * input->data[j];
         }
-
-        // Requantización a int8
-        int32_t scaled_acc = (acc * layer->output_qparam.inv_scale) >> Q_FRAC_BITS;
-        output->data[i] = (quant8)(scaled_acc + layer->output_qparam.zero_point);
-    }
-}*/
-void dense_layer(dense_layer_t *layer, data1d_t *input, data1d_t *output) {
-    output->length = layer->output_size;
-    output->qparam = layer->output_qparam;
-    output->data = (quant8*)swap_alloc(sizeof(quant8) * output->length);
-
-    // Escala efectiva: (input_scale * weight_scale) / output_scale
-    int64_t scale_mul = (int64_t)input->qparam.scale * layer->weights_qparam.scale;
-    int32_t effective_scale = (int32_t)((scale_mul + (layer->output_qparam.scale / 2)) / layer->output_qparam.scale);
-    // Está en Q_FRAC_BITS (Q17 en tu caso)
-
-    for (uint16_t i = 0; i < layer->output_size; i++) {
-        int32_t acc = 0;
-
-        for (uint16_t j = 0; j < layer->input_size; j++) {
-            int32_t w = (int32_t)layer->weights[i * layer->input_size + j] - layer->weights_qparam.zero_point;
-            int32_t x = (int32_t)input->data[j] - input->qparam.zero_point;
-            acc += w * x;  // Producto escalar, sin escalar todavía
-        }
-
-        // Sumar bias si está presente (bias en int32_t ya escalado al mismo dominio que acc)
-        if (layer->biases) {
-            acc += layer->biases[i];
-        }
-
-        // Escalar acumulador (Q0.30) con escala efectiva en Q_FRAC_BITS → resultado sigue en Q0.30
-        int64_t scaled = (int64_t)acc * effective_scale;
-
-        // Redondear antes de hacer shift
-        int32_t shifted = (int32_t)((scaled + (1LL << (Q_FRAC_BITS - 1))) >> Q_FRAC_BITS);
-
-        // Agregar zero_point de salida y saturar a int8
-        output->data[i] = Q_CLAMP(shifted + output->qparam.zero_point);
+        output->data[i] = result + DEQUANTIZE(dense_layer->neurons[i].bias, dense_layer->neurons[i].qparam);
     }
 }
-
-
-
-
 
 
 /*
@@ -425,7 +396,7 @@ void dense_layer(dense_layer_t *layer, data1d_t *input, data1d_t *output) {
  *  output    => output data
  */
 void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output){
-  /*  uint32_t c,i,j,aux1,aux2;
+    uint32_t c,i,j,aux1,aux2;
     float max = -INFINITY;
     float num;
 
@@ -454,7 +425,7 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
                 output->data[c*output->width*output->height + i*output->width + j] = max;
             }
         }
-    }*/
+    }
 }
 
 
@@ -468,7 +439,7 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  */
 
 void average_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output){
-/*    uint32_t c,i,j,aux1,aux2;
+    uint32_t c,i,j,aux1,aux2;
     uint32_t cant = pool.size*pool.size;
     float avg = 0;
     float num;
@@ -496,7 +467,7 @@ void average_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* o
                 output->data[c*output->width*output->height + i*output->width + j] = avg/cant;
             }
         }
-    }*/
+    }
 }
 
 /*
@@ -505,93 +476,25 @@ void average_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* o
  *  *data  => array of values to update
  *  length => numbers of values to update
  */
-// ==== VERSIÓN ULTRA OPTIMIZADA CON LOOKUP INLINE ====
-// Para casos donde el rango de entrada es predecible: softmax_shift_inplace_ultra
-/*void softmax_activation(int8_t* data, uint32_t length, qparam_t* qparam) {
-
-    // 1. Encontrar máximo con optimización de loop
-    int8_t max_val = data[0];
-    for (int i = 1; i < length; i++) {
-        max_val = (data[i] > max_val) ? data[i] : max_val;  // Branchless
-    }
-
-    // 2. Lookup table inline para shifts comunes (mejor que cálculo)
-    static const uint16_t shift_lut[9] = {
-        256, 128, 64, 32, 16, 8, 4, 2, 1  // 2^(8-i) para i=0..8
-    };
-
-    uint32_t sum = 0;
-
-    // 3. Primera pasada optimizada
-    for (int i = 0; i < length; i++) {
-        int16_t diff = data[i] - max_val;  // diff <= 0
-
-        uint16_t exp_approx;
-        if (diff <= -8) {
-            exp_approx = 1;
-        } else {
-            exp_approx = shift_lut[-diff];  // LUT en lugar de shift
+void softmax_activation(float *data, uint32_t length){
+    uint32_t i;
+    float m = -INFINITY;
+    for(i = 0; i < length; i++) {
+        if (data[i] > m) {
+            m = data[i];
         }
-        sum += exp_approx;
     }
 
-    // 4. Segunda pasada con división optimizada
-    uint32_t inv_sum = (1UL << 24) / sum;  // Precalcular 1/sum en fixed point
-
-    for (int i = 0; i < length; i++) {
-        int16_t diff = data[i] - max_val;
-
-        uint16_t exp_approx = (diff <= -8) ? 1 : shift_lut[-diff];
-
-        // Usar multiplicación en lugar de división
-        uint32_t normalized = (exp_approx * inv_sum) >> 16;
-
-        int32_t quantized = (normalized * qparam->inv_scale) >> 8;
-        quantized += qparam->zero_point;
-
-        data[i] = (int8_t)((quantized > 127) ? 127 :
-                          (quantized < -128) ? -128 : quantized);
-    }
-}*/
-void softmax_activation(int8_t* data, uint32_t length, qparam_t* qparam) {
-    // 1. Encontrar máximo (optimizado)
-    int8_t max_val = data[0];
-    for (uint32_t i = 1; i < length; i++) {
-        max_val = (data[i] > max_val) ? data[i] : max_val;  // Branchless
+    float sum = (0.0);
+    for(i = 0; i < length; i++) {
+        sum += exp(data[i] - m);
     }
 
-    // 2. LUT para exponencial (2^-x)
-    static const uint16_t exp_lut[9] = {256, 128, 64, 32, 16, 8, 4, 2, 1}; // 2^(8-i)
-
-    // 3. Primera pasada: calcular sum(exp(x - max_val))
-    uint32_t sum = 0;
-    for (uint32_t i = 0; i < length; i++) {
-        int16_t diff = data[i] - max_val;
-        uint16_t exp_approx = (diff <= -8) ? 1 : exp_lut[-diff];
-        sum += exp_approx;
-    }
-
-    // 4. Precalcular 1/sum en punto fijo (Q24.8)
-    uint32_t inv_sum = (1UL << 24) / sum;  // Equivale a (1.0/sum) * 2^24
-
-    // 5. Segunda pasada: normalizar y cuantizar
-    for (uint32_t i = 0; i < length; i++) {
-        int16_t diff = data[i] - max_val;
-        uint16_t exp_approx = (diff <= -8) ? 1 : exp_lut[-diff];
-
-        // Normalización (Q24.8 * Q8.8 -> Q32.16, luego >>16 para Q16.0)
-        uint32_t normalized = (exp_approx * inv_sum) >> 16;
-
-        // Requantización: (Q16.0 * scale_fixed) >> Q_FRAC_BITS
-        int32_t quantized = (normalized * qparam->scale) >> Q_FRAC_BITS;
-        quantized += qparam->zero_point;
-
-        // Saturación a int8_t
-        data[i] = (int8_t)((quantized > 127) ? 127 :
-                          (quantized < -128) ? -128 : quantized);
+    float offset = m + log(sum);
+    for(i = 0; i < length; i++) {
+        data[i] = exp(data[i] - offset);
     }
 }
-
 
 
 /*
@@ -599,49 +502,14 @@ void softmax_activation(int8_t* data, uint32_t length, qparam_t* qparam) {
  * Parameters:
  *  *data  => array of values to update
  *  length => numbers of values to update
- *  qp => quantization parameters
  */
-void relu_activation(quant8 *data, uint32_t length, qparam_t* qp) {
+void relu_activation(float *data, uint32_t length){
     uint32_t i;
-    const int8_t zero_point = qp->zero_point;
 
-    for(i = 0; i < length; i++) {
-        // Para datos cuantizados, el "0" real corresponde al zero_point
-        data[i] = data[i] < zero_point ? zero_point : data[i];
+    for(i=0;i<(length);i++){
+        data[i] = data[i] < 0 ? 0 : data[i];
     }
 }
-
-/* // relu con saturacion
-void relu_activation_sat(quant8 *data, uint32_t length, qparam_t qp) {
-    uint32_t i;
-    const int8_t zero_point = qp.zero_point;
-    const int8_t max_val = 127; // Valor máximo para int8_t
-
-    for(i = 0; i < length; i++) {
-        data[i] = (data[i] < zero_point) ? zero_point :
-                 (data[i] > max_val) ? max_val : data[i];
-    }
-}
-
-// Versión optimizada para ARM Cortex-M (usando instrucciones SIMD):
-void relu_activation_opt(quant8 *data, uint32_t length, qparam_t qp) {
-    uint32_t i;
-    const int8x16_t zero_point_v = vdupq_n_s8(qp.zero_point);
-    uint32_t chunks = length / 16;
-
-    // Procesamiento en bloques de 16 elementos
-    for(i = 0; i < chunks * 16; i += 16) {
-        int8x16_t vec = vld1q_s8(data + i);
-        int8x16_t res = vmaxq_s8(vec, zero_point_v);
-        vst1q_s8(data + i, res);
-    }
-
-    // Procesar elementos restantes
-    for(i = chunks * 16; i < length; i++) {
-        data[i] = data[i] < qp.zero_point ? qp.zero_point : data[i];
-    }
-}
-*/
 
 /*
  * relu6 activation function (float version)
@@ -693,25 +561,11 @@ void tanh_activation(float *data, uint32_t length){
  *  *data  => array of values to update
  *  length => numbers of values to update
  */
-void sigmoid_activation(quant8 *data, uint32_t length, qparam_t *qp) {
-    // Asume que los datos ya están preescalados adecuadamente
-    const fixed scale = qp->scale;
-    const fixed zero_point = (fixed)qp->zero_point << Q_FRAC_BITS;
-
+void sigmoid_activation(float *data, uint32_t length){
     uint32_t i;
 
-    for(i = 0; i < length; i++) {
-        fixed input = ((fixed)data[i] << Q_FRAC_BITS) - zero_point;
-
-        // Versión simplificada con exp() preajustada
-        fixed exp_val = fixed_exp(-(input >> 2));  // Reduce rango dinámico
-
-        fixed denominator = FIX_ONE + exp_val;
-        fixed output = FIXED_DIV(FIX_ONE, denominator);
-
-        // Re-escalado rápido con saturación
-        int32_t result = ((output * scale) >> Q_FRAC_BITS) + qp->zero_point;
-        data[i] = Q_CLAMP(result);
+    for(i=0;i<length;i++){
+        data[i] = 1 / (1 + exp(-data[i]));
     }
 }
 
@@ -754,7 +608,7 @@ void softplus_activation(float *data, uint32_t length){
  *  *output => pointer to the data1d_t structure where the result will be stored.
  */
 void flatten3d_layer(data3d_t input, data1d_t * output){
- /*   uint32_t c,i,j;
+    uint32_t c,i,j;
     uint32_t cantidad = 0;
 
     output->length = input.channels * input.height * input.width;
@@ -766,7 +620,7 @@ void flatten3d_layer(data3d_t input, data1d_t * output){
                 output->data[cantidad++] = input.data[(c*input.width*input.height)+(i*input.width)+j];
             }
         }
-    }*/
+    }
 }
 
 
@@ -776,7 +630,7 @@ void flatten3d_layer(data3d_t input, data1d_t * output){
 
 
 void normalization1(normalization_layer_t n, data1d_t input, data1d_t * output){
-/*
+
     uint32_t i;
 
     output->length = input.length;
@@ -784,11 +638,11 @@ void normalization1(normalization_layer_t n, data1d_t input, data1d_t * output){
 
     for(i=0; i<input.length; i++){
         output->data[i] = (input.data[i]-n.sub_val[i])*n.inv_div_val[i];
-    }*/
+    }
 }
 
 void normalization2(normalization_layer_t n, data1d_t input, data1d_t * output){
-/*
+
     uint32_t i;
 
     output->length = input.length;
@@ -796,7 +650,7 @@ void normalization2(normalization_layer_t n, data1d_t input, data1d_t * output){
 
     for(i=0; i<input.length; i++){
         output->data[i] = input.data[i]*n.inv_div_val[i];
-    }*/
+    }
 }
 
 /*
@@ -808,16 +662,16 @@ void normalization2(normalization_layer_t n, data1d_t input, data1d_t * output){
  */
 
 void batch_normalization1d_layer(batch_normalization_layer_t layer, data1d_t *data) {
-   /* uint32_t i;
+    uint32_t i;
 
     for(i = 0; i < data->length; i++) {
         data->data[i] = data->data[i] * layer.moving_inv_std_dev[i] + layer.std_beta[i];
-    }*/
+    }
 }
 
 
 void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *data) {
-/*    uint32_t i, j, ilen = 0;
+    uint32_t i, j, ilen = 0;
     uint32_t length = data->height * data->width;
     float scale, offset;
 
@@ -827,7 +681,7 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
         for(j = 0; j < length; j++) {
             data->data[ilen+j] = data->data[ilen+j] * scale + offset;
         }
-    }*/
+    }
 }
 
 
@@ -845,7 +699,7 @@ void batch_normalization3d_layer(batch_normalization_layer_t layer, data3d_t *da
  *   at the left and right (pad_w). The initialization is performed in-place on the output data.
  */
 static void zero_padding2d_init(uint8_t pad_h, uint8_t pad_w, data3d_t *output){
- /*   uint32_t c, i, j;
+    uint32_t c, i, j;
 
     for (c = 0; c < output->channels; c++) {
         for (i = 0; i < output->height; i++) {
@@ -867,7 +721,7 @@ static void zero_padding2d_init(uint8_t pad_h, uint8_t pad_w, data3d_t *output){
                 output->data[(c * output->height + output->height - 1 - i) * output->width + j] = 0.0;
             }
         }
-    }*/
+    }
 }
 
 /*
@@ -884,7 +738,7 @@ static void zero_padding2d_init(uint8_t pad_h, uint8_t pad_w, data3d_t *output){
  *   The result is stored in the output data structure.
  */
 void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t *output) {
- /*   uint32_t c, i, j, output_index, input_index;
+    uint32_t c, i, j, output_index, input_index;
 
     // Calc output dimension
     output->channels = input.channels;
@@ -905,7 +759,7 @@ void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t
         }
     }
 
-    zero_padding2d_init(pad_h, pad_w, output);*/
+    zero_padding2d_init(pad_h, pad_w, output);
 }
 
 /* channel_adapt_layer()
@@ -917,7 +771,7 @@ void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t
  */
 void channel_adapt_layer(data3d_t input, data3d_t * output){
 
-  /*  uint32_t i, j, c, l;
+    uint32_t i, j, c, l;
 
     output->channels = input.channels;
     output->height   = input.height;
@@ -930,5 +784,5 @@ void channel_adapt_layer(data3d_t input, data3d_t * output){
                 output->data[l] = input.data[i*input.channels*input.width+input.channels*j+c];
             }
         }
-    }*/
+    }
  }

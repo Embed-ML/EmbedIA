@@ -49,33 +49,39 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include "quant8.h"
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Estructuras de datos cuantizadas
-typedef struct{
-    uint32_t length;
-    quant8 *data;
-    qparam_t qparam;     // Parámetros de cuantización
-} data1d_t;
 
-typedef struct{
-    uint16_t width;
-    uint16_t height;
-    quant8 *data;
-    qparam_t qparam;
-} data2d_t;
+/**
+ * Structure that stores an array of float data (float * data) in vector form.
+ * Specifies the number of channels, the width and the height of the array.
+ */
 
+
+/**
+ * @brief Multi-dimensional data containers for different processing stages
+ */
 typedef struct{
     uint16_t channels;
     uint16_t width;
     uint16_t height;
-    quant8 *data;
-    qparam_t qparam;
-} data3d_t;
+    float * data;
+}data3d_t;
+
+typedef struct{
+    uint16_t width;
+    uint16_t height;
+    float * data;
+}data2d_t;
+
+typedef struct{
+    uint32_t length;
+    float * data;
+}data1d_t;
 
 typedef struct{
     uint16_t h;
@@ -137,11 +143,10 @@ uint32_t argmax(data1d_t data);
  * @param len Number of elements
  * @return Dot product (sum of a[i]*b[i])
  */
-EMBEDIA_INLINE dfixed dot_product(const fixed* a, const fixed* b, uint32_t len) {
-    dfixed sum = FIX_ZERO;
-    uint32_t i;
-    for ( i=0; i < len; i++) {
-        sum += DFIXED_MUL(a[i],b[i]);
+EMBEDIA_INLINE float dot_product(const float* a, const float* b, uint32_t len) {
+    float sum = 0.0f;
+    for (uint32_t i = 0; i < len; i++) {
+        sum += a[i] * b[i];
     }
     return sum;
 }

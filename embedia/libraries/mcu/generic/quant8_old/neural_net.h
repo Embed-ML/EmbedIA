@@ -9,7 +9,6 @@
  * Originally developed with student contributions
  *
  * Licensed under the BSD 3-Clause License. See LICENSE file for details.
- * GitHub: https://github.com/Embed-ML/EmbedIA
  */
 
 #include <stdint.h>
@@ -80,17 +79,25 @@ typedef struct{
 }separable_conv2d_layer_t;
 
 /*
- * Structure that models a dense layer.
- * Specifies the number of neurons  and a vector of neurons (neuron_t * neurons).
+ * Structure that models a neuron.
+ * Specifies the weights of the neuron as a vector (fixed * weights) and the bias (fixed bias).
  */
-typedef struct {
-    uint16_t input_size;
-    uint16_t output_size;
-    quant8 *weights;     // Matriz weights[input_size][output_size]
-    quant8 *biases;      // Vector biases[output_size]
-    qparam_t weights_qparam; // Cuantización de pesos
-    qparam_t output_qparam;  // Cuantización de salida
-} dense_layer_t;
+typedef struct{
+    const quant8  * weights;
+    quant8  bias;
+    qparam_t  qparam;
+}neuron_t;
+
+/*
+ * Structure that models a dense layer.
+ * Specifies the number of neurons (uint16_t n_neurons) and a vector of neurons (neuron_t * neurons).
+ */
+typedef struct{
+    uint16_t n_neurons;
+    neuron_t * neurons;
+    qparam_t  qparam;
+}dense_layer_t;
+
 
 /*
  * Pooling Structure
@@ -194,7 +201,7 @@ void depthwise_conv2d_layer(depthwise_conv2d_layer_t layer, data3d_t input, data
  *  - input       => structure data1d_t with the input data to process.
  *  - *output     => structure data1d_t to store the output result.
  */
-void dense_layer(dense_layer_t *layer, data1d_t *input, data1d_t * output);
+void dense_layer(dense_layer_t * dense_layer, data1d_t * input, data1d_t * output);
 
 /*
  * max_pooling2d_layer()
@@ -233,10 +240,9 @@ void average_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* o
 /***************************************************************************************************************************/
 /* Activation functions/layers */
 
-void softmax_activation(int8_t* data, uint32_t length, qparam_t* qparam);
+void softmax_activation(float *data, uint32_t length);
 
-
-void relu_activation(quant8 *data, uint32_t length, qparam_t* qp);
+void relu_activation(float *data, uint32_t length);
 
 void relu6_activation(float *data, uint32_t length);
 
@@ -244,7 +250,7 @@ void leakyrelu_activation(float *data, uint32_t length, float alpha);
 
 void tanh_activation(float *data, uint32_t length);
 
-void sigmoid_activation(quant8 *data, uint32_t length, qparam_t *qp);
+void sigmoid_activation(float *data, uint32_t length);
 
 void softsign_activation(float *data, uint32_t length);
 
