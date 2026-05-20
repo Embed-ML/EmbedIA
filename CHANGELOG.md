@@ -47,9 +47,9 @@
 
 * Some fixes for sklearn logistic regressor
 * Merge pull request #1 from Tomas-De-Blasio-ing/feature/logistic-regression
-* A├▒adiendo archivos restantes (falta error de ruas)
-* Integracion de LogisticRegression (falta cambio de carpeta para output)
-* Integracion de libreria y core de logisticRegression
+* Added remaining files (path error still pending)
+* Integrated LogisticRegression (output-folder change pending)
+* Integrated LogisticRegression library and core
 * Update of common.h headers
 * Update scripts after the ProjectFiles option refactoring
 * Merge branch 'main' of https://github.com/Embed-ML/EmbedIA
