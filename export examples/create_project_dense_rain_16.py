@@ -40,8 +40,8 @@ options.embedia_folder = '../embedia/'
 options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
 
-#options.micro = ModelMicro.GENERIC
-options.micro = ModelMicro.ESP32
+options.micro = ModelMicro.GENERIC
+#options.micro = ModelMicro.ESP32
 
 #options.data_type = ModelDataType.FLOAT
 #options.data_type = ModelDataType.FULL_QUANT8 # revisar sigmoid activation y demas
@@ -49,7 +49,7 @@ options.data_type = ModelDataType.FIXED32
 # options.data_type = ModelDataType.FIXED16
 # options.data_type = ModelDataType.FIXED8
 # options.data_type = ModelDataType.QUANT8
-
+options.fixed_precision = 16  # for FIXED data types
 # options.debug_mode = DebugMode.DISCARD
 # options.debug_mode = DebugMode.DISABLED
 # options.debug_mode = DebugMode.HEADERS
@@ -83,7 +83,7 @@ ids = data[:, -1]
 options.example_data = samples
 options.example_ids = ids
 
-options.files = ProjectFiles.ALL()
+options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MAIN}
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}

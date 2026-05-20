@@ -87,7 +87,7 @@ ids = y_test
 options.example_data = samples
 options.example_ids = ids
 
-options.files = ProjectFiles.ALL()
+options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MAIN}
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}

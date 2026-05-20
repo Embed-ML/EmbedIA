@@ -7,9 +7,10 @@ from embedia.project_generator import ProjectGenerator
 
 ############# Settings to create the project #############
 
+
 OUTPUT_FOLDER = 'outputs/'
 PROJECT_NAME  = 'C_mnist_float'
-MODEL_FILE    = 'models/mnist_model.h5'
+MODEL_FILE    = 'models/MNIST_14x14_model.h5'
 
 model = load_model(MODEL_FILE)
 
@@ -19,7 +20,6 @@ ids = digits.target[0:10]
 
 options = ProjectOptions()
 
-# set location of EmbedIA folder
 options.embedia_folder = '../embedia/'
 
 
@@ -27,9 +27,6 @@ options.embedia_folder = '../embedia/'
 options.project_type = ProjectType.C
 # options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
-
-#options.micro = ModelMicro.GENERIC
-options.micro = ModelMicro.ESP32
 
 options.data_type = ModelDataType.FLOAT
 # options.data_type = ModelDataType.FIXED32
@@ -41,7 +38,7 @@ options.debug_mode = DebugMode.DISCARD
 # options.debug_mode = DebugMode.HEADERS
 # options.debug_mode = DebugMode.DATA
 
-options.files = ProjectFiles.ALL()
+options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MAIN}
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}

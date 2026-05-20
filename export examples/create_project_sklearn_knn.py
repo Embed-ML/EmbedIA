@@ -51,8 +51,8 @@ OUTPUT_FOLDER = 'outputs/'
 PROJECT_NAME  = 'Prj-SKL_KNN_Iris'
 
 model = knn
-model.name = "SKL_LogisticRegression_iris_model"
-
+model.name = "SKL_KNN_iris_model"
+#model.name = "KNN_model"
 
 options = ProjectOptions()
 
@@ -64,9 +64,9 @@ options.embedia_folder = '../embedia/'
 options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
 
-# options.data_type = ModelDataType.FLOAT
+options.data_type = ModelDataType.FLOAT
 # options.data_type = ModelDataType.FIXED32
-options.data_type = ModelDataType.FIXED16
+# options.data_type = ModelDataType.FIXED16
 # options.data_type = ModelDataType.FIXED8
 
 # options.debug_mode = DebugMode.DISCARD
@@ -97,7 +97,7 @@ print("Clases de los vecinos más cercanos:", neighbor_classes)
 options.example_data = samples
 options.example_ids = ids
 options.preprocessing = scaler
-options.files = ProjectFiles.ALL()
+options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MAIN}
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}

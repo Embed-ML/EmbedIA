@@ -60,7 +60,9 @@ print( (res*100).astype('int') )
 options.example_data = samples
 options.example_ids = ids
 
-options.files = ProjectFiles.ALL()
+print(ids)
+
+options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MAIN}
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}

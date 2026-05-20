@@ -66,15 +66,16 @@ options.embedia_folder = '../embedia/'
 options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
 
-options.data_type = ModelDataType.FLOAT
+#options.data_type = ModelDataType.FLOAT
 # options.data_type = ModelDataType.FIXED32
-# options.data_type = ModelDataType.FIXED16
-# options.data_type = ModelDataType.FIXED8
+#options.data_type = ModelDataType.FIXED16
+#options.data_type = ModelDataType.QUANT8
+options.data_type = ModelDataType.FIXED8
 
 # options.debug_mode = DebugMode.DISCARD
-# options.debug_mode = DebugMode.DISABLED
+options.debug_mode = DebugMode.DISABLED
 # options.debug_mode = DebugMode.HEADERS
-options.debug_mode = DebugMode.DATA
+#options.debug_mode = DebugMode.DATA
 
 (samples, ids) = (X_test_raw, y_test)
 
@@ -87,7 +88,7 @@ print(X_test_raw[i], y_test[i])
 options.example_data = samples
 options.example_ids = ids
 options.preprocessing = scaler
-options.files = ProjectFiles.ALL()
+options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MAIN}
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}
@@ -101,5 +102,4 @@ options.clean_output = True
 generator = ProjectGenerator(options)
 generator.create_project(OUTPUT_FOLDER, PROJECT_NAME, model, options)
 
-print("Project", PROJECT_NAME, "exported in", OUTPUT_FOLDER)
 

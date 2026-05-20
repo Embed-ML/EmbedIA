@@ -10,7 +10,8 @@ from embedia.model_generator.project_options import (
     DebugMode,
     ProjectFiles,
     ProjectOptions,
-    ProjectType
+    ProjectType,
+    ModelMicro
 )
 import numpy as np
 
@@ -30,15 +31,15 @@ options = ProjectOptions()
 # set location of EmbedIA folder
 options.embedia_folder = '../embedia/'
 
-
+options.micro = ModelMicro.ESP32
 options.project_type = ProjectType.ARDUINO
 # options.project_type = ProjectType.C
-# options.project_type = ProjectType.CODEBLOCK
+#options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
 
-options.data_type = ModelDataType.FLOAT
+# options.data_type = ModelDataType.FLOAT
 # options.data_type = ModelDataType.FIXED32
-# options.data_type = ModelDataType.FIXED16
+options.data_type = ModelDataType.FIXED16
 # options.data_type = ModelDataType.FIXED8
 
 # options.debug_mode = DebugMode.DISCARD
@@ -59,7 +60,7 @@ sample = samples[0].numpy()
 options.example_data = np.array([sample])
 options.example_ids = np.array([ids[0]])
 
-options.files = ProjectFiles.ALL()
+options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MAIN}
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}

@@ -164,7 +164,7 @@ options.debug_mode = DebugMode.DISABLED
 options.example_data = samples
 options.example_ids = np.argmax(predictions, axis=1) # IDs de la clase predicha
 
-options.files = ProjectFiles.ALL()
+options.files = ProjectFiles.ALL
 options.clean_output = True
 
 ############# Generar proyecto #############

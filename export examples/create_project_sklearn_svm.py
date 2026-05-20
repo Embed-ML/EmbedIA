@@ -4,6 +4,7 @@ sys.path.insert(0, '..')
 
 from embedia.project_generator import ProjectGenerator
 from embedia.model_generator.project_options import (
+    ModelMicro,
     ModelDataType,
     DebugMode,
     ProjectFiles,
@@ -37,7 +38,7 @@ X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
 # Crear y entrenar el modelo SVM
-svm = SVC(kernel='rbf', C=1.0, decision_function_shape='ovo')
+svm = SVC(kernel='linear', C=1.0, decision_function_shape='ovo')
 svm.fit(X_train, y_train)
 
 # Evaluar el modelo
@@ -61,10 +62,20 @@ options.embedia_folder = '../embedia/'
 options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
 
-# options.data_type = ModelDataType.FLOAT
-options.data_type = ModelDataType.FIXED32
-# options.data_type = ModelDataType.FIXED16
+options.micro = ModelMicro.GENERIC
+#options.micro = ModelMicro.ESP32
+
+
+
+#options.data_type = ModelDataType.FLOAT
+#options.data_type = ModelDataType.FULL_QUANT8 # revisar sigmoid activation y demas
+#options.data_type = ModelDataType.FIXED32
+options.data_type = ModelDataType.FIXED16
 # options.data_type = ModelDataType.FIXED8
+# options.data_type = ModelDataType.QUANT8
+# for fixed point data types, set the number of bits for the fractional part (e.g., 16 for Q16.16)
+#options.fixed_precision = 7  # for FIXED data types
+
 
 # options.debug_mode = DebugMode.DISCARD
 options.debug_mode = DebugMode.DISABLED
@@ -82,7 +93,7 @@ for i in range(10):
 options.example_data = samples
 options.example_ids = ids
 options.preprocessing = scaler
-options.files = ProjectFiles.ALL()
+options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MAIN}
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}

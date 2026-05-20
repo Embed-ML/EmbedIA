@@ -60,8 +60,8 @@ options.embedia_folder = '../embedia/'
 options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
 
-# options.data_type = ModelDataType.FLOAT
-options.data_type = ModelDataType.FIXED32
+options.data_type = ModelDataType.FLOAT
+# options.data_type = ModelDataType.FIXED32
 # options.data_type = ModelDataType.FIXED16
 # options.data_type = ModelDataType.FIXED8
 
@@ -81,7 +81,7 @@ for i in range(10):
 options.example_data = samples
 options.example_ids = ids
 options.preprocessing = scaler
-options.files = ProjectFiles.ALL()
+options.files = ProjectFiles.ALL
 # options.files = {ProjectFiles.MAIN}
 # options.files = {ProjectFiles.MODEL}
 # options.files = {ProjectFiles.LIBRARY}
