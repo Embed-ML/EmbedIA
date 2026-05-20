@@ -288,9 +288,9 @@ void multi_stft_layer(spectrogram_layer_t config, data2d_t input, data3d_t *outp
 
             // Optionally convert to dB
             if (config.convert_to_db) {
-                fixed log10_scale = FL2FX(20.0f);
+                fixed log10_scale = FL2FX_CONST(20.0f);
                 for (j = 0; j < config.n_fft_table; j++) {
-                    fixed log_val = fixed_logn(data_re[j], FL2FX(10.0f));
+                    fixed log_val = fixed_logn(data_re[j], FL2FX_CONST(10.0f));
                     data_re[j] = FIXED_MUL(log10_scale, log_val);
                 }
             }

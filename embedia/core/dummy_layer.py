@@ -22,6 +22,9 @@ class DummyLayer(Layer ):
         None.
         """
         super().__init__(model, wrapper, **kwargs)
+        # DummyLayers are always inplace since they're pass-through
+        self._inplace_output = True
+        self._is_dummy = True
 
 
     def invoke(self, input_name, output_name):

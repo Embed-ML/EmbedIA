@@ -1,5 +1,48 @@
 ﻿# Changelog
 
+## v0.98.0 - 2026-05-19
+
+### Added
+
+* New Layer: Logistic Regression
+* Logistic regression layer with full scikit-learn support
+* Wrapper at `wrappers/sklearn/logistic_regression.py`
+* C implementation in all variants (float, fixed8, fixed16, quant8)
+* New Conv1D and GlobalPooling support
+  * Support for Conv1D layers
+  * GlobalPooling (Max, Avg) for 1D/2D/3D
+  * New C functions for 1D operations
+* ProjectOptions extensions
+  * `output_subfolder`: configurable subfolder for EmbedIA export files
+  * `project_type`: project type with CMake export support
+* C code generator improvements
+  * Improved handling of buffers and intermediate types
+  * Better debug output in the C code generator
+  * `CBuilder`: Arduino support and improved core functions
+  * Normalization functions separated into an independent file
+  * `EmbediaFile`: association and injection of definitions into C files
+* Improved accuracy in spectrogram implementation
+* SVM implementation improvements
+  * Improvements in SVM implementation
+  * Updated `wrappers/sklearn/svm.py` and `svm_base.py` for abstract types
+
+### Changed
+
+* Documentation
+* READMEs in 8 languages: ES, DE, FR, IT, PT, RU, ZH, JA
+* Updated English tutorial with a Spanish version
+* `CONTRIBUTORS.md` updated
+* Memory Management: fully static memory management in project export
+* Wrappers: new `sklearn/tree.py` wrapper for `DecisionTreeClassifier`
+* Updated `tensorflow_wrappers.py` and `embedia_wrappers.py`
+
+### Fixed
+
+* SVM quant8: typo in preprocessor directive and undefined `dequantize()` function
+* `CBuilder`: invalid code when inline layer was in first position
+* `type_converters.py`: silent overflows, added counter system
+* `swap_alloc_slice`: crash when the first layer changed
+
 ## v0.97.0
 
 * Some fixes for sklearn logistic regressor
@@ -177,3 +220,6 @@
 * includes embedia
 * Initial version of the exporter
 
+## Cambios no lanzados (HEAD)
+
+* Update changelog for v0.97.0 release

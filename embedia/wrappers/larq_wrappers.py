@@ -1,4 +1,5 @@
 from embedia.core.layer_wrapper import LayerWrapper
+from embedia.core.padding_types import PaddingType
 import numpy as np
 
 class LarqWrapper(LayerWrapper):
@@ -55,9 +56,7 @@ class LarqQuantConv2DWrapper(LarqWrapper):
 
     @property
     def padding(self):
-        if self._target.padding == 'same':
-            return 1
-        return 0
+        return PaddingType.SAME if self._target.padding == 'same' else PaddingType.VALID
 
 
 class LarqQuantSeparableConv2DWrapper(LarqQuantConv2DWrapper):

@@ -30,6 +30,32 @@
 float euclidean_distance(float *x, float *y, int length);
 
 /*
+ * euclidean_distance_sq()
+ *  Calculates the squared Euclidean distance between two data vectors.
+ *  This is optimized for KNN as it avoids the expensive sqrt operation.
+ * Parameters:
+ *  x      => first data vector of type float
+ *  y      => second data vector of type float
+ *  length => length of the vectors (both must have the same length)
+ * Returns:
+ *  result - squared Euclidean distance between vectors x and y
+ */
+float euclidean_sq_distance(float *x, float *y, int length);
+
+/*
+ * euclidean_distance_fast()
+ *  Fast approximate Euclidean distance using magnitude approximation.
+ *  Very fast but with lower precision, useful for embedded real-time applications.
+ * Parameters:
+ *  x      => first data vector of type float
+ *  y      => second data vector of type float
+ *  length => length of the vectors (both must have the same length)
+ * Returns:
+ *  result - approximate L2 distance using magnitude approximation
+ */
+float euclidean_fast_distance(float *x, float *y, int length);
+
+/*
  * manhattan_distance()
  *  Calculates the Manhattan (L1) distance between two data vectors.
  * Parameters:

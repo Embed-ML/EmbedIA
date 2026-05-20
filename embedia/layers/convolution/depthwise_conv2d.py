@@ -1,4 +1,5 @@
 from embedia.core.neural_net_layer import NeuralNetLayer
+from embedia.core.padding_types import PaddingType
 from embedia.model_generator.project_options import ModelDataType
 import numpy as np
 
@@ -103,81 +104,93 @@ class DepthwiseConv2D(NeuralNetLayer):
 
     @property
     def function_implementation(self):
+        """
+        Generate C code for the depthwise conv2d layer initialization function.
+        Uses CBuilder.add_array and add_struct for clean, declarative generation.
 
-        (data_type, data_converter) = self.model.get_type_converter()
+        Note: depthwise conv2d has a single filter (depth_filters=1), one set of
+        weights per channel, so weights[] is a flat array of all channel kernels.
+        """
+        weights = self._wrapper.weights
+        biases = self._wrapper.biases
+        depth_filters, depth_channels, depth_rows, depth_columns = weights.shape
 
-        qparams = ''
+        (weight_type, weight_converter) = self.model.get_type_converter()
+        conv_weights = weight_converter.fit_transform(weights)
 
-        conv_weights = data_converter.fit_transform(self._wrapper.weights)
-        if self.is_data_quantized:
-            qparams += f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
-        conv_biases = data_converter.fit_transform(self._wrapper.biases)
-        if self.is_data_quantized:
-            qparams += f',{{ {data_converter.scale}, {data_converter.zero_pt} }}'
+        if self.options.data_type == ModelDataType.QUANT8:
+            (biases_type, biases_converter) = self.model.get_type_converter(ModelDataType.FIXED16)
+            conv_biases = biases_converter.transform(biases)
+            params = weight_converter.export_params(mode='q15')
+            qparams = f', {{ {params.scale_q}, {params.zero_point} }}'
+        else:
+            (biases_type, biases_converter) = self.model.get_type_converter()
+            conv_biases = biases_converter.transform(biases)
+            qparams = ''
 
+        strd_rows, strd_cols = self._wrapper.strides[-2], self._wrapper.strides[-1]
+        assert strd_rows == strd_cols, "Only equal strides supported in row and column dimensions"
 
-        # add original comment values
-        comm_values = self.options.data_type != ModelDataType.FLOAT
-
-        depth_filters, depth_channels, depth_rows, depth_columns = self._wrapper.weights.shape  # Getting layer info from it's weights
-
-        kernel_size = f'{{ {depth_rows}, {depth_columns} }}'  # Defining kernel size
-
-        # padding
-        padding = self._wrapper.padding
-
-        # strides
-        (strd_rows, strd_cols) = (self._wrapper.strides[-2], self._wrapper.strides[-1])
-        assert strd_rows == strd_cols  # only supports equal length strides in the row and column dimensions
+        padding = '%d' % self._wrapper.padding
         strides = f'{{{strd_rows}, {strd_cols}}}'
+        kernel_size = f'{{ {depth_rows}, {depth_columns} }}'
+        use_comments = self.options.data_type != ModelDataType.FLOAT
+        name = self.name
+        cb = self.c_builder
 
+        cb.add()
+        with cb.bgn(f'{self.struct_data_type} init_{name}_data(void)'):
 
-        struct_type = self.struct_data_type
+            # --- weights: all channels flat, depth_columns values per row ---
+            # layout: [ch0_r0, ch0_r1, ..., ch1_r0, ch1_r1, ...]
+            flat_weights = [
+                conv_weights[0, ch, r, c]
+                for ch in range(depth_channels)
+                for r in range(depth_rows)
+                for c in range(depth_columns)
+            ]
+            row_comments = [
+                str(weights[0, ch, r, 0:depth_columns])
+                for ch in range(depth_channels)
+                for r in range(depth_rows)
+            ] if use_comments else None
 
-        comm_values = self.options.data_type != ModelDataType.FLOAT  # add original values as comment?
-        identation = ' '*8
+            cb.add_array(
+                f'static EMBEDIA_MODEL_STORAGE {weight_type}',
+                'weights',
+                flat_weights,
+                cols=depth_columns,
+                comments=row_comments,
+                header_comment=f'[{depth_channels} x {depth_rows} x {depth_columns}]'
+            )
 
-        init_conv_layer = f'''
-{struct_type} init_{self.name}_data(void){{
-'''
-        d_weights = ''
-        for ch in range(depth_channels):
-            for r in range(depth_rows):
-                d_weights += '\n' + identation
-                for c in range(depth_columns):
-                    d_weights += f'''{conv_weights[0,ch,r,c]}, '''
-                if comm_values:
-                    d_weights += f'/* {self._wrapper.weights[0, ch, r, 0:depth_columns]} */'
-            d_weights += '\n'
+            cb.add()
 
-        if comm_values:
-            id = d_weights.rfind(',')
-            d_weights = d_weights[0:id] + d_weights[id+1:] # remove last comma
+            # --- biases: one per channel ---
+            cb.add_array(
+                f'static EMBEDIA_MODEL_STORAGE {biases_type}',
+                'biases',
+                list(conv_biases),
+                comments=[str(biases[ch]) for ch in range(depth_channels)] if use_comments else None,
+                header_comment=f'[{depth_channels}]'
+            )
 
-        b_weights = '\n'
-        for ch in range(depth_channels):
-            b_weights += identation + f'{conv_biases[ch]}, '
-            if comm_values:
-                b_weights += f'/* {self._wrapper.biases[ch]} */'
-            b_weights += '\n'
-        id = b_weights.rfind(',')
-        b_weights = b_weights[0:id] + b_weights[id+1:] # remove last comma
+            cb.add()
 
-        o_code = f'''
-    static const {data_type} weights[]={{{d_weights}    }};
-    static const {data_type} biases[]={{{b_weights}    }};
-'''
-        init_conv_layer += o_code
+            # --- layer struct ---
+            cb.add_struct(
+                f'static EMBEDIA_MODEL_STORAGE {self.struct_data_type}',
+                'layer',
+                [
+                    f'weights, biases, {depth_channels}',  # data + channels
+                    f'{kernel_size}, {padding}, {strides}{qparams}'  # geometry
+                ]
+            )
 
-        # analizar lo que sigue
-        init_conv_layer += f'''
-    {struct_type} layer = {{weights, biases, {depth_channels}, {kernel_size}, {padding}, {strides}{qparams} }};
-        
-    return layer;
-}}
-'''
+            cb.add()
+            cb.add('return layer;')
 
-        return init_conv_layer
+        return cb.get_code()
 
     def invoke(self, input_name, output_name):
         """

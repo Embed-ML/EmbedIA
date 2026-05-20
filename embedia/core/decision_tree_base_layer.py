@@ -1,4 +1,4 @@
-from embedia.core.layer import Layer
+from embedia.core.layer import Layer, EmbediaFile
 
 class DecisionTreeBaseLayer(Layer):
 
@@ -24,4 +24,11 @@ class DecisionTreeBaseLayer(Layer):
         retorna una lista de tuplas indicando los nombres de los archivos donde se encuentra la definicion de
         tipos de datos (.h) y la implementación de las funciones (.c) requeridos por la capa/elemento
         '''
-        return super().required_files + [('decision_tree.h', 'decision_tree.c')]
+        return super().required_files + [
+            (EmbediaFile('decision_tree.h',
+                         {'DTREE_MAX_NODES': self.wrapper.node_count,
+                                 'DTREE_N_FEATURES': self.wrapper.n_features,
+                                 'DTREE_N_CLASSES': self.wrapper.n_classes}
+                         ),
+             EmbediaFile('decision_tree.c'))
+        ]

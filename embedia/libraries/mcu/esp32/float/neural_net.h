@@ -77,6 +77,29 @@ typedef struct {
 
 
 /**
+ * @struct conv1d_layer_t
+ * @brief Represents a 1D convolutional layer for temporal data processing.
+ *
+ * @details Used for time series analysis, audio processing, and sequential data
+ *
+ * - n_filters    Number of filters in the layer
+ * - filters      Array of filters (weights and biases)
+ * - channels     Number of input channels/features
+ * - kernel_size  Kernel size (temporal dimension)
+ * - padding      Padding type: PAD_SAME or PAD_VALID
+ * - stride       Stride size (temporal stride)
+ */
+typedef struct {
+    uint16_t n_filters;     /**< Number of filters in the layer */
+    filter_t * filters;     /**< Array of filters */
+    uint16_t channels;      /**< Number of input channels */
+    uint16_t kernel_size;   /**< Kernel size (length) */
+    uint8_t padding;        /**< Padding type: PAD_SAME or PAD_VALID */
+    uint16_t stride;        /**< Stride size */
+} conv1d_layer_t;
+
+
+/**
  * @struct depthwise_conv2d_layer_t
  * @brief Represents a depthwise 2D convolutional layer.
  *
@@ -131,6 +154,17 @@ typedef struct {
     uint16_t size;      /**< Pooling window size (assumed square: size x size) */
     uint16_t strides;   /**< Stride of the pooling window */
 } pooling2d_layer_t;
+
+
+/**
+ * @struct pooling1d_layer_t
+ * @brief Configuration for 1D pooling layers (max or average).
+ */
+typedef struct {
+    uint16_t size;      /**< Pooling window size */
+    uint16_t strides;   /**< Stride of the pooling window */
+} pooling1d_layer_t;
+
 
 /** @} */ // end of layer_structures
 
@@ -244,6 +278,42 @@ void conv2d_strides_layer(conv2d_layer_t layer, data3d_t input, data3d_t * outpu
 
 
 /**
+ * @brief Applies a 1D convolutional layer without padding or striding.
+ *
+ * @param layer    Convolutional layer configuration
+ * @param input    Input data (2D tensor: width × channels)
+ * @param output   Pointer to output data structure
+ */
+void conv1d_layer(conv1d_layer_t layer, data2d_t input, data2d_t * output);
+
+/**
+ * @brief Applies a 1D convolutional layer with padding support.
+ *
+ * @param layer    Convolutional layer configuration (with padding field)
+ * @param input    Input data (2D tensor: width × channels)
+ * @param output   Pointer to output data structure
+ */
+void conv1d_padding_layer(conv1d_layer_t layer, data2d_t input, data2d_t * output);
+
+/**
+ * @brief Applies a 1D convolutional layer with striding (no padding).
+ *
+ * @param layer    Convolutional layer configuration (with strides)
+ * @param input    Input data (2D tensor: width × channels)
+ * @param output   Pointer to output data structure
+ */
+void conv1d_strides_layer(conv1d_layer_t layer, data2d_t input, data2d_t * output);
+
+/**
+ * @brief Applies a 1D convolutional layer for single-channel signals.
+ *
+ * @param layer    Convolutional layer configuration
+ * @param input    Input data (1D tensor: single-channel signal)
+ * @param output   Pointer to output data structure
+ */
+
+
+/**
  * @brief Applies a separable 2D convolutional layer.
  *
  * Performs depthwise convolution followed by pointwise (1x1) convolution.
@@ -278,6 +348,12 @@ void dense_layer(dense_layer_t* dense_layer, data1d_t* input, data1d_t * output)
 
 
 /**
+ * @defgroup local_pooling Local Pooling
+ * @brief pooling functions.
+ * @{
+ */
+
+/**
  * @brief Applies max pooling to a 2D input.
  *
  * Currently supports square pooling windows and strides. No padding support.
@@ -298,6 +374,68 @@ void max_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* outpu
  */
 void average_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* output);
 
+/**
+ * @brief Applies max pooling to a 1D input.
+ *
+ * Currently supports any pooling window size and stride. No padding support.
+ *
+ * @param pool     Pooling configuration (size and stride)
+ * @param input    Input data (2D tensor: channels × width)
+ * @param output   Pointer to output data structure
+ */
+void max_pooling1d_layer(pooling1d_layer_t pool, data2d_t input, data2d_t* output);
+
+/**
+ * @brief Applies average pooling to a 1D input.
+ *
+ * @param pool     Pooling configuration (size and stride)
+ * @param input    Input data (2D tensor: channels × width)
+ * @param output   Pointer to output data structure
+ */
+void average_pooling1d_layer(pooling1d_layer_t pool, data2d_t input, data2d_t* output);
+
+
+/** @} */ // end of local_pooling
+
+
+
+/**
+ * @defgroup global_pooling Global Pooling
+ * @brief global pooling functions.
+ * @{
+ */
+
+/**
+ * @brief Global Max Pooling for 2D data
+ * Reduces (C, H, W) to (C) by taking max over H×W dimensions
+ */
+void global_max_pooling2d_layer(data3d_t input, data1d_t* output);
+
+
+/**
+ * @brief Global Average Pooling for 2D data
+ * Reduces (C, H, W) to (C) by averaging over H×W dimensions
+ */
+void global_average_pooling2d_layer(data3d_t input, data1d_t* output);
+
+
+/**
+ * @brief Global Max Pooling for 1D data
+ * Takes maximum value along spatial dimensions for each channel
+ */
+void global_max_pooling1d_layer(data2d_t input, data1d_t* output);
+
+
+/**
+ * @brief Global Average Pooling for 1D data
+ * Reduces spatial dimensions to single value per channel by averaging
+ * No parameters needed - operates over entire input dimensions
+ */
+void global_average_pooling1d_layer(data2d_t input, data1d_t* output);
+
+
+/** @} */ // end of global_pooling
+
 
 /**
  * @brief Flattens a 3D tensor into a 1D vector.
@@ -308,6 +446,19 @@ void average_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* o
  * @param output   Pointer to output data structure (1D vector)
  */
 void flatten3d_layer(data3d_t input, data1d_t * output);
+
+
+/**
+ * @brief Flattens a 2D tensor into a 1D vector.
+ *
+ * Used to convert 2D layer outputs (like from 1D convolutions) into a format
+ * suitable for dense layers. Preserves the order: channels first, then width.
+ *
+ * @param input    Input data (2D tensor: channels × width)
+ * @param output   Pointer to output data structure (1D vector)
+ */
+void flatten2d_layer(data2d_t input, data1d_t * output);
+
 
 /** @} */ // end of core_functions
 
@@ -472,7 +623,20 @@ void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t
  * @param input   Input data in (H, W, C) format
  * @param output  Pointer to output data in (C, H, W) format
  */
-void channel_adapt_layer(data3d_t input, data3d_t * output);
+void channel_adapt_layer_3d(data3d_t input, data3d_t * output);
+
+/**
+ * @brief Adapts channel ordering from interleaved to consecutive format for 1D data.
+ *
+ * Converts from time-major interleaved format [T0_C0, T0_C1, T1_C0, T1_C1, ...]
+ * to channel-major consecutive format [C0_T0, C0_T1, ..., C1_T0, C1_T1, ...].
+ * Required when input data format doesn't match convolution layer expectations.
+ *
+ * @param input   Input data in interleaved format (time, channels)
+ * @param output  Pointer to output data in consecutive format (channels, time)
+ */
+void channel_adapt_layer_2d(data2d_t input, data2d_t * output);
+
 
 /** @} */ // end of reshaping_functions
 

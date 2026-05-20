@@ -1,4 +1,4 @@
-from embedia.core.layer import Layer
+from embedia.core.layer import Layer, EmbediaFile
 from embedia.model_generator.project_options import ModelDataType
 from math import log2
 
@@ -43,10 +43,10 @@ class SvmBaseLayer(Layer):
     @property
     def required_files(self):
         '''
-        retorna una lista de tuplas indicando los nombres de los archivos donde se encuentra la definicion de
-        tipos de datos (.h) y la implementación de las funciones (.c) requeridos por la capa/elemento
+        Returns a list of tuples indicating the names of the files containing the data type definitions (.h) and
+        the function implementations (.c) required by the layer/element.
         '''
-        return super().required_files + [('svm.h', 'svm.c')]
+        return super().required_files + [(EmbediaFile('svm.h'), EmbediaFile('svm.c'))]
 
 
     def calculate_params(self):
@@ -105,5 +105,31 @@ class SvmBaseLayer(Layer):
 
         return mem_size
 
+    def convert_coefficients_sparse(self, coefficients, threshold: float = 1e-6, sort: bool = True) -> list[list[tuple[int, float]]]:
+        """
+        Convert dense OVO coefficients to sparse representation.
 
+        Args:
+            threshold: Minimum absolute value to keep coefficient
+            sort: If True, sort by descending magnitude (recommended for MCU)
+
+        Returns:
+            List of lists, each inner list contains (sv_idx, coef) for a binary classifier
+        """
+        coef_matrix = coefficients
+        sparse_pairs = []
+
+        for row in coef_matrix:
+            sparse = [
+                (int(k), float(coef))
+                for k, coef in enumerate(row)
+                if abs(coef) > threshold
+            ]
+
+            if sort:
+                sparse.sort(key=lambda x: -abs(x[1]))
+
+            sparse_pairs.append(sparse)
+
+        return sparse_pairs
 

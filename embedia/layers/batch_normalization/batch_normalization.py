@@ -85,15 +85,22 @@ class BatchNormalization(NeuralNetLayer):
 
     @property
     def function_implementation(self):
+        """
+        Generate C code for the batch normalization layer initialization function.
 
-        (data_type, data_converter) = self.model.get_type_converter()
+        Optimization: precomputes two derived parameters to avoid costly operations
+        (division, sqrt) on the MCU at inference time:
 
-        macro_converter = lambda x:x
+            inv_gamma_dev[i] = gamma[i] / sqrt(moving_variance[i] + epsilon)
+            std_beta[i]      = beta[i] - moving_mean[i] * inv_gamma_dev[i]
 
-        name = self.name
-        struct_type = self.struct_data_type
-        inv_gamma_dev_name = 'inv_gamma_dev'
-        std_beta_name = 'std_beta'
+        At inference the layer only needs: output = input * inv_gamma_dev + std_beta
+        (one multiply + one add per element, no sqrt or division).
+        """
+        if self.options.data_type == ModelDataType.QUANT8:
+            (data_type, data_converter) = self.model.get_type_converter(ModelDataType.FIXED16)
+        else:
+            (data_type, data_converter) = self.model.get_type_converter()
 
         gamma = self._wrapper.gamma
         beta = self._wrapper.beta
@@ -102,46 +109,57 @@ class BatchNormalization(NeuralNetLayer):
         epsilon = self._wrapper.epsilon
         length = len(moving_mean)
 
-        # Params: data type, var name, macro, array/list of values
-        array_type = f'static const {data_type}'
+        # precompute derived parameters
+        inv_gamma_dev = data_converter.fit_transform([
+            gamma[i] / sqrt(moving_variance[i] + epsilon)
+            for i in range(gamma.size)
+        ])
 
-        # gamma, beta and mov_mean can be eliminated due to the optimization performed below
-        
-        # Optimization to avoid a multiplication, a division and square root
-        # calculation in the microcontroller
-        # epsilon is a small value to avoid division by zero
-        
-        #gamma_variance = np.array([(gamma[i] / sqrt(moving_variance[i] + epsilon)) for i in range(gamma.size)])
-        #inv_gamma_dev = ['%f/sqrt(%f+%f)' % (self.gamma[i], self.moving_variance[i], self.epsilon) for i in range(self.gamma.size)]
-        inv_gamma_dev = [gamma[i] / sqrt(moving_variance[i]+epsilon) for i in range(gamma.size)]
-        inv_gamma_dev = data_converter.fit_transform(inv_gamma_dev)
-        qparam = f', {{ {data_converter.scale}, {data_converter.zero_pt} }}' if self.is_data_quantized else ''
+        std_beta = data_converter.fit_transform([
+            beta[i] - moving_mean[i] * gamma[i] / sqrt(moving_variance[i] + epsilon)
+            for i in range(beta.size)
+        ])
 
-        # standard_beta = np.array([(beta[i] - moving_mean[i] * standard_gamma[i]) for i in range(beta.size)])
+        name = self.name
+        cb = self.c_builder
 
-        #std_beta = ['%f-(%f*%f/sqrt(%f+%f))' % (self.beta[i], self.moving_mean[i], self.gamma[i], self.moving_variance[i], self.epsilon) for i in range(self.beta.size)]
-        std_beta = [beta[i] - (moving_mean[i]*gamma[i]/sqrt(moving_variance[i]+epsilon) ) for i in range(beta.size)]
-        std_beta = data_converter.fit_transform(std_beta)
-        qparam += f', {{ {data_converter.scale}, {data_converter.zero_pt} }}' if self.is_data_quantized else ''
+        cb.add()
+        with cb.bgn(f'{self.struct_data_type} init_{name}_data(void)'):
 
-        # get inverse of standard dev (square root of moving variance)
-        o_inv_mov_std = declare_array(array_type, inv_gamma_dev_name, macro_converter, inv_gamma_dev)
-        
-        o_std_beta = declare_array(array_type, std_beta_name, macro_converter, std_beta)
+            cb.add('// Precomputed parameters — avoids sqrt and division on MCU:')
+            cb.add('//   inv_gamma_dev[i] = gamma[i] / sqrt(variance[i] + epsilon)')
+            cb.add('//   std_beta[i]      = beta[i]  - mean[i] * inv_gamma_dev[i]')
+            cb.add('// Inference: output = input * inv_gamma_dev + std_beta')
+            cb.add()
 
-        # By exporting this two new parameters, the layer only needs to perform a multiplication and a sum
+            cb.add_array(
+                f'static EMBEDIA_MODEL_STORAGE {data_type}',
+                'inv_gamma_dev',
+                inv_gamma_dev,
+                header_comment=f'[{length}]'
+            )
 
-        init_layer = f'''
-{struct_type} init_{name}_data(void){{
+            cb.add()
 
-    {o_inv_mov_std};
-    {o_std_beta};
+            cb.add_array(
+                f'static EMBEDIA_MODEL_STORAGE {data_type}',
+                'std_beta',
+                std_beta,
+                header_comment=f'[{length}]'
+            )
 
-    static const {struct_type} norm = {{ {length}, {inv_gamma_dev_name}, {std_beta_name} {qparam} }};
-    return norm;
-}}
-'''
-        return init_layer
+            cb.add()
+
+            cb.add_struct(
+                f'static EMBEDIA_MODEL_STORAGE {self.struct_data_type}',
+                'norm',
+                [f'{length}, inv_gamma_dev, std_beta']
+            )
+
+            cb.add()
+            cb.add('return norm;')
+
+        return cb.get_code()
 
     def invoke(self, input_name, output_name):
         dim = len(self.input_shape)

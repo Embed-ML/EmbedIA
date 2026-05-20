@@ -63,17 +63,17 @@ void print_data2d_t(const char *head_text, data2d_t data){
 
     PRINT_TXT_LN(head_text);
 
-    PRINT_INT(STR_MHE, data.height);
+    PRINT_INT(STR_CHN, data.channels);
     PRINT_INT_LN(STR_MWI,data.width);
 
     #if EMBEDIA_DEBUG > 1
 
     PRINT_TXT_LN(STR_CONTENT);
 
-    uint16_t h,w;
-    for(h=0;h<data.height;h++){
+    uint16_t c,w;
+    for(c=0;c<data.channels;c++){
         for(w=0;w<data.width;w++){
-            PRINT_FL("", data.data[data.width+h*data.width+w] );
+            PRINT_FL("", data.data[c * data.width + w]);
         }
         PRINT_TXT_LN("");
     }

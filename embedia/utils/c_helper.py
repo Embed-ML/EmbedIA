@@ -131,7 +131,7 @@ def replace_c_define(content, values):
 
 
 class BlockContext:
-    """Context manager for code blocks."""
+    """Context manager for code blocks with automatic indentation."""
 
     def __init__(self, builder, header, footer="}"):
         self.builder = builder
@@ -140,7 +140,7 @@ class BlockContext:
 
     def __enter__(self):
         self.builder.add(self.header).inc()
-        return self.builder  # Retorna el builder para usar sus métodos
+        return self.builder
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.builder.dec().add(self.footer)
@@ -148,101 +148,247 @@ class BlockContext:
 
 
 class CBuilder:
-    """Text builder with indentation support using simplified method names."""
+    """
+    Text builder with indentation support for C code generation.
+
+    Design principles:
+    - All qualifiers (static, const, EMBEDIA_MODEL_STORAGE, etc.) are the caller's
+      responsibility — methods never assume or inject qualifiers.
+    - Methods return self for chaining: cb.add('x').inc()
+    - bgn() handles braces and indentation automatically.
+    - add_array() and add_struct() are semantic helpers for the most common
+      C patterns in EmbedIA layer initialization.
+    """
 
     def __init__(self, indent_size=4):
         self.indent_size = indent_size
         self._current_indent = 0
         self._lines = []
 
+    # ------------------------------------------------------------------
+    # Core primitives
+    # ------------------------------------------------------------------
+
     def add(self, text=""):
-        """Add text with current indentation."""
+        """Add a line with current indentation. Empty text adds a blank line."""
+        indent = ' ' * self._current_indent
         if text:
-            indent = ' ' * self._current_indent
             self._lines.append(indent + text.replace('\n', '\n' + indent))
+        else:
+            self._lines.append('')
         return self
 
-    def append(self,text=""):
-        """Add text with current indentation."""
-        self.add(text)
-        return self
+    def append(self, text=""):
+        """Alias for add()."""
+        return self.add(text)
 
     def inc(self):
-        """Increase indentation level."""
+        """Increase indentation by one level."""
         self._current_indent += self.indent_size
         return self
 
     def dec(self):
-        """Decrease indentation level."""
+        """Decrease indentation by one level (floor at 0)."""
         self._current_indent = max(0, self._current_indent - self.indent_size)
         return self
 
     def bgn(self, header, footer="}"):
-        """Context manager for blocks with automatic indentation."""
-        return BlockContext(self, header, footer)
+        """
+        Context manager for a C block.
+
+        Appends ' {' to the header automatically, increases indentation
+        inside the block, and closes with footer (default '}') on exit.
+
+        Usage:
+            with cb.bgn('void foo(void)'):
+                cb.add('return;')
+            # generates:
+            # void foo(void) {
+            #     return;
+            # }
+
+        If header already ends with '{', no extra '{' is added — this
+        allows callers to pass custom openers like 'do {' or 'struct {'.
+        """
+        opener = header if header.rstrip().endswith('{') else header + ' {'
+        return BlockContext(self, opener, footer)
 
     def end(self, footer=""):
-        """Close a block with optional footer."""
+        """Manually close a block (dec + optional footer line)."""
         self.dec()
         if footer:
             self.add(footer)
         return self
 
+    # ------------------------------------------------------------------
+    # Output
+    # ------------------------------------------------------------------
+
     def get_code(self):
-        """Return the built text as a single string."""
+        """Return generated code as a single string."""
         return '\n'.join(self._lines)
 
     def __str__(self):
         return self.get_code()
 
     def clear(self):
-        """Reset the builder."""
+        """Reset builder to empty state."""
         self._lines = []
         self._current_indent = 0
         return self
 
+    def load(self, filename):
+        """Replace current content with the contents of a file."""
+        path = Path(filename)
+        if not path.exists():
+            raise FileNotFoundError(f"File '{filename}' not found")
+        self.clear()
+        for line in path.read_text(encoding='utf-8').splitlines():
+            self._lines.append(line)
+        return self
+
+    def save(self, filename):
+        """Write current content to a file (creates parent dirs if needed)."""
+        path = Path(filename)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(self.get_code(), encoding='utf-8')
+        return self
+
+    # ------------------------------------------------------------------
+    # Formatting helpers
+    # ------------------------------------------------------------------
+
     def to_array(self, values, sep=', ', fmt=''):
-        formatted_values = []
+        """Format an iterable as a comma-separated string."""
+        result = []
         for x in values:
             try:
-                formatted_values.append(f"{x: {fmt}}")
+                result.append(f"{x: {fmt}}")
             except (ValueError, TypeError):
-                formatted_values.append(str(x))
-        return sep.join(formatted_values)
+                result.append(str(x))
+        return sep.join(result)
 
     def indent_text(self, text, times=1, char=' '):
-        """apply text with indentation."""
-        indent_size = self.indent_size * times
-        indent_block = char * indent_size
-        return indent_block + text.replace('\n', '\n' + indent_block)
+        """Return text with extra indentation (does not add to builder)."""
+        pad = char * (self.indent_size * times)
+        return pad + text.replace('\n', '\n' + pad)
 
     def printf(self, format_string, *args):
-        """Add a printf statement with C formatting."""
-        arg_str = ', '.join(str(arg) for arg in args)
+        """Add a printf() call."""
         if args:
-            self.add(f'printf("{format_string}", {arg_str});')
+            self.add(f'printf("{format_string}", {", ".join(str(a) for a in args)});')
         else:
             self.add(f'printf("{format_string}");')
         return self
 
-    def load(self, filename):
-        """Load content from file and replace current content."""
-        path = Path(filename)
-        if path.exists():
-            content = path.read_text(encoding='utf-8')
-            self.clear()
-            # Split by lines and add without extra indentation since load replaces content
-            for line in content.splitlines():
-                self._lines.append(line)
+    # ------------------------------------------------------------------
+    # Semantic C helpers
+    # ------------------------------------------------------------------
+
+    def add_array(self, dtype, name, values, cols=0, comments=None, line_limit=80, header_comment=''):
+        """
+        Generate a C array declaration.
+
+        The caller supplies the full type string including all qualifiers:
+
+            cb.add_array('static EMBEDIA_MODEL_STORAGE fixed', 'weights0',
+                         values, cols=4, comments=original_rows)
+
+            cb.add_array('static filter_t', 'filters', filter_inits)
+
+        Parameters
+        ----------
+        dtype      : full type string (qualifiers + base type)
+        name       : variable name (None / '' → anonymous initializer only)
+        values     : iterable — any iterable is accepted: list, numpy array, generator.
+                     Callers do not need to call .tolist() before passing numpy arrays.
+        cols       : elements per row.
+                     > 0 → fixed column layout, one row per cols elements.
+                     0   → free layout, wrap at line_limit characters.
+        comments   : list of per-row comment strings (optional).
+                     When cols > 0: one comment per row of cols elements.
+                     When cols = 0: one comment per wrapped line.
+        line_limit : max line length for free layout (cols=0). Default 80.
+        """
+        values = list(values)
+
+        comment = f'  // {header_comment}' if header_comment else ''
+        opener = f'{dtype} {name}[] = {{{comment}' if name else f'{{{comment}'
+        self.add(opener).inc()
+
+        if cols > 0:
+            # fixed column layout — one row per cols elements
+            rows = [values[i:i + cols] for i in range(0, len(values), cols)]
+            for row_idx, row in enumerate(rows):
+                is_last = (row_idx == len(rows) - 1)
+                row_str = ', '.join(str(v) for v in row)
+                trailing = '' if is_last else ','
+                comment = f'  /* {comments[row_idx]} */' \
+                    if comments and row_idx < len(comments) else ''
+                self.add(f'{row_str}{trailing}{comment}')
+
         else:
-            raise FileNotFoundError(f"File '{filename}' not found")
+            # free layout — wrap lines at line_limit characters
+            current_line = ''
+            wrapped_lines = []
+            for idx, v in enumerate(values):
+                is_last = (idx == len(values) - 1)
+                token = str(v) + ('' if is_last else ', ')
+                if current_line and len(current_line) + len(token) > line_limit:
+                    wrapped_lines.append(current_line.rstrip(', '))
+                    current_line = token
+                else:
+                    current_line += token
+            if current_line:
+                wrapped_lines.append(current_line.rstrip(', '))
+
+            for line_idx, line in enumerate(wrapped_lines):
+                is_last = (line_idx == len(wrapped_lines) - 1)
+                trailing = '' if is_last else ','
+                comment = f'  /* {comments[line_idx]} */' \
+                    if comments and line_idx < len(comments) else ''
+                self.add(f'{line}{trailing}{comment}')
+
+        self.dec().add('};')
         return self
 
-    def save(self, filename):
-        """Save current content to file."""
-        path = Path(filename)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(self.get_code(), encoding='utf-8')
+    def add_struct(self, dtype, name, fields, comments=None):
+        """
+        Generate a C struct initialization.
+
+        Each element of fields becomes one indented line inside the braces,
+        so the caller controls grouping — pass multi-value strings to put
+        related fields on the same line:
+
+            # one field per line
+            cb.add_struct('static conv2d_layer_t', 'layer',
+                          ['8', 'filters', '1', '{2,2}', '0', '{1,1}'])
+
+            # grouped by meaning — compact and readable
+            cb.add_struct('static EMBEDIA_MODEL_STORAGE conv2d_layer_t', 'layer', [
+                f'{n_filters}, filters, {n_channels}',  # dimensions
+                f'{kernel_size}, {padding}, {strides}'  # geometry
+            ])
+
+        Parameters
+        ----------
+        dtype    : full type string including qualifiers
+        name     : variable name
+        fields   : list of strings — each becomes one indented line
+        comments : optional per-field comment strings
+        """
+        self.add(f'{dtype} {name} = {{').inc()
+
+        for idx, field in enumerate(fields):
+            is_last = (idx == len(fields) - 1)
+            trailing = '' if is_last else ','
+            comment = f'  /* {comments[idx]} */' \
+                if comments and idx < len(comments) else ''
+
+            if field+comment != '':
+                self.add(f'{field}{trailing}{comment}')
+
+        self.dec().add('};')
         return self
 
 

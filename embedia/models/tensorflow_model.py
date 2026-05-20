@@ -2,7 +2,7 @@ from embedia.layers.transformation.channels_adapter import ChannelsAdapter
 from embedia.layers.activation.activation import Activation
 from embedia.core.embedia_model import EmbediaModel
 from embedia.core.layer_wrapper import OutputPredictionType
-from embedia.wrappers.tensorflow_wrappers import TFActivationWrapper
+from embedia.wrappers.tensorflow.activation import TFActivationWrapper
 from tensorflow.keras.layers import Activation as KerasActivation
 
 
@@ -13,11 +13,13 @@ class TensorflowModel(EmbediaModel):
         if self.model is None:
             return None
 
+        #if 'Conv' not in self.model.layers[0].__class__.__name__:
+        #    return None
         if hasattr(self.model.layers[0], 'data_format') and self.model.layers[0].data_format != 'channels_last':
             return None # has attribute but channel is first
 
         inp_shape = self.model.input_shape[1:]
-        if len(inp_shape)>=3 and inp_shape[-1]>=2:
+        if len(inp_shape)>=2 and inp_shape[-1]>=2:
                 return ChannelsAdapter(model=self, shape=inp_shape, options=self.options)
 
         return None
@@ -44,6 +46,8 @@ class TensorflowModel(EmbediaModel):
             if not isinstance(layer, KerasActivation) and hasattr(layer, 'activation') and layer.activation is not None:
                 self._embedia_layers.append(Activation(self, TFActivationWrapper(layer)))
 
+        # external post proccesing layers (ej softmax, argmax) to the model? => add as last layer
+        self._add_processing_layers(self.options.postprocessing)
 
         self._complete_layers_shapes()
         return self._embedia_layers

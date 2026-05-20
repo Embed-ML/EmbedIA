@@ -1,4 +1,3 @@
-
 from abc import abstractmethod
 from enum import Enum
 
@@ -50,4 +49,43 @@ class LayerWrapper:
     @property
     def output_prediction_type(self):
         return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Classifier contract
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ClassifierWrapperBase(LayerWrapper):
+    """
+    Base contract for all classifiers.
+
+    Any classifier wrapper must provide these properties so that the code
+    generator can build the C project without knowing the underlying library.
+    """
+
+    @property
+    def n_classes(self) -> int:
+        """Number of output classes."""
+        raise NotImplementedError
+
+    @property
+    def n_features(self) -> int:
+        """Number of input features."""
+        raise NotImplementedError
+
+    @property
+    def input_shape(self) -> tuple:
+        """Expected input shape: (None, n_features)."""
+        return (None, self.n_features)
+
+    @property
+    def output_shape(self) -> tuple:
+        """Expected output shape: (None, n_classes)."""
+        return (None, self.n_classes)
+
+    @property
+    def output_prediction_type(self) -> OutputPredictionType:
+        """How to interpret the raw output to get a class prediction."""
+        raise NotImplementedError
+
 

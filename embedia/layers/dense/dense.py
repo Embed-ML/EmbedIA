@@ -169,82 +169,95 @@ class Dense(NeuralNetLayer):
     @property
     def function_implementation(self):
         """
-        Generate C code with the initialization function of the additional
-        structure (defined in "neural_net.h") required by the layer.
-        Note: it is important to note the automatically generated function
-        prototype (defined in the DataLayer class).
+        Generate C code for the dense layer initialization function.
+        Uses CBuilder.add_array and add_struct for clean, declarative generation.
 
-        Returns
-        -------
-        str
-            C function for data initialization
+        Generated C structure:
+            static EMBEDIA_MODEL_STORAGE {weight_type} weights[] = {  // [n_neurons x n_input]
+                ...  // one neuron per row, float values as comments if quantized
+            };
+            static EMBEDIA_MODEL_STORAGE {biases_type} biases[] = {  // [n_neurons]
+                ...  // float values as comment if quantized
+            };
+            static EMBEDIA_MODEL_STORAGE dense_layer_t layer = {
+                n_input, n_neurons,
+                weights, biases
+            };
+            return layer;
         """
         cb = self.c_builder
         weights = self._wrapper.weights
-        biases = self._wrapper.biases
+        biases = self._wrapper.biases.reshape(1, -1)
         name = self.name
-        struct_type = self.struct_data_type
-        (data_type, data_converter) = self.model.get_type_converter()
+        n_input, n_neurons = weights.shape
 
-        (n_input, n_neurons) = weights.shape
+        (weight_type, weight_converter) = self.model.get_type_converter()
+        (conv_weights, quant_params) = self.convert_to_embedia_data(weight_converter, weights)
 
-        all_weights = np.concatenate([weights, biases.reshape(1,-1)])
-        full_quant = self.options.data_type == ModelDataType.FULL_QUANT8
-        scale_factor_name = 'Q_SCALE' if full_quant else '' # QSCALE is a constant defined when use quantization (int)
-        (conv_weights, quant_params) = self.convert_to_embedia_data(data_converter, all_weights, scale_param=scale_factor_name)
-        (w_quant_params, o_quant_params) = (quant_params, quant_params)
-        if quant_params != '':
-            w_quant_params = w_quant_params + '    // weights quantization'
-            o_quant_params = o_quant_params + '    // outputs quantization'
-
-        # build c string with weights values
-        o_weights = ''
-        for i in range(n_neurons):
-            fl_weights = cb.to_array(all_weights[:-1,i], fmt='.6f')
-            if self.options.data_type != ModelDataType.FLOAT:
-                q8_weights = cb.to_array(conv_weights[:-1, i], fmt='3d')
-                o_weights += f'// N{i:<3d} | ' + fl_weights + '\n' # comment with float values
-                o_weights += q8_weights + ',\n'
-            else:
-                o_weights += fl_weights + ',\n'
-
-        o_weights = o_weights[:-len(",\n")] # remove trailing comma
-
-        # build c string with biases values
-        fl_biases = cb.to_array(all_weights[-1, :], fmt='.6f')
-        if self.options.data_type != ModelDataType.FLOAT:
-            q8_biases = cb.to_array(conv_weights[-1,:])
-            o_biases =   f'// {fl_biases}\n{q8_biases}'
+        if self.options.data_type == ModelDataType.QUANT8:
+            (biases_type, biases_converter) = self.model.get_type_converter(ModelDataType.FIXED16)
+            conv_biases = biases_converter.transform(biases)
+            params = weight_converter.export_params(mode='q15')
+            qparams = f', {{ {params.scale_q}, {params.zero_point} }}'
         else:
-            o_biases = f'{fl_biases}'
+            (biases_type, biases_converter) = self.model.get_type_converter()
+            conv_biases = biases_converter.transform(biases)
+            qparams = ''
 
+        use_comments = self.options.data_type != ModelDataType.FLOAT
 
-        init_function = f'''
-        
-{struct_type} init_{name}_data(void){{
-    // {n_input:3d} inputs
-    // {n_neurons:3d} outputs/neurons
-    static {data_type} weights[{n_neurons}*{n_input}] = {{
-{cb.indent_text(o_weights, times=2)}
-    }};
-    
-    static {data_type} biases[{n_neurons}*1] = {{
-{cb.indent_text(o_biases, times=2)}
-    }};
+        cb.add()
+        with cb.bgn(f'{self.struct_data_type} init_{name}_data(void)'):
 
-    dense_layer_t layer= {{
-        {n_input:3d},     // number of input features 
-        {n_neurons:3d},     // number of neurons/outputs
-        weights, // weights of neurons
-        biases   // biases of neurons
-        {w_quant_params}     
-        {o_quant_params}     
-    }};
-    return layer;
-}}
-'''
+            cb.add(f'// {n_input} inputs, {n_neurons} neurons')
+            cb.add()
 
-        return init_function
+            # --- weights: column-major layout, one neuron per row ---
+            flat_weights = []
+            row_comments = [] if use_comments else None
+            for i in range(n_neurons):
+                flat_weights.extend(conv_weights[:, i].tolist())
+                if use_comments:
+                    row_comments.append(
+                        f'N{i:<3d} | {cb.to_array(weights[:, i], fmt=".6f")}'
+                    )
+
+            cb.add_array(
+                f'static EMBEDIA_MODEL_STORAGE {weight_type}',
+                'weights',
+                flat_weights,
+                cols=n_input,
+                comments=row_comments,
+                header_comment=f'[{n_neurons} x {n_input}]'
+            )
+
+            cb.add()
+
+            # --- biases ---
+            cb.add_array(
+                f'static EMBEDIA_MODEL_STORAGE {biases_type}',
+                'biases',
+                conv_biases[0].tolist(),
+                comments=[cb.to_array(biases[0], fmt='.6f')] if use_comments else None,
+                header_comment=f'[{n_neurons}]'
+            )
+
+            cb.add()
+
+            # --- layer struct ---
+            cb.add_struct(
+                f'static EMBEDIA_MODEL_STORAGE {self.struct_data_type}',
+                'layer',
+                [
+                    f'{n_input}, {n_neurons}',  # input features, neurons
+                    f'weights, biases{qparams}'  # data pointers + optional qparams
+                ]
+            )
+
+            cb.add()
+            cb.add('return layer;')
+
+        return cb.get_code()
 
 
     def invoke(self, input_name, output_name):

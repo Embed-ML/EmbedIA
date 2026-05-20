@@ -1,4 +1,4 @@
-from embedia.core.layer import Layer
+from embedia.core.layer import Layer, EmbediaFile
 
 class NeuralNetLayer(Layer):
     """
@@ -44,4 +44,4 @@ class NeuralNetLayer(Layer):
         retorna una lista de tuplas indicando los nombres de los archivos donde se encuentra la definicion de
         tipos de datos (.h) y la implementación de las funciones (.c) requeridos por la capa/elemento
         '''
-        return super().required_files + [('neural_net.h', 'neural_net.c')]
+        return super().required_files + [(EmbediaFile('neural_net.h'), EmbediaFile('neural_net.c'))]

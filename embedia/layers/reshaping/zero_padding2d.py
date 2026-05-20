@@ -1,4 +1,5 @@
 from embedia.core.neural_net_layer import NeuralNetLayer
+from embedia.model_generator.project_options import ModelDataType
 
 
 class ZeroPadding2D(NeuralNetLayer):
@@ -20,6 +21,31 @@ class ZeroPadding2D(NeuralNetLayer):
 
         #self.input_data_type = f'data3d_t'
         #self.output_data_type = 'data3d_t'
+
+    def calculate_memory(self):
+        """
+        calculates amount of memory required to store the data of layer
+        Returns
+        -------
+        int
+            amount memory required
+
+        """
+
+        # layer dimensions
+        sz_input = self.input_size
+        sz_struct = 0
+        # base data type in bits: float, fixed (32/16/8)
+        if self.options.data_type == ModelDataType.QUANT8:
+            dt_size = ModelDataType.FIXED16.size
+        else:
+            dt_size = self.options.data_type.size
+
+
+        mem_size = (sz_input * dt_size/8 + sz_struct)
+
+        return mem_size
+
 
     def invoke(self, input_name, output_name):
         """

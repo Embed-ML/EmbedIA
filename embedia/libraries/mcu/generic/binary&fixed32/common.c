@@ -19,7 +19,7 @@ typedef struct{
 #define MAX_BUFFER 2
 
 static unsigned char id = MAX_BUFFER-1;
-static raw_buffer buffer[MAX_BUFFER] = {0};
+static raw_buffer buffer[MAX_BUFFER];
 
 void prepare_buffers(){
     id = MAX_BUFFER-1;

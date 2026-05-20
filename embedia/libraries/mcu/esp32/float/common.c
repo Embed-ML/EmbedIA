@@ -44,7 +44,7 @@ typedef struct{
 static unsigned char id = MAX_BUFFER-1;
 
 // info for size and pointer of buffer (only 2 buffers available)
-static raw_buffer buffer[MAX_BUFFER] = {0};
+static raw_buffer buffer[MAX_BUFFER];
 
 // Buffer for memory management
 static unsigned char pool_buffer[ALLOC_BUFFER_SZ];

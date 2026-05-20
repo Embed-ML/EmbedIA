@@ -12,6 +12,7 @@ from embedia.model_generator.project_options import BinaryBlockSize
 from embedia.core.unimplemented_layer import UnimplementedLayer
 from embedia.core.dummy_layer import DummyLayer
 from embedia.core.embedia_model import OutputPredictionType
+import embedia.utils.file_management as fm
 
 
 def multi_replace(adict, text):
@@ -33,85 +34,150 @@ def indent(multi_ln_code, level=1, spaces=4):
     return re.sub("^", level*spaces*' ', code, flags=re.MULTILINE)
 
 
-def generate_embedia_library(embedia_model, src_folder, dst_folder, ext_h, ext_c, options):
+def find_source_file(filename, search_paths):
+    """
+    Encuentra la ubicación real de un archivo fuente en múltiples ubicaciones.
 
-    # files to add "#include"
-    update_include_files = ['common.h']
-    update_define_files = {'common.c': ('ALLOC_BUFFER_SZ', embedia_model.get_buffer_layer_max_size())}
+    Args:
+        filename: Nombre del archivo a buscar
+        search_paths: Lista de directorios donde buscar (en orden de prioridad)
 
-    filenames = os.listdir(src_folder)
+    Returns:
+        Ruta completa del archivo encontrado, o None si no se encuentra
+
+    Ejemplo:
+        find_source_file('common.h', [src_folder, tmpl_folder])
+    """
+    for folder in search_paths:
+        if not folder or not os.path.exists(folder):
+            continue
+
+        file_path = os.path.join(folder, filename)
+        if os.path.exists(file_path):
+            return file_path
+
+    return None
+
+
+def generate_embedia_library(embedia_model, tmpl_folder, src_folder, dst_folder, ext_h, ext_c, options):
+
+    if options.verbose:
+        print("buffer size:", embedia_model.get_buffer_layer_max_size(align=4))
+
+    # 1. Crear DirectiveProcessor con rutas de búsqueda
+    processor = fm.DirectiveProcessor(
+        embedia_model,
+        options,
+        search_paths=[src_folder, tmpl_folder]  # ← NUEVO: pasar carpetas de búsqueda
+    )
+
+    # 2. Generar contenido de headers (sin cambios)
+    includes = []
+    defines = {}
+
+    if options.project_type == ProjectType.ARDUINO:
+        includes.append('"Arduino.h"')
+    else:
+        includes.append('<stdlib.h>')
+
+    if options.data_type in [
+        ModelDataType.BINARY,
+        ModelDataType.BINARY_FIXED32,
+        ModelDataType.BINARY_FLOAT16
+    ]:
+        block_sizes = {
+            'Bits8': 8,
+            'Bits16': 16,
+            'Bits32': 32,
+            'Bits64': 64,
+        }
+        tam_block = block_sizes.get(str(options.tamano_bloque), 64)
+        defines['binary_block_size'] = tam_block
+
+    lines = []
+    for inc in includes:
+        lines.append(f'#include {inc}')
+
+    if includes and defines:
+        lines.append('')
+
+    for name, value in defines.items():
+        lines.append(f'#define {name} {value}')
+
+    includes_h = '\n'.join(lines) + '\n' if lines else ''
+
+    # 3. Configurar transformaciones por archivo
+    transforms = {
+        'common.h': {
+            'inject_headers': includes_h,
+            'update_defines': {'EMBEDIA_MODEL_STORAGE': options.model_storage.qualifier}
+        },
+        'common.c': {
+            'update_defines': {'ALLOC_BUFFER_SZ': embedia_model.get_buffer_layer_max_size(align=4)}
+        }
+    }
+
+    if options.data_type.is_fixed_point and options.fixed_precision is not None:
+        transforms['fixed.h'] = {
+            'update_defines': {
+                'FIX_FRC_SZ': options.fixed_precision
+            }
+        }
+    
+    # agregar redefiniciones de macros definidas en archivos a incluir
+    for (hfile, cfile) in embedia_model.required_files:
+        # hfile y cfile son EmbediaFile o None
+        if hfile and hasattr(hfile, 'defines') and hfile.defines:
+            transforms[str(hfile)] = {
+                'update_defines': hfile.defines
+            }
+        if cfile and hasattr(cfile, 'defines') and cfile.defines:
+            transforms[str(cfile)] = {
+                'update_defines': cfile.defines
+            }
+
+    # 4. Procesar archivos requeridos
     required_files = embedia_model.required_files
-
     embedia_files = []
 
     for (header_file, code_file) in required_files:
-        # check if project's files exists
-        if header_file is not None:
-            if header_file not in filenames:
-                raise FileNotFoundError(f'Missing file: {header_file} in {src_folder}')
-            embedia_files.append(header_file)
-        if code_file is not None:
-            if code_file not in filenames:
-                raise FileNotFoundError(f'Missing file: {code_file} in {src_folder}')
-            embedia_files.append(code_file)
+        for element in [header_file, code_file]:
+            if not element:  # es None
+                continue
 
-    # Prepare includes for files
-    includes_h = ''
-    if options.data_type == ModelDataType.BINARY or options.data_type == ModelDataType.BINARY_FIXED32 or options.data_type == ModelDataType.BINARY_FLOAT16:
+            filename = str(element)  # Usar str() para obtener el nombre
 
-        if options.tamano_bloque == BinaryBlockSize.Bits8:
-            tam_block = 8
-        elif options.tamano_bloque == BinaryBlockSize.Bits16:
-            tam_block = 16
-        elif options.tamano_bloque == BinaryBlockSize.Bits32:
-            tam_block = 32
-        else:
-            tam_block = 64
+            if filename.endswith('.c'):
+                new_name = filename.replace('.c', ext_c)
+            elif filename.endswith('.h'):
+                new_name = filename.replace('.h', ext_h)
+            else:
+                new_name = filename
 
-        if options.project_type == ProjectType.ARDUINO:
-            includes_h = '#include "Arduino.h"\n'
-            includes_h += f'\n#define binary_block_size {tam_block}\n'
-        else:
-            includes_h = '#include <stdlib.h>\n'
-            includes_h += f'\n#define binary_block_size {tam_block}\n'
-    else:
-        if options.project_type == ProjectType.ARDUINO:
-            includes_h = '#include "Arduino.h"\n'
-        else:
-            includes_h = '#include <stdlib.h>\n'
+            # Buscar archivo en tmpl_folder o src_folder
+            src_path = find_source_file(filename, [tmpl_folder, src_folder])
+            dst_path = os.path.join(dst_folder, new_name)
 
-    for i, filename in enumerate(embedia_files):
-        if filename.endswith('.c'):
-            new_name = filename.replace('.c', ext_c)
-        elif filename.endswith('.h'):
-            new_name = filename.replace('.h', ext_h)
-        else:
-            new_name = filename
+            transform = transforms.get(filename, {})
+            processor.process_file_full(
+                src_path,
+                dst_path,
+                inject_headers=transform.get('inject_headers'),
+                update_defines=transform.get('update_defines')
+            )
 
-        src_file = os.path.join(src_folder, filename)
-        dst_file = os.path.join(dst_folder, new_name)
-        if filename in update_include_files or filename in update_define_files.keys():
-            content = file_management.read_from_file(src_file)
-            if filename in update_include_files:
-                content = multi_replace({'{includes}': includes_h}, content)
-            if filename in update_define_files.keys():
-                content = replace_c_define(content, update_define_files[filename])
-            file_management.save_to_file(dst_file, content)
-        else:
-            file_management.copy(src_file, dst_file)
-
-        # update with new filename
-        embedia_files[i] = new_name
+            embedia_files.append(new_name)
 
     return embedia_files
 
 
-# Warning TO DO: check width vs height order
+
 def get_input_const(input_shape):
     if len(input_shape) == 3:
         return {'INPUT_CHANNELS': input_shape[2], 'INPUT_WIDTH': input_shape[1], 'INPUT_HEIGHT': input_shape[0]}
     elif len(input_shape) == 2:
-        return {'INPUT_WIDTH': input_shape[1], 'INPUT_HEIGHT': input_shape[0]}
+        # for 2D channels and height are alias
+        return {'INPUT_CHANNELS': input_shape[0], 'INPUT_WIDTH': input_shape[1]}
     elif len(input_shape) == 1:
         return {'INPUT_LENGTH': input_shape[0]}
 
@@ -171,7 +237,9 @@ def generate_embedia_model(model, src_folder, dst_folder, ext_h, ext_c, model_na
         files_list = layer.required_files
         for (header_file, code_file) in files_list:
             if header_file is not None:
-                include_files.add(header_file[0:-2])
+                # Usar str() para obtener el nombre, funciona tanto con EmbediaFile como con strings
+                filename = str(header_file)
+                include_files.add(filename[0:-2])
 
         if layer.wrapper is None:
             predict_fn += f'\n//<<<<<<<<<<<<<<<<<<<<< INTERNAL LAYER >>>>>>>>>>>>>>>>>>>>>//'
@@ -192,10 +260,12 @@ def generate_embedia_model(model, src_folder, dst_folder, ext_h, ext_c, model_na
                     data_init += layer.variable_initialization  # variable initialization via data init function
                     func_impl += layer.function_implementation  # data init function implementation
 
+                input_layer_type = layer.input_data_type
+                output_layer_type = layer.output_data_type
+
                 # layer section of predict function
                 if not layer.inplace_output:
 
-                    input_layer_type = layer.input_data_type
                     if data_layers_input[-1]['type'] != input_layer_type:
                         var_input = f'input{len(data_layers_input)}'
                         predict_fn += f'{input_layer_type} {var_input};\n'
@@ -206,11 +276,21 @@ def generate_embedia_model(model, src_folder, dst_folder, ext_h, ext_c, model_na
                     else:
                         first_layer = False
 
-                    output_layer_type = layer.output_data_type
                     if data_layers_output == [] or data_layers_output[-1]['type'] != output_layer_type:
                         var_output = f'output{len(data_layers_output)}'
                         predict_fn += f'{output_layer_type} {var_output};\n'
                         data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
+
+                elif first_layer: # first layer is inplace so output must exist before use
+                    first_layer = False
+                    var_input = 'input'
+                    var_output = f'output{len(data_layers_output)}'
+                    n_dims = output_data_type[-4:-2] #1d, 2d or 3d
+                    predict_fn += '// copy input because first layer is inplace\n'
+                    predict_fn += f'{output_layer_type} {var_output};\n'
+                    predict_fn += f'copy_data_{n_dims}(&{var_input}, &{var_output});\n'
+                    data_layers_output.append({'type': output_layer_type, 'var_name': var_output})
+
 
                 param_in = data_layers_input[-1]['var_name']
                 param_out = data_layers_output[-1]['var_name']
@@ -225,6 +305,9 @@ def generate_embedia_model(model, src_folder, dst_folder, ext_h, ext_c, model_na
                 # message of unimplemented layer
                 predict_fn += '// ' + layer.message + '\n'
 
+    #if data_layers_output[-1]["var_name"] != 'output':
+    #    predict_fn += f'   output = {data_layers_output[-1]["var_name"]};\n'
+
     # indent code
     predict_fn = indent(predict_fn)
     # improve code in order to include the correct model funcion
@@ -234,7 +317,7 @@ def generate_embedia_model(model, src_folder, dst_folder, ext_h, ext_c, model_na
         if output_pred_type == OutputPredictionType.BINARY_OUTPUT:
             predict_class = 'return results->data[0] >= 0.5;'
         elif output_pred_type == OutputPredictionType.CLASS_PROBABILITIES:
-            predict_class = 'return argmax(*results);'
+            predict_class = 'return argmax(results->data, results->length);'
         elif output_pred_type == OutputPredictionType.DIRECT_CLASS_ID:
             predict_class = 'return results->data[0];'
     else:
@@ -273,22 +356,20 @@ def generate_embedia_model(model, src_folder, dst_folder, ext_h, ext_c, model_na
     return (text_model_h, text_model_c, model_filename)
 
 
-def generate_embedia_main(embedia_model, src_folder, dst_embedia_folder, model_name, options):
+def generate_embedia_main(embedia_model, src_folder, dst_embedia_folder, model_name, options, strategy):
     embedia_layers = embedia_model._embedia_layers
 
     src_c = os.path.join(src_folder, 'main/main_')
 
-    # Prepare includes
+    # Use strategy for includes and coder
+    coder = strategy.get_coder()
+    includes_c = strategy.get_includes()
+    baud_rate = strategy.get_baud_rate(options)
+    
     if options.project_type == ProjectType.ARDUINO:
-        coder = ArduinoBuilder()
         src_c += "arduino.c"
-        includes_c = '#include "Arduino.h"\n'
-        baud_rate = str(options.baud_rate)
     else:
-        coder = CBuilder()
         src_c += "c.c"
-        includes_c = '#include <stdio.h>\n'
-        baud_rate = "\n"
 
     # for basic types of embedia
     filename = os.path.join(dst_embedia_folder, 'neural_net.h')
@@ -323,15 +404,20 @@ def generate_embedia_main(embedia_model, src_folder, dst_embedia_folder, model_n
         model_data_type = 'fixed'
 
     input_const = get_input_const(embedia_layers[0].input_shape)
-    input_dim = ''
-    for k in input_const:
-        input_dim += f'{k}, '
 
-    if options.data_type == ModelDataType.FULL_QUANT8:
-        qparam = ', sample_data_qp'
+    # Detectar si es data2d_t y formatear apropiadamente
+    if embedia_layers[0].input_shape == 2 and len(input_const) == 2:
+        # Para data2d_t con 2 campos (channels/height + width)
+        values = list(input_const.values())
+        # El primer valor va dentro de la union, el segundo es width
+        input_initializer = f'{{ {{ {values[0]} }}, {values[1]}, NULL }}'
     else:
-        qparam = ''
-    input_data = f'''{input_data_type} input = {{ {input_dim} NULL {qparam} }};\n'''
+        # Formato normal
+        input_dim = ', '.join([f'{v}' for v in input_const.values()])
+        input_initializer = f'{{ {input_dim}, NULL }}'
+
+    input_data = f'''{input_data_type} input = {input_initializer};\n'''
+
     output_data = f'''{output_data_type} results;\n'''
 
     coder.append(f'''
@@ -375,7 +461,7 @@ def generate_embedia_main(embedia_model, src_folder, dst_embedia_folder, model_n
     return (h, c)
 
 
-def generate_embedia_debug(src_dbg_folder, dst_folder, options):
+def generate_embedia_debug(src_dbg_folder, dst_folder, options, strategy):
     # add debug mode macro to header file
 
     if options.data_type == ModelDataType.FULL_QUANT8:
@@ -387,45 +473,17 @@ def generate_embedia_debug(src_dbg_folder, dst_folder, options):
     # add include
     content = content.format(EMBEDIA_DEBUG='#define EMBEDIA_DEBUG %d\n' % options.debug_mode)
     file_management.save_to_file(os.path.join(dst_folder, f'{debug_filename}.h'), ''.join(content))
-    # copy aditional debug file
-    if options.project_type == ProjectType.ARDUINO:
-        file_management.copy(os.path.join(src_dbg_folder, 'embedia_debug_def_arduino.h'),
-                    os.path.join(dst_folder, 'embedia_debug_def.h'))
-        # copy implementation file
-        file_management.copy(os.path.join(src_dbg_folder, f'{debug_filename}.c'),
-                    os.path.join(dst_folder, f'{debug_filename}.cpp'))
-    else:
-        file_management.copy(os.path.join(src_dbg_folder, 'embedia_debug_def_c.h'),
-                    os.path.join(dst_folder, 'embedia_debug_def.h'))
-        # copy implementation file
-        file_management.copy(os.path.join(src_dbg_folder, f'{debug_filename}.c'),
-                    os.path.join(dst_folder, f'{debug_filename}.c'))
-
-def generate_codeblock_project(project_name, files, src_folder, _dst_embedia_folder_name):
-
-    embedia_output_folder = _dst_embedia_folder_name
-    included_files = ''
-    for filename in files:
-        if filename[-2:].lower() == '.c':
-            if filename == 'main.c':
-                folder_filename = filename
-            else:
-                folder_filename = os.path.join(embedia_output_folder, filename)
-            included_files += f'''
-        <Unit filename="{folder_filename}">
-            <Option compilerVar="CC" />
-        </Unit>'''
-        elif filename[-2:].lower() == '.h':
-            folder_filename = os.path.join(embedia_output_folder, filename)
-            included_files += f'''
-        <Unit filename="{folder_filename}" />'''
-
-    src_cbp = os.path.join(src_folder, 'main/codeblock_project.cbp')
-    content = file_management.read_from_file(src_cbp)
-
-    content = multi_replace({'{project_name}': project_name, '{included_files}': included_files}, content)
-
-    return content
+    
+    # Use strategy to get debug file names
+    def_header, impl_file = strategy.get_debug_files(debug_filename)
+    
+    # copy additional debug file
+    file_management.copy(os.path.join(src_dbg_folder, def_header),
+                os.path.join(dst_folder, 'embedia_debug_def.h'))
+    
+    # copy implementation file with correct extension
+    file_management.copy(os.path.join(src_dbg_folder, f'{debug_filename}.c'),
+                os.path.join(dst_folder, impl_file))
 
 
 def data_to_array_str(data, macro_converter=None, clip=120):
@@ -458,14 +516,16 @@ def generate_examples(src_folder, var_name, options, embedia_model):
     #         return f"FL2FX({s})"
     #     data_type = 'fixed'
 
-    if embedia_model.is_data_quantized and options.data_type == ModelDataType.QUANT8:
-        (data_type, data_converter) = embedia_model.get_type_converter(ModelDataType.FLOAT)
+    if options.data_type == ModelDataType.QUANT8:
+        (data_type, data_converter) = embedia_model.get_type_converter(ModelDataType.FIXED16)
     else:
         (data_type, data_converter) = embedia_model.get_type_converter()
 
     src_h = os.path.join(src_folder, 'main/example_file.h')
     smp = options.example_data
     ids = options.example_ids
+
+    #print("smp", smp)
 
     if smp.shape[0] != ids.shape[0]:
         raise Exception("The number of examples does not match the number of classes")
@@ -475,6 +535,7 @@ def generate_examples(src_folder, var_name, options, embedia_model):
         ids = np.array(ids)
     if len(ids.shape) == 1:
         ids = ids.reshape((-1,1))
+    ids = ids.astype(int)
 
 
     # generate array of samples

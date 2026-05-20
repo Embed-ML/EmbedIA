@@ -1,7 +1,7 @@
-from embedia.core.neural_net_layer import NeuralNetLayer
+from embedia.core.layer import Layer
 
 
-class Spectrogram(NeuralNetLayer):
+class Spectrogram(Layer):
 
     """
     
@@ -155,7 +155,7 @@ spectrogram_layer_t init_melspec_data(void){{
     layer_spec.len_nfft_nmels = {(self.wrapper.n_fft // 2) // self.wrapper.n_mels};
     layer_spec.spec_size = {self.wrapper.shape[0] * self.wrapper.shape[1]};
     layer_spec.ts_us = {int(1 / self.wrapper.sample_rate * 1000 * 1000)};
-
+    layer_spec.top_db = {self.wrapper.top_db};
     return layer_spec;
 }}
         '''

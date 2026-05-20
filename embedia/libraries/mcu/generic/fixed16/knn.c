@@ -10,42 +10,48 @@
  * GitHub: https://github.com/Embed-ML/EmbedIA
  */
 
-#include "knn.h"
 #include <stdlib.h>
+#include "knn.h"
 
-// Estructura para almacenar distancias e índices
+/* Internal types and helpers */
+
+/** @brief Pair of distance and sample index for heap operations */
 typedef struct {
-    fixed distance;
+    dfixed   distance;
     uint16_t index;
 } DistanceIndex;
 
-
-// Macro para intercambiar dos elementos
+/** @brief Swaps two elements of any type */
 #define SWAP(a, b, type) do { \
-    type temp = a; \
-    a = b; \
-    b = temp; \
+    type temp = (a); (a) = (b); (b) = temp; \
 } while (0)
 
-// Función para mantener la propiedad de heap máximo
-static inline void max_heapify(DistanceIndex *heap, int heap_size, int i) {
-    int largest = i;
-    int left = 2 * i + 1;
-    int right = 2 * i + 2;
 
-    if (left < heap_size && heap[left].distance > heap[largest].distance) {
-        largest = left;
-    }
-    if (right < heap_size && heap[right].distance > heap[largest].distance) {
-        largest = right;
-    }
-    if (largest != i) {
-        SWAP(heap[i], heap[largest], DistanceIndex); // Usando la macro SWAP
-        max_heapify(heap, heap_size, largest);
+/**
+ * @brief Maintains max-heap property by sifting down.
+ * @param heap Array of DistanceIndex elements.
+ * @param heap_size Total size of the heap.
+ * @param i Index to start heapify from.
+ */
+static inline void max_heapify(DistanceIndex *heap, int heap_size, int i) {
+    int largest, left, right;
+    while (1) {
+        largest = i;
+        left  = 2 * i + 1;
+        right = 2 * i + 2;
+        if (left  < heap_size && heap[left ].distance > heap[largest].distance) largest = left;
+        if (right < heap_size && heap[right].distance > heap[largest].distance) largest = right;
+        if (largest == i) break;
+        SWAP(heap[i], heap[largest], DistanceIndex);
+        i = largest;
     }
 }
 
-// Función para construir un heap máximo
+/**
+ * @brief Builds a max-heap from an unordered array.
+ * @param heap Array of DistanceIndex elements.
+ * @param heap_size Total size of the heap.
+ */
 static inline void build_max_heap(DistanceIndex *heap, int heap_size) {
     int i;
     for (i = heap_size / 2 - 1; i >= 0; i--) {
@@ -53,37 +59,49 @@ static inline void build_max_heap(DistanceIndex *heap, int heap_size) {
     }
 }
 
-// Función principal para clasificación KNN
+/**
+ * @brief Performs KNN classification using max-heap for efficient k-nearest neighbor selection.
+ * 
+ * Algorithm:
+ * 1. Build max-heap with first k samples
+ * 2. For remaining samples, replace heap root if distance is smaller
+ * 3. Count class votes from k nearest neighbors
+ * 4. Return normalized class probabilities
+ * 
+ * Uses dfixed for distance comparisons and fixed-point division for probability calculation.
+ * 
+ * @param layer KNN classifier configuration.
+ * @param input Input feature vector.
+ * @param output Class probabilities (normalized to sum = 1).
+ */
 void k_neighbors_classifier_layer(k_neighbors_classifier_layer_t layer, data1d_t input, data1d_t *output) {
     DistanceIndex heap[layer.n_neighbors];
-    fixed distance;
+    dfixed distance;
     uint16_t class_count[layer.n_classes];
-    int i, class_id;
+    uint16_t i, class_id;
 
     // Inicializar la salida
     output->length = layer.n_classes;
     output->data = (fixed *)swap_alloc(sizeof(fixed) * output->length);
 
-    // Fase 1: Llenar el heap con los primeros k elementos
+    /* Phase 1: fill heap */
     for (i = 0; i < layer.n_neighbors; i++) {
         distance = layer.distance_fn(layer.neighbors_features + i * layer.n_features, input.data, layer.n_features);
         heap[i] = (DistanceIndex){distance, i};
     }
-    build_max_heap(heap, layer.n_neighbors); // Construir el heap máximo
+    build_max_heap(heap, layer.n_neighbors);
 
-    // Fase 2: Procesar el resto de los elementos
+    /* Phase 2: scan remaining samples — pure integer comparisons */
     for (i = layer.n_neighbors; i < layer.n_samples; i++) {
         distance = layer.distance_fn(layer.neighbors_features + i * layer.n_features, input.data, layer.n_features);
         if (distance < heap[0].distance) {
-            heap[0] = (DistanceIndex){distance, i};
-            max_heapify(heap, layer.n_neighbors, 0); // Ajustar el heap
+            heap[0] = (DistanceIndex){ distance, (uint16_t)i };
+            max_heapify(heap, layer.n_neighbors, 0);
         }
     }
 
-    // Contar las etiquetas de los k vecinos más cercanos
-    for (i = 0; i < layer.n_classes; i++) {
-        class_count[i] = 0;
-    }
+    /* Count votes */
+    for (i = 0; i < layer.n_classes; i++) class_count[i] = 0;
     for (i = 0; i < layer.n_neighbors; i++) {
         class_id = layer.neighbors_id[heap[i].index];
         class_count[class_id]++;
@@ -96,20 +114,34 @@ void k_neighbors_classifier_layer(k_neighbors_classifier_layer_t layer, data1d_t
     }
 }
 
-// Función principal para regresión KNN
+/**
+ * @brief Performs KNN regression using max-heap for efficient k-nearest neighbor selection.
+ * 
+ * Algorithm:
+ * 1. Build max-heap with first k samples
+ * 2. For remaining samples, replace heap root if distance is smaller
+ * 3. Average target values from k nearest neighbors
+ * 
+ * Uses dfixed for distance comparisons and fixed-point division for averaging.
+ * 
+ * @param layer KNN regressor configuration.
+ * @param input Input feature vector.
+ * @param output Predicted value (average of k nearest neighbors).
+ */
 void k_neighbors_regressor_layer(k_neighbors_regressor_layer_t layer, data1d_t input, data1d_t *output) {
+    uint16_t i;
+    dfixed distance;
     DistanceIndex heap[layer.n_neighbors];
 
-    // Inicializar la salida
     output->length = 1;
-    output->data = (fixed *)swap_alloc(sizeof(fixed));
+    output->data   = (fixed *)swap_alloc(sizeof(fixed));
 
     // Fase 1: Llenar el heap con los primeros k elementos
     for (int i = 0; i < layer.n_neighbors; i++) {
         fixed distance = layer.distance_fn(layer.neighbors_features + i * layer.n_features, input.data, layer.n_features);
         heap[i] = (DistanceIndex){distance, i};
     }
-    build_max_heap(heap, layer.n_neighbors); // Construir el heap máximo
+    build_max_heap(heap, layer.n_neighbors);
 
     // Fase 2: Procesar el resto de los elementos
     for (int i = layer.n_neighbors; i < layer.n_samples; i++) {

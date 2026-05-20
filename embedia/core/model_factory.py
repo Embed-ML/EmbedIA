@@ -40,7 +40,7 @@ class ModelFactory:
             return TensorflowModel(model_object, options)
         elif main_module in ['sklearn']:
             return SklearnModel(model_object, options)
-        elif main_module in ['common']:
+        elif main_module in ['common', 'embedia']:
             return EmbediaModel(model_object, options)
         else:
             raise ValueError("Object not in TensorFlow or scikit-learn module")

@@ -43,4 +43,5 @@ class ChannelsAdapter(NeuralNetLayer):
         return self._shape
 
     def invoke(self, input_name, output_name):
-        return f'''channel_adapt_layer({input_name}, &{output_name});'''
+        dim = self.input_data_type[4]
+        return f'''channel_adapt_layer_{dim}d({input_name}, &{output_name});'''

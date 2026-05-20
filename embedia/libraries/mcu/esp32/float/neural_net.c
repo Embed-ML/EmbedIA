@@ -179,6 +179,131 @@ void conv2d_layer(conv2d_layer_t layer, data3d_t input, data3d_t * output) {
     }
 }
 
+
+// ========================================================
+// 1D Convolution Layer Implementation
+// ========================================================
+
+/*
+ * Calculates symmetric padding for 'SAME' convolution mode (1D version)
+ */
+static uint16_t compute_padding_1d(int stride, int in_size, int filter_size, int out_size) {
+    int dilation_rate = 1;
+    int effective_filter_size = (filter_size - 1) * dilation_rate + 1;
+    int total_padding = ((out_size - 1) * stride + effective_filter_size - in_size);
+    total_padding = total_padding > 0 ? total_padding : 0;
+    return total_padding / 2;
+}
+
+/*
+ * Allocates and configures output tensor for 1D convolution
+ */
+static void calc_alloc_conv1d_output(uint16_t n_filters, uint16_t kernel_size, uint16_t stride,
+                                     uint8_t padding, data2d_t input, data2d_t *output) {
+    if (padding == PAD_VALID) {
+        output->width = (input.width + stride - kernel_size) / stride;
+    } else {
+        output->width = (input.width + stride - 1) / stride;
+    }
+    output->channels = n_filters; // total of output channels
+    output->data = (float*)swap_alloc(sizeof(float) * output->channels * output->width);
+}
+
+// ========================================================
+// 1D Convolution Layer Implementations
+// ========================================================
+
+/*
+ * General 1D convolution with padding and bounds checking
+ */
+void conv1d_padding_layer(conv1d_layer_t layer, data2d_t input, data2d_t * output) {
+    int32_t delta, i, k, f_pos, i_pos;
+    int16_t f, c, i_pad, pad;
+    float value;
+
+    // calculate output size and allocate memory
+    calc_alloc_conv1d_output(layer.n_filters, layer.kernel_size, layer.stride,
+                            layer.padding, input, output);
+
+    pad = compute_padding_1d(layer.stride, input.width, layer.kernel_size, output->width);
+
+    for (f = 0; f < layer.n_filters; f++) {
+        delta = f * output->width;
+        for (i = 0; i < output->width; i++) {
+            value = 0;
+            for (c = 0; c < layer.channels; c++) {
+                for (k = 0; k < layer.kernel_size; k++) {
+                    i_pad = i * layer.stride + k - pad;
+                    // Check for valid input access within padded bounds
+                    if (i_pad >= 0 && i_pad < input.width) {
+                        f_pos = (c * layer.kernel_size) + k;
+                        i_pos = (c * input.width) + i_pad;
+                        value += layer.filters[f].weights[f_pos] * input.data[i_pos];
+                    }
+                }
+            }
+            output->data[delta + i] = value + layer.filters[f].bias;
+        }
+    }
+}
+
+/*
+ * Optimized 1D convolution for stride=1 without padding
+ */
+void conv1d_strides_layer(conv1d_layer_t layer, data2d_t input, data2d_t * output) {
+    int32_t delta, i, k, f_pos, i_pos;
+    int16_t f, c;
+    float value;
+
+    // calculate output size and allocate memory
+    calc_alloc_conv1d_output(layer.n_filters, layer.kernel_size, layer.stride,
+                            layer.padding, input, output);
+
+    for (f = 0; f < layer.n_filters; f++) {
+        delta = f * output->width;
+        for (i = 0; i < output->width; i++) {
+            value = 0;
+            for (c = 0; c < layer.channels; c++) {
+                for (k = 0; k < layer.kernel_size; k++) {
+                    f_pos = (c * layer.kernel_size) + k;
+                    i_pos = (c * input.width) + (i * layer.stride + k);
+                    value += layer.filters[f].weights[f_pos] * input.data[i_pos];
+                }
+            }
+            output->data[delta + i] = value + layer.filters[f].bias;
+        }
+    }
+}
+
+/*
+ * Basic 1D convolution implementation for stride=1 without padding
+ */
+void conv1d_layer(conv1d_layer_t layer, data2d_t input, data2d_t * output) {
+    int32_t delta, i, k, f_pos, i_pos;
+    int16_t f, c;
+    float value;
+
+    // calculate output size and allocate memory
+    calc_alloc_conv1d_output(layer.n_filters, layer.kernel_size, layer.stride,
+                            layer.padding, input, output);
+
+    for (f = 0; f < layer.n_filters; f++) {
+        delta = f * output->width;
+        for (i = 0; i < output->width; i++) {
+            value = 0;
+            for (c = 0; c < layer.channels; c++) {
+                for (k = 0; k < layer.kernel_size; k++) {
+                    f_pos = (c * layer.kernel_size) + k;
+                    i_pos = (c * input.width) + (i + k);
+                    value += layer.filters[f].weights[f_pos] * input.data[i_pos];
+                }
+            }
+            output->data[delta + i] = value + layer.filters[f].bias;
+        }
+    }
+}
+
+
 /*
  * Depthwise convolution operation for separable convolutions
  * - Applies single filter per input channel
@@ -336,6 +461,10 @@ void dense_layer(dense_layer_t *layer, data1d_t *input, data1d_t *output) {
 }
 
 
+// ========================================================
+// Local Pooling Functions
+// ========================================================
+
 /*
  * Max pooling layer implementation
  * - Downsamples input by taking maximum value in each window
@@ -401,6 +530,175 @@ void average_pooling2d_layer(pooling2d_layer_t pool, data3d_t input, data3d_t* o
                 output->data[c*output->width*output->height + i*output->width + j] = avg/cant;
             }
         }
+    }
+}
+
+/*
+ * Max pooling 1D layer implementation
+ * - Downsamples 1D input by taking maximum value in each window
+ * - Preserves channel dimensions
+ * - Commonly used for temporal invariance in sequential data
+ */
+void max_pooling1d_layer(pooling1d_layer_t pool, data2d_t input, data2d_t* output){
+    uint32_t c, i, aux;
+    float max = -INFINITY;
+    float num;
+
+    // Calculate output dimensions
+    output->width = ((uint16_t) ((input.width - pool.size)/pool.strides)) + 1;
+    output->channels = input.channels;
+    output->data = (float*)swap_alloc(sizeof(float) * output->channels * output->width);
+
+    // Process each channel
+    for(c = 0; c < output->channels; c++){
+        // Process each output position
+        for(i = 0; i < output->width; i++){
+            max = -INFINITY;
+            // Find maximum in pooling window
+            for(aux = 0; aux < pool.size; aux++){
+                num = input.data[c * input.width + (i * pool.strides + aux)];
+                if(num > max){
+                    max = num;
+                }
+            }
+            output->data[c * output->width + i] = max;
+        }
+    }
+}
+
+/*
+ * Average pooling 1D layer implementation
+ * - Downsamples 1D input by averaging values in each window
+ * - Preserves channel dimensions
+ * - Smoother downsampling than max pooling for sequential data
+ */
+void average_pooling1d_layer(pooling1d_layer_t pool, data2d_t input, data2d_t* output){
+    uint32_t c, i, aux;
+    uint32_t count = pool.size;
+    float avg = 0;
+    float num;
+
+    // Calculate output dimensions
+    output->width = ((uint32_t)((input.width - pool.size) / pool.strides)) + 1;
+    output->channels = input.channels;
+    output->data = (float*)swap_alloc(sizeof(float) * output->channels * output->width);
+
+    // Process each channel
+    for(c = 0; c < output->channels; c++){
+        // Process each output position
+        for(i = 0; i < output->width; i++){
+            avg = 0;
+            // Sum values in pooling window
+            for(aux = 0; aux < pool.size; aux++){
+                num = input.data[c * input.width + (i * pool.strides + aux)];
+                avg += num;
+            }
+            // Store average
+            output->data[c * output->width + i] = avg / count;
+        }
+    }
+}
+
+
+// ========================================================
+// Global Pooling Functions
+// ========================================================
+/*
+ * Global Max Pooling 2D
+ * Takes maximum value along spatial dimensions for each channel
+ * Input: data3d_t (channels, height, width)
+ * Output: data1d_t (channels)
+ */
+void global_max_pooling2d_layer(data3d_t input, data1d_t* output) {
+    uint32_t c, i, j;
+    float max_val;
+
+    output->length = input.channels;
+    output->data = (float*)swap_alloc(sizeof(float) * output->length);
+
+    for (c = 0; c < input.channels; c++) {
+        max_val = -INFINITY;
+        for (i = 0; i < input.height; i++) {
+            for (j = 0; j < input.width; j++) {
+                float val = input.data[c * input.height * input.width + i * input.width + j];
+                if (val > max_val) {
+                    max_val = val;
+                }
+            }
+        }
+        output->data[c] = max_val;
+    }
+}
+
+/*
+ * Global Average Pooling 2D
+ * Reduces (channels, height, width) to (channels) by averaging over spatial dimensions
+ * Input: data3d_t (channels, height, width)
+ * Output: data1d_t (channels)
+ */
+void global_average_pooling2d_layer(data3d_t input, data1d_t* output) {
+    uint32_t c, i, j;
+    float sum;
+    uint32_t spatial_size = input.height * input.width;
+
+    output->length = input.channels;
+    output->data = (float*)swap_alloc(sizeof(float) * output->length);
+
+    for (c = 0; c < input.channels; c++) {
+        sum = 0.0;
+        for (i = 0; i < input.height; i++) {
+            for (j = 0; j < input.width; j++) {
+                sum += input.data[c * input.height * input.width + i * input.width + j];
+            }
+        }
+        output->data[c] = sum / spatial_size;
+    }
+}
+
+/*
+ * Global Max Pooling 1D
+ * Takes maximum value along width dimension for each channel
+ * Input: data2d_t (channels, width)
+ * Output: data1d_t (channels)
+ */
+void global_max_pooling1d_layer(data2d_t input, data1d_t* output) {
+    uint32_t c, i;
+    float max_val;
+
+    output->length = input.channels;
+    output->data = (float*)swap_alloc(sizeof(float) * output->length);
+
+    for (c = 0; c < input.channels; c++) {
+        max_val = -INFINITY;
+        for (i = 0; i < input.width; i++) {
+            float val = input.data[c * input.width + i];
+            if (val > max_val) {
+                max_val = val;
+            }
+        }
+        output->data[c] = max_val;
+    }
+}
+
+/*
+ * Global Average Pooling 1D
+ * Reduces (channels, width) to (channels) by averaging along width dimension
+ * Input: data2d_t (channels, width)
+ * Output: data1d_t (channels)
+ */
+void global_average_pooling1d_layer(data2d_t input, data1d_t* output) {
+    uint32_t c, i;
+    float sum;
+
+    output->length = input.channels;
+    output->data = (float*)swap_alloc(sizeof(float) * output->length);
+
+    for (c = 0; c < input.channels; c++) {
+        sum = 0.0;
+        for (i = 0; i < input.width; i++) {
+            sum += input.data[c * input.width + i];
+        }
+        output->data[c] = sum / input.width;
     }
 }
 
@@ -614,6 +912,28 @@ void flatten3d_layer(data3d_t input, data1d_t * output) {
     }
 }
 
+
+/*
+ * Flattens a 2D tensor (channels × width) into a 1D vector.
+ * - Used to connect 1D convolutional layers to dense layers.
+ * - Memory layout of input: channel-major (channels stored sequentially).
+ * - Output order: time-major with channels last, matching TensorFlow Flatten:
+ *   [t0_c0, t0_c1, ..., t1_c0, t1_c1, ..., tN_c0, tN_c1, ...]
+ */
+void flatten2d_layer(data2d_t input, data1d_t * output) {
+    uint32_t i, c, idx = 0;
+    output->length = input.channels * input.width;
+    output->data = (float*)swap_alloc(sizeof(float) * output->length);
+
+    // Flatten in "time-major" order: positions first, then channels
+    for (i = 0; i < input.width; i++) {
+        for (c = 0; c < input.channels; c++) {
+            output->data[idx++] = input.data[c * input.width + i];
+        }
+    }
+}
+
+
 /*
  * Initializes zero padding for 2D data
  * - Helper function for zero_padding2d_layer
@@ -673,7 +993,7 @@ void zero_padding2d_layer(uint8_t pad_h, uint8_t pad_w, data3d_t input, data3d_t
  * - Reorders input channels for compatibility
  * - Handles different channel ordering formats
  */
-void channel_adapt_layer(data3d_t input, data3d_t * output){
+void channel_adapt_layer_3d(data3d_t input, data3d_t * output){
 
     uint32_t i, j, c, l;
 
@@ -687,6 +1007,32 @@ void channel_adapt_layer(data3d_t input, data3d_t * output){
             for(j=0; j < input.width; j++, l++ ){
                 output->data[l] = input.data[i*input.channels*input.width+input.channels*j+c];
             }
+        }
+    }
+}
+
+
+/*
+ * Channel adaptation layer for 2D data (1D convolution)
+ * - Reorders input channels for compatibility
+ * - Handles different channel ordering formats
+ * - Converts from interleaved to consecutive channel format
+ */
+void channel_adapt_layer_2d(data2d_t input, data2d_t * output){
+
+    uint32_t i, c, l;
+
+    output->channels = input.channels;
+    output->width    = input.width;
+    output->height   = 1;  // For 2D data in 1D convolution, height is typically 1
+    output->data     = (float*)swap_alloc(sizeof(float) * output->channels * output->width);
+
+    // Convert from interleaved format to consecutive channels format
+    for(i = 0; i < input.width; i++) {
+        for(c = 0; c < input.channels; c++, l++) {
+            // Input : interleaved format [time0_ch0, time0_ch1, time1_ch0, time1_ch1, ...]
+            // Output: consecutive format [ch0_time0, ch0_time1, ..., ch1_time0, ch1_time1, ...]
+            output->data[c * input.width + i] = input.data[i * input.channels + c];
         }
     }
 }

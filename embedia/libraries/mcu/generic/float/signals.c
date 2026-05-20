@@ -139,18 +139,27 @@ void multi_stft_layer(spectrogram_layer_t config, data2d_t input, data3d_t *outp
     // Temporary arrays for FFT input
     // float data_re[config.frame_length + aux_n_fft];
     // float data_im[config.frame_length + aux_n_fft];
-    float * data_re = (float *) malloc((config.frame_length+aux_n_fft)*sizeof(float));
-    float * data_im = (float *) malloc((config.frame_length+aux_n_fft)*sizeof(float));
 
     // For hanning window
     float win;
     int midpoint;
 
-    // output dimension and allocate
-    output->height = config.n_frames;
-    output->width = config.n_fft_table;
-    output->channels = input.height;  // Un canal por cada canal de entrada
-    output->data = (float*)swap_alloc(sizeof(float) * output->height * output->width * output->channels);
+    const uint16_t frm_len = config.frame_length;
+    const uint16_t n_ch      = input.channels;
+    const uint16_t n_frms    = config.n_frames;
+    const uint16_t n_bins    = config.n_fft_table;
+
+    const uint32_t sz_re  = (uint32_t)frm_len * sizeof(float);
+    const uint32_t sz_im  = (uint32_t)frm_len * sizeof(float);
+    const uint32_t sz_out = (uint32_t)n_ch * n_frms * n_bins * sizeof(float);
+
+    output->height   = n_frms;
+    output->width    = n_bins;
+    output->channels = n_ch;
+
+    float *data_re, *data_im;
+    swap_alloc_slice3(sz_re, sz_im, sz_out, (void**)&data_re, (void**)&data_im, (void**)&(output->data));
+
 
     // Procesar cada canal por separado
     for (c = 0; c < input.height; c++) {
@@ -217,48 +226,49 @@ void multi_stft_layer(spectrogram_layer_t config, data2d_t input, data3d_t *outp
 
             // Optionally convert to dB
             if (config.convert_to_db) {
+                #define EPS 1e-8f
+                // Encontrar máximo
+                float max_mag = 0.0f;
                 for (j = 0; j < config.n_fft_table; j++) {
-                    data_re[j] = 20.0f * log10(data_re[j]);
+                    if (data_re[j] > max_mag) max_mag = data_re[j];
+                }
+                float max_db = 20.0f * log10f(fmaxf(max_mag, EPS));
+                float min_allowed_db = max_db - config.top_db;
+
+                for (j = 0; j < config.n_fft_table; j++) {
+                    float mag_db = 20.0f * log10f(fmaxf(data_re[j], EPS));
+                    data_re[j] = (mag_db < min_allowed_db) ? min_allowed_db : mag_db;
                 }
             }
 
-            // Store in output (only first half: 0 to n_fft//2)
+            // Guardar en output
             for (j = 0; j < config.n_fft_table; j++) {
-                // La estructura de datos es [canal][bloque][frecuencia]
                 output->data[(c * output->height * output->width) + (i * output->width) + j] = data_re[j];
             }
 
             #if DEBUG_STFT
             sprintf(name_vector_debug, "bloque_%d", i);
             printf_vector(name_vector_debug, data_re, config.n_fft_table);
-            #endif // DEBUG_STFT
+            #endif
         }
     }
 
     #if DEBUG_STFT
     printf_vector("array", output->data, output->height * output->width * output->channels);
-    #endif // DEBUG_STFT
-
-    free(data_re);
-    free(data_im);
+    #endif
 }
-
 
 void stft_layer(spectrogram_layer_t config, data1d_t input, data2d_t *output) {
     data2d_t inp_2d;
     data3d_t out_3d;
 
     inp_2d.height = 1;
-    inp_2d.width = input.length;
-    inp_2d.data = input.data;
+    inp_2d.width  = input.length;
+    inp_2d.data   = input.data;
 
     multi_stft_layer(config, inp_2d, &out_3d);
 
-    output->data = out_3d.data;
-    output->width = out_3d.width;
+    output->data   = out_3d.data;
+    output->width  = out_3d.width;
     output->height = out_3d.height;
 }
-
-
-
-

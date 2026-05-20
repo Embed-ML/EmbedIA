@@ -1,7 +1,27 @@
 import regex as re
 import numpy as np
-import tensorflow.keras.backend as K
+from tensorboard.manager import data_source_from_info
+from collections import namedtuple
+
+from embedia.model_generator import ModelDataType
 from embedia.utils.c_helper import CBuilder
+
+# EmbediaFile: representa un archivo requerido por una capa con defines opcionales
+class EmbediaFile:
+    """Representa un archivo requerido por una capa con defines opcionales."""
+    
+    def __init__(self, name, defines=None):
+        self.name = name
+        self.defines = defines
+    
+    def __str__(self):
+        """Retorna solo el nombre del archivo al imprimir."""
+        return self.name
+    
+    def __repr__(self):
+        """Representación para debugging."""
+        return f"EmbediaFile(name='{self.name}', defines={self.defines})"
+
 
 
 class LayerStats:
@@ -181,6 +201,11 @@ class Layer(object):
         self._input_stats = None
         self._output_stats = None
         self._param_stats = None
+        self._is_dummy = False
+
+    @property
+    def is_dummy(self):
+        return self._is_dummy
 
     @property
     def c_builder(self):
@@ -231,6 +256,38 @@ class Layer(object):
         return self._inplace_output
 
     @property
+    def internal_alloc_required(self):
+        """
+        Additional memory requested internally by the layer via swap_alloc,
+        excluding input and final output (which are handled externally).
+
+        This method should be overridden by layers that require extra memory
+        to perform their operations. The return value is the amount of additional
+        memory required, in bytes.
+
+        The intended usage in C is to call the swap_alloc_slice function (instead
+        of swap_alloc) to allocate one memory pointer for the output and another
+        for the additional memory.
+
+        Returns
+        -------
+        int
+            Amount of additional memory required, in bytes.
+        """
+        # Calculates output size in bytes by default
+        if self.options.data_type == ModelDataType.QUANT8:
+            data_size = 16
+        else:# Para datos binarios, cada valor ocupa 1 bit, así que convertimos a bytes
+            data_size = self.options.data_type.size
+
+        size_bytes = self.output_size * (data_size // 8)
+
+        return size_bytes
+
+
+        return data_size * output_size
+
+    @property
     def support_quantization(self):
         return self._support_quantization
 
@@ -251,8 +308,6 @@ class Layer(object):
         """
         if hasattr(self, '_struct_data_type'):
             return self._struct_data_type
-        if self.embedia_type_name.endswith('_layer'):
-            return self.embedia_type_name + '_t'
         return self.embedia_type_name + '_layer_t'
 
 
@@ -262,9 +317,7 @@ class Layer(object):
         Generates C code with the declaration of a variable of the type
         indicated by the property "struct_data_type" and with the name
         "layer name "+"_data" (e.g.: "dense_data_t dense0_data;").
-        Parameters
-        ----------
-            None
+
         Returns
         -------
         str
@@ -321,9 +374,7 @@ class Layer(object):
         "struct_data_type" property with de layer data.
         It should be noted that array type data must be declared as static.
         For mor details se implementation of Dense layer.
-        Parameters
-        ----------
-            None
+
         Returns
         -------
         str
@@ -347,7 +398,7 @@ class Layer(object):
     def embedia_type_name(self):
         """
         generates an automatic EmbedIA name for data type assosiated to the
-        class that implements layer/element function. This name must exits in
+        class that implements layer/element function. This name must exists in
         "neural_net.h" and has snake case format
         Returns
         -------
@@ -540,7 +591,7 @@ class Layer(object):
         retorna una lista de tuplas indicando los nombres de los archivos donde se encuentra la definicion de
         tipos de datos (.h) y la implementación de las funciones (.c) requeridos por la capa/elemento
         '''
-        return [('common.h', 'common.c')]
+        return [(EmbediaFile('realtype.h'), None), (EmbediaFile('common.h'), EmbediaFile('common.c'))]
 
 
     def calculate_params(self):

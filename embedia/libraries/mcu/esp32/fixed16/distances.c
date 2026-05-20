@@ -223,3 +223,49 @@ fixed canberra_distance(fixed *x, fixed *y, int length) {
 
     return distance;
 }
+
+/*
+ * euclidean_sq_distance()
+ *  Calculates the squared Euclidean distance between two data vectors.
+ *  This is optimized for KNN as it avoids the expensive sqrt operation.
+ * Parameters:
+ *  x      => first data vector of type fixed
+ *  y      => second data vector of type fixed
+ *  length => length of the vectors (both must have the same length)
+ * Returns:
+ *  result - squared Euclidean distance between vectors x and y
+ */
+dfixed euclidean_sq_distance(fixed *x, fixed *y, int length) {
+    dfixed acc = 0;
+    int i;
+
+    for (i = 0; i < length; i++) {
+        dfixed d = (dfixed)y[i] - x[i];
+        acc += d * d;
+    }
+
+    return acc;
+}
+
+/*
+ * euclidean_fast_distance()
+ *  Fast approximate Euclidean distance using magnitude approximation.
+ *  Very fast but with lower precision, useful for embedded real-time applications.
+ * Parameters:
+ *  x      => first data vector of type fixed
+ *  y      => second data vector of type fixed
+ *  length => length of the vectors (both must have the same length)
+ * Returns:
+ *  result - approximate L2 distance using magnitude approximation
+ */
+dfixed euclidean_fast_distance(fixed *x, fixed *y, int length) {
+    fixed acc = FIX_ZERO;
+    int i;
+
+    for (i = 0; i < length; i++) {
+        fixed diff = FIXED_ABS(y[i] - x[i]);
+        acc = fixed_magnitude(acc, diff);
+    }
+
+    return acc;
+}

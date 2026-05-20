@@ -10,42 +10,49 @@
  * GitHub: https://github.com/Embed-ML/EmbedIA
  */
 
-#include "knn.h"
 #include <stdlib.h>
+#include <string.h>
+#include "knn.h"
+#include "distances.h"
 
-// Estructura para almacenar distancias e índices
+/** @brief Pair of distance and sample index for heap operations */
 typedef struct {
-    fixed distance;
+    dfixed distance;
     uint16_t index;
 } DistanceIndex;
 
-
-// Macro para intercambiar dos elementos
+/** @brief Swaps two elements of any type */
 #define SWAP(a, b, type) do { \
     type temp = a; \
     a = b; \
     b = temp; \
 } while (0)
 
-// Función para mantener la propiedad de heap máximo
+/**
+ * @brief Maintains max-heap property by sifting down.
+ * @param heap Array of DistanceIndex elements.
+ * @param heap_size Total size of the heap.
+ * @param i Index to start heapify from.
+ */
 static inline void max_heapify(DistanceIndex *heap, int heap_size, int i) {
-    int largest = i;
-    int left = 2 * i + 1;
-    int right = 2 * i + 2;
-
-    if (left < heap_size && heap[left].distance > heap[largest].distance) {
-        largest = left;
-    }
-    if (right < heap_size && heap[right].distance > heap[largest].distance) {
-        largest = right;
-    }
-    if (largest != i) {
-        SWAP(heap[i], heap[largest], DistanceIndex); // Usando la macro SWAP
-        max_heapify(heap, heap_size, largest);
+    int largest, left, right;
+    while (1) {
+        largest = i;
+        left  = 2 * i + 1;
+        right = 2 * i + 2;
+        if (left  < heap_size && heap[left ].distance > heap[largest].distance) largest = left;
+        if (right < heap_size && heap[right].distance > heap[largest].distance) largest = right;
+        if (largest == i) break;
+        SWAP(heap[i], heap[largest], DistanceIndex);
+        i = largest;
     }
 }
 
-// Función para construir un heap máximo
+/**
+ * @brief Builds a max-heap from an unordered array.
+ * @param heap Array of DistanceIndex elements.
+ * @param heap_size Total size of the heap.
+ */
 static inline void build_max_heap(DistanceIndex *heap, int heap_size) {
     int i;
     for (i = heap_size / 2 - 1; i >= 0; i--) {
@@ -53,80 +60,114 @@ static inline void build_max_heap(DistanceIndex *heap, int heap_size) {
     }
 }
 
-// Función principal para clasificación KNN
-void k_neighbors_classifier_layer(k_neighbors_classifier_layer_t layer, data1d_t input, data1d_t *output) {
+/**
+ * @brief Performs KNN classification using max-heap for efficient k-nearest neighbor selection.
+ * 
+ * Algorithm:
+ * 1. Build max-heap with first k samples
+ * 2. For remaining samples, replace heap root if distance is smaller
+ * 3. Count class votes from k nearest neighbors
+ * 4. Return normalized class probabilities
+ * 
+ * Uses dfixed for distance comparisons and DFIXED_RECIP for efficient probability calculation.
+ * Note: Fixed8 has limited precision (4 fractional bits), may affect accuracy.
+ * 
+ * @param layer KNN classifier configuration.
+ * @param input Input feature vector.
+ * @param output Class probabilities (normalized to sum = 1).
+ */
+void k_neighbors_classifier_layer(k_neighbors_classifier_layer_t layer,
+                                   data1d_t input,
+                                   data1d_t *output) {
     DistanceIndex heap[layer.n_neighbors];
-    fixed distance;
     uint16_t class_count[layer.n_classes];
-    int i, class_id;
 
-    // Inicializar la salida
     output->length = layer.n_classes;
     output->data = (fixed *)swap_alloc(sizeof(fixed) * output->length);
 
-    // Fase 1: Llenar el heap con los primeros k elementos
-    for (i = 0; i < layer.n_neighbors; i++) {
-        distance = layer.distance_fn(layer.neighbors_features + i * layer.n_features, input.data, layer.n_features);
-        heap[i] = (DistanceIndex){distance, i};
-    }
-    build_max_heap(heap, layer.n_neighbors); // Construir el heap máximo
+    // Pre-calculate reciprocal for normalization
+    dfixed inv_k = DFIXED_RECIP(layer.n_neighbors);
 
-    // Fase 2: Procesar el resto de los elementos
-    for (i = layer.n_neighbors; i < layer.n_samples; i++) {
-        distance = layer.distance_fn(layer.neighbors_features + i * layer.n_features, input.data, layer.n_features);
-        if (distance < heap[0].distance) {
-            heap[0] = (DistanceIndex){distance, i};
-            max_heapify(heap, layer.n_neighbors, 0); // Ajustar el heap
+    // Phase 1: Fill heap with first k elements
+    for (int i = 0; i < layer.n_neighbors; i++) {
+        heap[i].distance = layer.distance_fn(layer.neighbors_features + i * layer.n_features,
+                                              input.data, layer.n_features);
+        heap[i].index = i;
+    }
+    build_max_heap(heap, layer.n_neighbors);
+
+    // Phase 2: Process remaining samples
+    for (int i = layer.n_neighbors; i < layer.n_samples; i++) {
+        dfixed dist = layer.distance_fn(layer.neighbors_features + i * layer.n_features,
+                                         input.data, layer.n_features);
+
+        if (dist < heap[0].distance) {
+            heap[0].distance = dist;
+            heap[0].index = i;
+            max_heapify(heap, layer.n_neighbors, 0);
         }
     }
 
-    // Contar las etiquetas de los k vecinos más cercanos
-    for (i = 0; i < layer.n_classes; i++) {
-        class_count[i] = 0;
-    }
-    for (i = 0; i < layer.n_neighbors; i++) {
-        class_id = layer.neighbors_id[heap[i].index];
-        class_count[class_id]++;
+    // Count votes
+    memset(class_count, 0, sizeof(class_count));
+    for (int i = 0; i < layer.n_neighbors; i++) {
+        class_count[layer.neighbors_id[heap[i].index]]++;
     }
 
-    // Asignar la etiqueta predicha a la salida
-    fixed c = FIXED_DIV(FIX_ONE, INT_TO_FIXED(layer.n_neighbors));
-    for (i = 0; i < layer.n_classes; i++) {
-        output->data[i] = FIXED_MUL(c, INT_TO_FIXED(class_count[i]));
+    // Calculate probabilities using fixed-point
+    for (int i = 0; i < layer.n_classes; i++) {
+        dfixed prob = (dfixed)class_count[i] * inv_k;
+        output->data[i] = DFX2FX_RND_SAT(prob);
     }
 }
 
-// Función principal para regresión KNN
-void k_neighbors_regressor_layer(k_neighbors_regressor_layer_t layer, data1d_t input, data1d_t *output) {
+/**
+ * @brief Performs KNN regression using max-heap for efficient k-nearest neighbor selection.
+ * 
+ * Algorithm:
+ * 1. Build max-heap with first k samples
+ * 2. For remaining samples, replace heap root if distance is smaller
+ * 3. Average target values from k nearest neighbors using DFIXED_AVG
+ * 
+ * Note: Fixed8 has limited precision (4 fractional bits), may affect accuracy.
+ * 
+ * @param layer KNN regressor configuration.
+ * @param input Input feature vector.
+ * @param output Predicted value (average of k nearest neighbors).
+ */
+void k_neighbors_regressor_layer(k_neighbors_regressor_layer_t layer,
+                                  data1d_t input,
+                                  data1d_t *output) {
     DistanceIndex heap[layer.n_neighbors];
 
-    // Inicializar la salida
     output->length = 1;
     output->data = (fixed *)swap_alloc(sizeof(fixed));
 
-    // Fase 1: Llenar el heap con los primeros k elementos
+    // Phase 1: Fill heap with first k elements
     for (int i = 0; i < layer.n_neighbors; i++) {
-        fixed distance = layer.distance_fn(layer.neighbors_features + i * layer.n_features, input.data, layer.n_features);
-        heap[i] = (DistanceIndex){distance, i};
+        heap[i].distance = layer.distance_fn(layer.neighbors_features + i * layer.n_features,
+                                              input.data, layer.n_features);
+        heap[i].index = i;
     }
-    build_max_heap(heap, layer.n_neighbors); // Construir el heap máximo
+    build_max_heap(heap, layer.n_neighbors);
 
-    // Fase 2: Procesar el resto de los elementos
+    // Phase 2: Process remaining samples
     for (int i = layer.n_neighbors; i < layer.n_samples; i++) {
-        fixed distance = layer.distance_fn(layer.neighbors_features + i * layer.n_features, input.data, layer.n_features);
-        if (distance < heap[0].distance) {
-            heap[0] = (DistanceIndex){distance, i};
-            max_heapify(heap, layer.n_neighbors, 0); // Ajustar el heap
+        dfixed dist = layer.distance_fn(layer.neighbors_features + i * layer.n_features,
+                                         input.data, layer.n_features);
+
+        if (dist < heap[0].distance) {
+            heap[0].distance = dist;
+            heap[0].index = i;
+            max_heapify(heap, layer.n_neighbors, 0);
         }
     }
 
-    // Calcular el promedio de los k vecinos más cercanos
-    fixed prom_neighbors = 0;
+    // Calculate average using DFIXED_AVG
+    dfixed sum = 0;
     for (uint16_t i = 0; i < layer.n_neighbors; i++) {
-        prom_neighbors += layer.neighbors_id[heap[i].index];
+        sum += layer.neighbors_id[heap[i].index];
     }
-    prom_neighbors = FIXED_DIV(prom_neighbors,INT_TO_FIXED(layer.n_neighbors));
-
-    // Asignar el valor predicho a la salida
-    *output->data = prom_neighbors;
+    dfixed avg = DFIXED_AVG(sum, layer.n_neighbors);
+    *output->data = DFX2FX_RND_SAT(avg);
 }

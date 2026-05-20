@@ -4,7 +4,7 @@ from embedia.core.decision_tree_base_layer import DecisionTreeBaseLayer
 import numpy as np
 
 
-class DecisionTreeClasifier(DecisionTreeBaseLayer):
+class DecisionTreeClassifier(DecisionTreeBaseLayer):
     support_quantization = False  # support quantized data
 
     def __init__(self, model, wrapper, **kwargs):
@@ -12,11 +12,130 @@ class DecisionTreeClasifier(DecisionTreeBaseLayer):
 
         self._use_data_structure = True  # this layer require data structure initialization
 
+    def calculate_params(self):
+        """
+        Calculates trainable and non-trainable parameters of the layer.
+        """
+
+        n_nodes = self.wrapper.node_count
+
+        # each node stores:
+        # threshold, feature_id, right_offset, class_id
+        params_per_node = 4
+
+        trainable = 0
+        non_trainable = n_nodes * params_per_node
+
+        return (trainable, non_trainable)
+
+    def calculate_ACOPS(self):
+
+        def _max_depth(wrapper):
+            left = wrapper.node_left
+            right = wrapper.node_right
+
+            def depth(node):
+                if left[node] == -1:
+                    return 1
+                return 1 + max(depth(left[node]), depth(right[node]))
+
+            return depth(0)
+
+        depth = _max_depth(self.wrapper)
+
+        ops_per_node = 5
+
+        return (depth-1)*ops_per_node
+
+    def _implementation_normal_tree(self):
+        """
+        Generate C code for the decision tree layer initialization function.
+        Uses CBuilder.add_array and add_struct for clean, declarative generation.
+
+        The tree nodes are reordered via DFS so that each node's right child
+        can be referenced by a relative offset instead of an absolute index,
+        saving memory (offset fits in a smaller integer type than a pointer).
+        """
+
+        def _reorder_tree(wrapper):
+            """
+            DFS reorder: returns (order, mapping) where:
+              order   = list of original node indices in DFS visit order
+              mapping = dict from original index -> new DFS index
+            """
+            left, right = wrapper.node_left, wrapper.node_right
+            order, mapping = [], {}
+
+            def dfs(node):
+                mapping[node] = len(order)
+                order.append(node)
+                if left[node] != -1:
+                    dfs(left[node])
+                    dfs(right[node])
+
+            dfs(0)
+            return order, mapping
+
+        wrapper = self.wrapper
+        name = self.name
+        node_count = wrapper.node_count
+        num_features = wrapper.n_features
+        num_classes = wrapper.n_classes
+
+        (data_type, data_converter) = self.model.get_type_converter()
+        (conv_data, quant_params) = self.convert_to_embedia_data(data_converter,
+                                                                 wrapper.node_thresholds)
+
+        order, mapping = _reorder_tree(wrapper)
+
+        # build node initializer strings in DFS order
+        node_inits = []
+        for old_i in order:
+            feature = wrapper.node_features[old_i]
+            threshold = conv_data[old_i]
+            value = wrapper.node_values[old_i]
+
+            if feature < 0:
+                # leaf node — no split
+                feature_str = 'DT_LEAF_NODE'
+                right_offset = 0
+            else:
+                feature_str = str(feature)
+                right_offset = mapping[wrapper.node_right[old_i]] - mapping[old_i]
+
+            node_inits.append(f'{{ {threshold}, {feature_str}, {right_offset}, {value} }}')
+
+        cb = self.c_builder
+
+        cb.add()
+        with cb.bgn(f'{self.struct_data_type} init_{name}_data(void)'):
+
+            # nodes array — one node per line for readability
+            cb.add_array(
+                f'static EMBEDIA_MODEL_STORAGE Node',
+                'nodes',
+                node_inits,
+                header_comment=f'[{node_count}]'
+            )
+
+            cb.add()
+
+            cb.add_struct(
+                f'static EMBEDIA_MODEL_STORAGE decision_tree_classifier_layer_t',
+                'tree',
+                [f'{num_features}, {num_classes},nodes{quant_params}']
+            )
+
+            cb.add()
+            cb.add('return tree;')
+
+        return cb.get_code()
+
     @property
     def function_implementation(self):
         """
         Generate C code with the initialization function of the additional
-        structure (defined in "decision_tree.h") required by the layer.
+        structure required by the layer.
         Note: it is important to note the automatically generated function
         prototype (defined in the DataLayer class).
 
@@ -25,38 +144,10 @@ class DecisionTreeClasifier(DecisionTreeBaseLayer):
         str
             C function for data initialization
         """
-        name = self.name
-        struct_type = self.struct_data_type
-        node_count = self.wrapper.node_count
-        num_features = self.wrapper.n_features
-        (data_type, data_converter) = self.model.get_type_converter()
-        (conv_data, quant_params) = self.convert_to_embedia_data(data_converter, self.wrapper.node_threshhold)
 
-        # Generar los nodos directamente como literales de inicialización
-        nodes_init = []
-        for i in range(node_count):
-            node_feature = self.wrapper.node_feature[i]
-            node_threshold = conv_data[i]
-            node_value = self.wrapper.value[i]
-            node_left = self.wrapper.node_children_left[i]
-            node_right = self.wrapper.node_children_right[i]
+        init_fn = self._implementation_normal_tree()
 
-            node_str = f"{{{node_feature}, {node_threshold}f, {node_value}, {node_left}, {node_right}}}"
-            nodes_init.append(node_str)
-
-        nodes_array_init = ",\n        ".join(nodes_init)
-
-        code_str = f'''
-        {struct_type} init_{name}_data() {{
-            static Node nodes[{node_count}] = {{
-                {nodes_array_init}
-            }};
-
-            decision_tree_clasifier_layer_t tree = {{ {num_features}, nodes }};
-            return tree;
-        }}
-        '''
-        return code_str
+        return init_fn
 
 
     def invoke(self, input_name, output_name):
@@ -86,5 +177,5 @@ class DecisionTreeClasifier(DecisionTreeBaseLayer):
 
         """
 
-        return f'''decision_tree_clasifier_layer({self.name}_data, {input_name}, &{output_name});
+        return f'''decision_tree_classifier_layer({self.name}_data, {input_name}, &{output_name});
 '''

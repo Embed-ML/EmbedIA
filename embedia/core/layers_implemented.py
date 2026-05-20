@@ -1,12 +1,13 @@
 
 from tensorflow import keras
-from sklearn import preprocessing, neighbors, svm, tree, linear_model
+from sklearn import preprocessing, neighbors, svm, tree
 from embedia.native.signals.transforms import stft
-from embedia.utils import messages
+from embedia.utils import diagnostics
 
 from embedia.core.dummy_layer import DummyLayer
 from embedia.layers.convolution.separable_conv2d import SeparableConv2D
 from embedia.layers.convolution.conv2d import Conv2D
+from embedia.layers.convolution.conv1d import Conv1D
 from embedia.layers.convolution.depthwise_conv2d import DepthwiseConv2D
 from embedia.layers.dense.dense import Dense
 from embedia.layers.reshaping.flatten import Flatten
@@ -24,32 +25,39 @@ from embedia.layers.knn.k_neighbors_classifier import KNeighborsClassifier
 from embedia.layers.knn.k_neighbors_regressor import KNeighborsRegressor
 from embedia.layers.svm.svm_classfier import SvmClassifier
 from embedia.layers.svm.svm_linear_classfier import SvmLinearClassifier
-from embedia.layers.decision_tree.decision_tree_classifier import DecisionTreeClasifier
+from embedia.layers.decision_tree.decision_tree_classifier import DecisionTreeClassifier
 from embedia.layers.signal_processing.stft import STFT
-from embedia.layers.logistic_regression.logisticRegression import LogisticRegressionLayer
 
-from embedia.wrappers.tensorflow_wrappers import (
+from embedia.wrappers.tensorflow import (
     TensorflowWrapper,
     TFActivationWrapper,
     TFBatchNormWrapper,
     TFConv2DWrapper,
+    TFConv1DWrapper,
     TFDenseWrapper,
     TFPaddingWrapper,
     TFPoolWrapper,
-    TFSeparableConv2DWrapper
+    TFSeparableConv2DWrapper,
 )
 
-from embedia.wrappers.sklearn_wrappers import (
-    SKLMaxAbsScalerWrapper,
-    SKLMinMaxScalerWrapper,
-    SKLStandardScalerWrapper,
-    SKLRobustScalerWrapper,
-    SKLKnnWrapper,
+from embedia.wrappers.sklearn.svm import (
     SKLSvmWrapper,
     SKLSvmLinearWrapper,
-    SKLDecisionTreeClassifierWrapper,
-    SKLLogisticRegressionWrapper
 )
+
+from embedia.wrappers.sklearn.tree import (       # noqa: F401
+    SKLDecisionTreeClassifierWrapper,
+)
+
+from embedia.wrappers.sklearn.normalizer import ( # noqa: F401
+    SKLMinMaxScalerWrapper,
+    SKLMaxAbsScalerWrapper,
+    SKLStandardScalerWrapper,
+    SKLRobustScalerWrapper,
+)
+
+from embedia.wrappers.sklearn.knn import SKLKnnWrapper
+
 
 from embedia.wrappers.larq_wrappers import (
     LarqWrapper,
@@ -83,6 +91,7 @@ dict_layers = {
     keras.layers.SeparableConv2D: (SeparableConv2D, TFSeparableConv2DWrapper),
     keras.layers.DepthwiseConv2D: (DepthwiseConv2D, TFConv2DWrapper),
     keras.layers.Conv2D: (Conv2D, TFConv2DWrapper),
+    keras.layers.Conv1D: (Conv1D, TFConv1DWrapper),
     keras.layers.Dense: (Dense, TFDenseWrapper),
     keras.layers.Flatten: (Flatten, TensorflowWrapper),
     keras.layers.BatchNormalization: (BatchNormalization, TFBatchNormWrapper),
@@ -91,12 +100,18 @@ dict_layers = {
     keras.layers.LeakyReLU: (Activation, TFActivationWrapper),
     keras.layers.Softmax: (Activation, TFActivationWrapper),
     # pooling layers
-    keras.layers.AveragePooling1D: (Pooling, None),   # not yet implemented in C
+    keras.layers.AveragePooling1D: (Pooling, TFPoolWrapper),
     keras.layers.AveragePooling2D: (Pooling, TFPoolWrapper),
     keras.layers.AveragePooling3D: (Pooling, None),   # not yet implemented in C
-    keras.layers.MaxPooling1D: (Pooling, None),       # not yet implemented in C
+    keras.layers.MaxPooling1D: (Pooling, TFPoolWrapper),
     keras.layers.MaxPooling2D: (Pooling, TFPoolWrapper),
     keras.layers.MaxPooling3D: (Pooling, None),       # not yet implemented in C
+    keras.layers.GlobalAveragePooling1D: (Pooling, TFPoolWrapper),
+    keras.layers.GlobalAveragePooling2D: (Pooling, TFPoolWrapper),
+    keras.layers.GlobalAveragePooling3D: (Pooling, None),  # not yet implemented in C
+    keras.layers.GlobalMaxPooling1D: (Pooling, TFPoolWrapper),
+    keras.layers.GlobalMaxPooling2D: (Pooling, TFPoolWrapper),
+    keras.layers.GlobalMaxPooling3D: (Pooling, None),  # not yet implemented in C
     keras.layers.ZeroPadding2D: (ZeroPadding2D, TFPaddingWrapper),
     # normalization layers from SKLearn
     preprocessing.StandardScaler: (Normalization, SKLStandardScalerWrapper),
@@ -112,13 +127,8 @@ dict_layers = {
     svm.SVC: (SvmClassifier, SKLSvmWrapper),
     svm.LinearSVC: (SvmLinearClassifier, SKLSvmLinearWrapper),
     # DTC
-    tree.DecisionTreeClassifier: (DecisionTreeClasifier, SKLDecisionTreeClassifierWrapper),
-    # Logistic regression
-    linear_model.LogisticRegression: (LogisticRegressionLayer, SKLLogisticRegressionWrapper)
-
+    tree.DecisionTreeClassifier: (DecisionTreeClassifier, SKLDecisionTreeClassifierWrapper)
 }
-
-
 
 # register larq related layers only if larq module is installed
 try:
@@ -135,4 +145,4 @@ try:
 
     })
 except:
-    messages.warn("'larq' package is missing. Certain features requiring binary neural networks may not work.")
+    diagnostics.warn("'larq' package is not installed. Certain features requiring binary neural networks may not work.")

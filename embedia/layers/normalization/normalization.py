@@ -1,8 +1,8 @@
-from embedia.core.neural_net_layer import NeuralNetLayer
+from embedia.core.layer import Layer, EmbediaFile
 from embedia.utils.c_helper import declare_array
 from embedia.model_generator.project_options import ModelDataType
 
-class Normalization(NeuralNetLayer):
+class Normalization(Layer):
 
     """
     The normalization layer is a layer that requires additional data
@@ -48,6 +48,14 @@ class Normalization(NeuralNetLayer):
         # Subclass must assign the property name
         # self.norm_function_name = '?'
 
+    @property
+    def required_files(self):
+        '''
+        retorna una lista de tuplas indicando los nombres de los archivos donde se encuentra la definicion de
+        tipos de datos (.h) y la implementación de las funciones (.c) requeridos por la capa/elemento
+        '''
+        return super().required_files + [(EmbediaFile('normalization.h'), EmbediaFile('normalization.c'))]
+
 
     @property
     def struct_data_type(self):
@@ -67,7 +75,7 @@ class Normalization(NeuralNetLayer):
 
     @property
     def norm_function_name(self):
-        return self._wrapper.funcion_name + '_norm_layer'
+        return self._wrapper.function_name + '_norm_layer'
 
     # def get_input_shape(self):
     #     """
@@ -154,10 +162,12 @@ class Normalization(NeuralNetLayer):
     @property
     def function_implementation(self):
 
-        if self.is_data_quantized:
-            (data_type, data_converter) = self.model.get_type_converter(ModelDataType.FLOAT)
+        if self.options.data_type == ModelDataType.QUANT8:
+            # Mixed precision: parameters in quant8 and data in fixed16
+            (data_type, data_converter) = self.model.get_type_converter(ModelDataType.FIXED16)
         else:
             (data_type, data_converter) = self.model.get_type_converter()
+
         name = self.name
         struct_type = self.struct_data_type
         sub_var_name = 'sub_val'

@@ -54,3 +54,8 @@ class EmbediaSpectrumWrapper(EmbediaWrapper):
     @property
     def convert_to_db(self):
         return self._target.convert_to_db
+
+    @property
+    def top_db(self):
+        return self._target.top_db
+

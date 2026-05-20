@@ -1,5 +1,5 @@
 from embedia.core.knn_base_layer import KnnBaseLayer
-import numpy as np
+from embedia.model_generator.project_options import ModelDataType
 
 
 class KNeighborsClassifier(KnnBaseLayer):
@@ -12,56 +12,62 @@ class KNeighborsClassifier(KnnBaseLayer):
 
     @property
     def function_implementation(self):
-        """
-        Generate C code with the initialization function of the additional
-        structure (defined in "knn.h") required by the layer.
-        Note: it is important to note the automatically generated function
-        prototype (defined in the DataLayer class).
-
-        Returns
-        -------
-        str
-            C function for data initialization
-        """
         name = self.name
         struct_type = self.struct_data_type
-        (data_type, data_converter) = self.model.get_type_converter()
-
-        data_fit = self._wrapper.fit_x
-
-        (conv_data_fit, quant_params) = self.convert_to_embedia_data(data_converter, data_fit)
-
-        init_knn_layer = f'''
-        
-    {struct_type} init_{name}_data(void){{
-    
-        uint16_t n_neighbors = {self._wrapper.n_neighbors};
-        uint32_t n_samples = {self._wrapper.n_samples};
-        uint16_t n_features = {self._wrapper.n_features};
-        uint16_t n_classes = {self._wrapper.n_classes};
-
-    '''
-
-        features_data = "\n".join(
-            f"/* {cls} */ " + ", ".join(map(str, row)) + "," for cls, row in zip(self._wrapper.y, conv_data_fit))
-        features_data = "{\n" + features_data + "\n}"
-
-        ids_data = ','.join([str(y) for y in self._wrapper.y])
-        ids_data = '{' + ids_data + '}'
-
+        data_fit = self._wrapper.fit_data
         dist_fn = f'{self._wrapper.distance_function}_distance'
+        is_mixed_type = (self.options.data_type == ModelDataType.QUANT8)
 
-        init_knn_layer += f'''
-        static {data_type} neighbors_features[] = {features_data};
-        static uint16_t neighbors_id[] = {ids_data};
-    '''
+        (data_type, data_converter) = self.model.get_type_converter()
+        conv_data_fit = data_converter.fit_transform(data_fit)
 
-        init_knn_layer += f'''
-        k_neighbors_classifier_layer_t layer= {{ n_neighbors, n_samples, n_features, n_classes, neighbors_features, neighbors_id {quant_params}, {dist_fn} }};
-        return layer;
-    }}
-    '''
-        return init_knn_layer
+        if is_mixed_type:
+            params = data_converter.export_params(mode="q15")
+            qp_param = f',{{ {params.scale_q}, {params.zero_point} }}'
+        else:
+            qp_param = ''
+
+
+
+        cb = self.c_builder
+
+        with cb.bgn(f'{struct_type} init_{name}_data(void)'):
+            cb.add(f'uint16_t n_neighbors = {self.wrapper.n_neighbors};')
+            cb.add(f'uint32_t n_samples   = {self.wrapper.n_samples};')
+            cb.add(f'uint16_t n_features  = {self.wrapper.n_features};')
+            cb.add(f'uint16_t n_classes   = {self.wrapper.n_classes};')
+            cb.add()
+
+            cb.add_array(
+                dtype=f'static {data_type}',
+                name='neighbors_features',
+                values=[v for row in conv_data_fit for v in row],
+                cols=self.wrapper.n_features,
+                comments=[str(cls) for cls in self.wrapper.fit_target],
+            )
+            cb.add()
+
+            cb.add_array(
+                dtype='static uint16_t',
+                name='neighbors_id',
+                values=self._wrapper.fit_target,
+            )
+            cb.add()
+
+            fields = [
+                'n_neighbors, n_samples, n_features, n_classes',
+                f'neighbors_features, neighbors_id',
+                f'{dist_fn}{qp_param}'
+            ]
+            cb.add_struct(
+                dtype='k_neighbors_classifier_layer_t',
+                name='layer',
+                fields=fields,
+            )
+            cb.add()
+            cb.add('return layer;')
+
+        return cb.get_code()
 
     def invoke(self, input_name, output_name):
         """

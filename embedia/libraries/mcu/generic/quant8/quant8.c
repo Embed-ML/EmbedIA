@@ -7,68 +7,70 @@
  * Originally developed with student contributions
  *
  * Licensed under the BSD 3-Clause License. See LICENSE file for details.
- * GitHub: https://github.com/Embed-ML/EmbedIA
  */
+
 #include <math.h>
 #include "quant8.h"
 
+/**
+ * @brief Calculate quantization parameters from float array
+ */
 void quantize_param(float *values, int size, qparam_t *qp) {
+    if (!values || !qp || size <= 0) {
+        qp->scale_q = QUANT_SCALE_ONE;
+        qp->zero_point = 0;
+        return;
+    }
+
     float min_val = values[0];
     float max_val = values[0];
 
-    // 1. Encontrar rango
     for (int i = 1; i < size; ++i) {
         if (values[i] < min_val) min_val = values[i];
         if (values[i] > max_val) max_val = values[i];
     }
 
-    // 2. Calcular parámetros de cuantización
-    float float_scale = (max_val - min_val) / (Q_MAX_VAL - Q_MIN_VAL);
+    float range = max_val - min_val;
+    float float_scale = range / (float)Q_RANGE;
 
-    // Prevenir división por cero
-    if (float_scale < 1e-8f) float_scale = 1e-8f;
+    if (float_scale < 1e-8f) {
+        float_scale = 1e-8f;
+    }
 
-    // Convertir a punto fijo
-    qp->scale = float_to_q(float_scale);
+    qp->scale_q = (uint16_t)(float_scale * (float)QUANT_SCALE_ONE + 0.5f);
 
-    qp->scale = float_to_q(1.0f / float_scale);
-    //qp->frac_bits = Q_FRAC_BITS; // Definido globalmente (ej. 8 o 16)
+    if (qp->scale_q == 0) {
+        qp->scale_q = 1;
+    }
+    if (qp->scale_q > QUANT_SCALE_MAX) {
+        qp->scale_q = QUANT_SCALE_MAX;
+    }
 
-    qp->zero_point = (int8_t)roundf(Q_MIN_VAL - min_val / float_scale);
+    float zp_float = -min_val / float_scale;
+    qp->zero_point = (int8_t)roundf(zp_float);
 
-    // Asegurar que zero_point esté en rango
-    qp->zero_point = (qp->zero_point > Q_MAX_VAL) ? Q_MAX_VAL :
-                     (qp->zero_point < Q_MIN_VAL) ? Q_MIN_VAL : qp->zero_point;
+    if (qp->zero_point > Q_MAX) qp->zero_point = Q_MAX;
+    if (qp->zero_point < Q_MIN) qp->zero_point = Q_MIN;
 }
 
+/**
+ * @brief Quantize float array to int8 array
+ */
 void quantize_vec(float values[], quant8 qvalues[], int size, qparam_t qp) {
     for (int i = 0; i < size; ++i) {
-        // Convertir a punto fijo y multiplicar por scale_fixed
-        int32_t input_fixed = float_to_q(values[i]);
-        int32_t quantized = ((int64_t)input_fixed * qp.scale) >> Q_FRAC_BITS;
-        quantized += qp.zero_point;
-
-        // Saturar
-        qvalues[i] = (quantized > Q_MAX_VAL) ? Q_MAX_VAL :
-                    (quantized < Q_MIN_VAL) ? Q_MIN_VAL : (quant8)quantized;
+        float x_scaled = values[i] * (float)QUANT_SCALE_ONE;
+        float divided = x_scaled / (float)qp.scale_q;
+        int32_t quantized = (int32_t)roundf(divided) + qp.zero_point;
+        qvalues[i] = Q_CLAMP(quantized);
     }
 }
 
-int32_t mul_add_vec(quant8 a[], qparam_t qa, quant8 b[], qparam_t qb, int size) {
-    int32_t sum = 0;
-
-    for (int i = 0; i < size; ++i) {
-        // Descuantizar usando shifts en lugar de multiplicación
-        int32_t deq_a = (a[i] - qa.zero_point) * qa.scale;
-        int32_t deq_b = (b[i] - qb.zero_point) * qb.scale;
-
-        // Multiplicación con ajuste de precisión
-        sum += ((int64_t)deq_a * deq_b) >> Q_FRAC_BITS;
-
-        // Opcional: saturación periódica para evitar overflow
-        if (sum > (1 << 30)) sum = (1 << 30);
-        if (sum < -(1 << 30)) sum = -(1 << 30);
+/**
+ * @brief Dequantize int8 array to fixed array
+ */
+void dequantize_vec(quant8 qvalues[], fixed values[], int size, qparam_t qp) {
+    int i;
+    for (i = 0; i < size; i++) {
+        values[i] = DEQUANTIZE_FIXED(qvalues[i], qp);
     }
-
-    return sum;
 }

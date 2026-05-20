@@ -1,0 +1,113 @@
+#ifndef _SVM_H
+#define _SVM_H
+/*
+ * EmbedIA - Embedded Machine Learning and Neural Networks Framework
+ * Copyright (c) 2022
+ * César Estrebou & contributors
+ * Instituto de Investigación en Informática LIDI (III-LIDI)
+ * Facultad de Informática - Universidad Nacional de La Plata (UNLP)
+ * Originally developed with student contributions
+ *
+ * Licensed under the BSD 3-Clause License. See LICENSE file for details.
+ * GitHub: https://github.com/Embed-ML/EmbedIA
+ *
+ * SVM classifier — One-vs-One (OvO) strategy
+ *
+ * This file implements multiclass SVM inference using the OvO strategy:
+ * k*(k-1)/2 binary classifiers are trained, one per class pair. Prediction
+ * is determined by majority voting across all pairwise decisions.
+ *
+ * Coefficients are stored in sparse format: for each pair (i,j) only the
+ * support vectors with non-zero contribution are kept, saving memory when
+ * the model is sparse (common in practice).
+ *
+ * For the OvR strategy, see svm_ovr.h / svm_ovr.c.
+ */
+
+#include "common.h"
+#include "fixed.h"      /* Incluimos directamente fixed.h para usar fixed/FL2FX etc. */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* ------------------------------------------------------------------------- */
+/* Kernel type constants */
+/* ------------------------------------------------------------------------- */
+
+typedef uint8_t svm_kernel_type_t;
+#define SVM_KERNEL_LINEAR   0
+#define SVM_KERNEL_POLY     1
+#define SVM_KERNEL_RBF      2
+#define SVM_KERNEL_SIGMOID  3
+
+/* ------------------------------------------------------------------------- */
+/* Sparse structures */
+/* ------------------------------------------------------------------------- */
+
+typedef uint16_t vector_id_t;
+
+typedef struct {
+    vector_id_t idx;      /* índice en model->vectors */
+    storage_t   coef;     /* coeficiente dual α  */
+} svm_coef_sparse_t;
+
+typedef struct {
+    uint16_t                       count;
+    const svm_coef_sparse_t *data;
+} svm_pair_sparse_t;
+
+/* ------------------------------------------------------------------------- */
+/* Kernel configuration (en fixed) */
+/* ------------------------------------------------------------------------- */
+
+typedef struct {
+    svm_kernel_type_t type;
+    compute_t         gamma;      /* gamma fixed */
+    compute_t         intercept;  /* intercept fixed */
+    uint8_t           degree;
+} svm_kernel_config_t;
+
+/* ------------------------------------------------------------------------- */
+/* Main SVM OvO model structure for fixed-point */
+/* ------------------------------------------------------------------------- */
+
+typedef struct {
+    uint16_t                 n_classes;
+    uint16_t                 n_features;
+    uint16_t                 n_SV;
+    uint16_t                 n_pairs;
+
+    svm_kernel_config_t      kernel;
+
+    const storage_t          *vectors;   /* support vectors [n_SV × n_features] fixed */
+    const svm_pair_sparse_t  *pairs;     /* sparse coefficients */
+    const compute_t          *icepts;    /* intercepts [n_pairs] en fixed */
+
+} svm_classifier_layer_t;
+
+/* ------------------------------------------------------------------------- */
+/* Public API - Fixed point versions */
+/* ------------------------------------------------------------------------- */
+
+void svm_linear_classifier_layer(const svm_classifier_layer_t *model,
+                                       const data1d_t                     *input,
+                                       data1d_t                           *output);
+
+void svm_rbf_classifier_layer(const svm_classifier_layer_t *model,
+                                    const data1d_t                     *input,
+                                    data1d_t                           *output);
+
+void svm_poly_classifier_layer(const svm_classifier_layer_t *model,
+                                     const data1d_t                     *input,
+                                     data1d_t                           *output);
+
+void svm_sigmoid_classifier_layer(const svm_classifier_layer_t *model,
+                                        const data1d_t                     *input,
+                                        data1d_t                           *output);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _SVM_H */

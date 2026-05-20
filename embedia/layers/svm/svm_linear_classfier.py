@@ -1,5 +1,4 @@
 from embedia.core.svm_base_layer import SvmBaseLayer
-
 from embedia.model_generator.project_options import ModelDataType
 
 class SvmLinearClassifier(SvmBaseLayer):
@@ -20,8 +19,8 @@ class SvmLinearClassifier(SvmBaseLayer):
             tuple: (#trainable params, #non-trainable params)
         """
         # Get model dimensions
-        n_classes = len(self._wrapper.classes)
-        n_features = self._wrapper.n_features
+        n_classes = self.wrapper.n_classes
+        n_features= self.wrapper.n_features
 
         # Trainable parameters (coefficients + intercepts)
         trainable = (n_classes * n_features) + n_classes
@@ -41,8 +40,8 @@ class SvmLinearClassifier(SvmBaseLayer):
         Returns:
             int: Total MAC operations
         """
-        n_classes = len(self._wrapper.classes)
-        n_features = self._wrapper.n_features
+        n_classes = self.wrapper.n_classes
+        n_features = self.wrapper.n_features
 
         # Dot product: n_features MACs per class
         # Plus 1 for adding the intercept
@@ -60,8 +59,8 @@ class SvmLinearClassifier(SvmBaseLayer):
         Returns:
             int: Memory size in bytes
         """
-        n_classes = len(self._wrapper.classes)
-        n_features = self._wrapper.n_features
+        n_classes = self.wrapper.n_classes
+        n_features = self.wrapper.n_features
         dtype_size = 4  # float32
 
         # Memory breakdown
@@ -75,35 +74,96 @@ class SvmLinearClassifier(SvmBaseLayer):
 
     @property
     def function_implementation(self):
-
+        """
+        Generate C code for SVM direct classifier (OvR/dense) initialization.
+        """
+        # ─────────────────────────────────────────────────────────────────
+        # Model data
+        # ─────────────────────────────────────────────────────────────────
         struct_type = self.struct_data_type
-        (data_type, data_converter) = self.model.get_type_converter()
         name = self.name
-        coefficients, intercepts = self._wrapper.coefficients
-        coef_shp = coefficients.shape
-        n_classes = len(self._wrapper.classes)
-        n_features = self._wrapper.n_features
+        coefficients = self.wrapper.coefficients
+        intercepts = self.wrapper.intercepts
+        n_classes = self.wrapper.n_classes
+        n_features = self.wrapper.n_features
 
-        (conv_coefs, qparams_coefs) = self.convert_to_embedia_data(data_converter, coefficients)
-        (conv_icepts, qparams_icepts) = self.convert_to_embedia_data(data_converter, intercepts)
+        is_mixed_type = (self.options.data_type == ModelDataType.QUANT8)
+        use_comments = (self.options.data_type != ModelDataType.FLOAT)
 
-        init_svm_layer = f'''
-{struct_type} init_{name}_data(void){{
-    static {data_type} icepts[] = {'{' + ', '.join(map(str, conv_icepts)) + '}'};
-    static {data_type} coefs[{coef_shp[0]}*{coef_shp[1]}] = {{ '''
-        for row in conv_coefs:
-            init_svm_layer += f'    ' + ', '.join(map(str, row)) + ',\n'
-        init_svm_layer += f'''        }};
+        # ─────────────────────────────────────────────────────────────────
+        # Type converters
+        # ─────────────────────────────────────────────────────────────────
+        (data_type, coefs_converter) = self.model.get_type_converter()
+        conv_coeffs = coefs_converter.fit_transform(coefficients)
 
-    {struct_type} layer = {{
-        .n_classes  = {n_classes},
-        .n_features = {n_features},
-        .ovr_coefs  = coefs,
-        .ovr_icepts = icepts
-    }};
-    return layer;
-}}'''
-        return init_svm_layer
+        if is_mixed_type:
+            (icepts_type, icepts_converter) = self.model.get_type_converter(ModelDataType.FIXED16)
+            params = coefs_converter.export_params(mode="q15")
+            qp_coefs = f'{{ {params.scale_q}, {params.zero_point} }}'
+        else:
+            (icepts_type, icepts_converter) = self.model.get_type_converter()
+            qp_coefs = ''
+
+        conv_icepts = icepts_converter.fit_transform(intercepts)
+
+        # ─────────────────────────────────────────────────────────────────
+        # C code generation
+        # ─────────────────────────────────────────────────────────────────
+        cb = self.c_builder
+        cb.add()
+
+        with cb.bgn(f'{struct_type} init_{name}_data(void)'):
+
+            # Intercepts  [n_classes]  — always compute_t (fixed16 or float)
+            cb.add_array(
+                f'static EMBEDIA_MODEL_STORAGE {icepts_type}',
+                f'{name}_icepts',
+                conv_icepts.flatten().tolist(),
+                comments=[cb.to_array(intercepts.flatten(), fmt='.6f')] if use_comments else None,
+                header_comment=f'[{n_classes}]'
+            )
+            cb.add()
+
+            # Coefficient matrix  [n_classes x n_features]
+            flat_coefs = []
+            row_comments_c = [] if use_comments else None
+
+            for i, row in enumerate(conv_coeffs):
+                flat_coefs.extend(row.tolist())
+                if use_comments:
+                    row_comments_c.append(
+                        f'class {i} | {cb.to_array(coefficients[i], fmt=".6f")}'
+                    )
+
+            cb.add_array(
+                f'static EMBEDIA_MODEL_STORAGE {data_type}',
+                f'{name}_coefs',
+                flat_coefs,
+                cols=n_features,
+                comments=row_comments_c,
+                header_comment=f'[{n_classes} x {n_features}]'
+            )
+            cb.add()
+
+            # Struct initializer
+            fields = [
+                f'{n_classes}, {n_features}',
+                f'{name}_coefs',
+                f'{name}_icepts',
+            ]
+            if is_mixed_type:
+                fields.append(qp_coefs)
+
+            cb.add_struct(
+                f'static EMBEDIA_MODEL_STORAGE {struct_type}',
+                f'{name}_layer',
+                fields
+            )
+
+            cb.add()
+            cb.add(f'return {name}_layer;')
+
+        return cb.get_code()
     
     def invoke(self, input_name, output_name):
-        return f'''svm_linear_classifier_layer(&{self.name}_data, &{input_name}, &{output_name});'''
+        return f'''svm_direct_classifier_layer(&{self.name}_data, &{input_name}, &{output_name});'''

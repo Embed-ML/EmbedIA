@@ -1,4 +1,5 @@
 from embedia.core.layers_implemented import dict_layers
+from embedia.core.layer import EmbediaFile
 from collections import defaultdict
 from embedia.model_generator.project_options import ModelDataType
 import regex as re
@@ -6,8 +7,7 @@ from embedia.core.unimplemented_layer import UnimplementedLayer
 from embedia.core.type_converters import *
 from embedia.core.exceptions import *
 from embedia.core.layer_wrapper import OutputPredictionType
-from embedia.utils import string_utils
-from enum import Enum
+from collections.abc import Iterable
 
 class EmbediaModel(object):
     """
@@ -65,14 +65,7 @@ class EmbediaModel(object):
 
     @property
     def model_name(self):
-        model = self._model
-        if hasattr(model, 'name'):
-            model_name = model.name
-        else:
-            model_name = string_utils.CamelCaseToSnakeCase(type(model).__name__)
-
-        model_name = model_name.lower()
-
+        model_name = self._model.name.lower()
         if not model_name.endswith('model'):
             model_name += '_model'
         return model_name
@@ -90,34 +83,36 @@ class EmbediaModel(object):
     def _get_data_type_files(self):
         data_type = self.options.data_type
         if data_type == ModelDataType.FIXED8:
-            return  [('fixed.h', 'fixed.c')]
+            return [(EmbediaFile('fixed.h'), EmbediaFile('fixed.c'))]
         elif data_type == ModelDataType.FIXED16:
-            return  [('fixed.h', 'fixed.c')]
+            return [(EmbediaFile('fixed.h'), EmbediaFile('fixed.c'))]
         elif data_type == ModelDataType.FIXED32:
-            return  [('fixed.h', 'fixed.c')]
+            return [(EmbediaFile('fixed.h'), EmbediaFile('fixed.c'))]
         elif data_type == ModelDataType.QUANT8:
-            return [('quant8.h', 'quant8.c')]
+            return [(EmbediaFile('quant8.h'), EmbediaFile('quant8.c')), (EmbediaFile('fixed.h'), EmbediaFile('fixed.c'))]
         elif data_type == ModelDataType.FULL_QUANT8:
-            return [('quant8.h', 'quant8.c'), ('fixed.h', 'fixed.c')]
+            return [(EmbediaFile('quant8.h'), EmbediaFile('quant8.c'))]
         elif data_type == ModelDataType.BINARY:
             return None
         elif data_type == ModelDataType.BINARY_FIXED32:
-            return [('fixed.h', 'fixed.c')]
+            return [(EmbediaFile('fixed.h'), EmbediaFile('fixed.c'))]
         elif data_type == ModelDataType.BINARY_FLOAT16:
-            return [('half.hpp', None)]
+            return [(EmbediaFile('half.hpp'), None)]
         return None
 
     @property
     def required_files(self):
-        result = set()
+        result = []
         dt_files = self._get_data_type_files()
         if dt_files is not None:
             for dt_file in dt_files:
-                result.add(dt_file)
+                if dt_file not in result:
+                    result.append(dt_file)
         for layer in self._embedia_layers:
             for files_tuple in layer.required_files:
-                result.add(files_tuple)
-        return list(result)
+                if files_tuple not in result:
+                    result.append(files_tuple)
+        return result
 
     def _add_processing_layers(self, objects):
         if objects is None:
@@ -133,6 +128,38 @@ class EmbediaModel(object):
             ly = self._create_embedia_layer(object)
             self._embedia_layers.append(ly)
 
+    from collections.abc import Iterable
+
+    def _extract_layers(self, model):
+        """
+        Normaliza cualquier tipo de modelo a una lista de 'bloques procesables'.
+
+        Soporta:
+        - Keras models (model.layers)
+        - sklearn ensembles (estimators_)
+        - DummyModel (layers)
+        - listas/tuplas de capas
+        - single objects (wrap en lista)
+        """
+
+        # 1. Keras / DummyModel
+        if hasattr(model, 'layers'):
+            return list(model.layers)
+
+        # 2. sklearn ensembles (RandomForest, etc.)
+        if hasattr(model, 'estimators_'):
+            return list(model.estimators_)
+
+        # 3. sklearn pipelines (opcional, si lo usás)
+        if hasattr(model, 'steps'):
+            return [step[1] for step in model.steps]
+
+        # 4. iterable explícito (pero no string)
+        if isinstance(model, Iterable) and not isinstance(model, (str, bytes)):
+            return list(model)
+
+        # 5. fallback → objeto único
+        return [model]
 
     def _create_embedia_layers(self, options_array=None):
         # options es la generica del proyecto
@@ -143,7 +170,7 @@ class EmbediaModel(object):
         # external preprocessing to the model? => add as first layer
         self._add_processing_layers(self.options.preprocessing)
 
-        for layer in self.model.layers:
+        for layer in self._extract_layers(self.model):
             obj = layer
             ly = self._create_embedia_layer(layer)
             self._embedia_layers.append(ly)
@@ -260,7 +287,7 @@ class EmbediaModel(object):
             return name
         return name+str(num)
 
-    def get_type_converter(self, data_type=None):
+    def get_type_converter(self, data_type=None, fixed_precision=None):
         """
         returns a tuple with the name of the embedia type used (float, fixed, quant8) in the
         data representation (e.g. neuron weights) together with the conversion
@@ -291,15 +318,22 @@ class EmbediaModel(object):
         elif data_type == ModelDataType.BINARY_FIXED32:
             return ('fixed', FixedTypeConverter(15, 17))  # should use Fixed32TypeConverter()?, test required
         elif data_type == ModelDataType.QUANT8:
-            return ('quant8', QuantizedTypeConverter(8, False))
+            return ('quant8', QuantizedTypeConverter(8, symetric=False, signed=True))
         elif data_type == ModelDataType.FULL_QUANT8:
             return ('quant8', QuantizedTypeConverter(8, symetric=False, signed=True))
-        elif data_type == ModelDataType.FIXED32:
-            return ('fixed', FixedTypeConverter(15, 17))
-        elif data_type == ModelDataType.FIXED16:
-            return ('fixed', FixedTypeConverter(8, 8))
-        elif data_type == ModelDataType.FIXED8:
-            return ('fixed', FixedTypeConverter(5, 3))
+        elif data_type.is_fixed_point:
+            if fixed_precision is not None:
+                fraq_bits = fixed_precision
+            elif self.options.fixed_precision is not None:
+                fraq_bits = self.options.fixed_precision
+            elif data_type == ModelDataType.FIXED32:
+                fraq_bits = 17
+            elif data_type == ModelDataType.FIXED16:
+                fraq_bits = 8
+            else:
+                frac_bits = 4
+            int_bits = data_type.size - fraq_bits
+            return ('fixed', FixedTypeConverter(int_bits, fraq_bits))
         else:
             raise UnsupportedFeatureError(data_type, 'Data type converter not supported')
 
@@ -311,7 +345,7 @@ class EmbediaModel(object):
         Returns:
             bool: True if the data is quantized (ModelDataType.QUANT8), False otherwise.
         """
-        return self.options.data_type in [ModelDataType.QUANT8, ModelDataType.FULL_QUANT8]
+        return self.options.data_type.is_quantized
 
     def get_type_initializer(self):
         """
@@ -347,45 +381,149 @@ class EmbediaModel(object):
 
         return data_type_explorer
 
+    def get_buffer_layer_size(self, layer_idx, align=0):
+        """
+        Buffer size for a specific layer — used for layer statistics.
+
+        Returns the size of the largest slot this layer uses, which is
+        max(input_slot, output_slot + internal_temp).
+        This represents the heaviest buffer this layer handles at any point.
+
+        For the total RAM required at runtime (both slots simultaneously),
+        use _get_layer_working_size().
+
+        Args:
+            layer_idx : index of the layer
+            align     : alignment in bytes (0 = no alignment)
+
+        Returns:
+            int: largest slot size in bytes (0 for DummyLayers)
+        """
+
+        def ensure_aligned(size, align):
+            if align > 0:
+                size = ((size + align - 1) // align) * align
+            return size
+
+        layer = self.embedia_layers[layer_idx]
+
+        if layer.__class__.__name__ == 'DummyLayer':
+            return 0
+
+        if self.options.data_type == ModelDataType.QUANT8:
+            data_type_sz = 16 // 8
+        else:
+            data_type_sz = self.options.data_type.size // 8
+
+        is_first_real = all(
+            self.embedia_layers[i].__class__.__name__ == 'DummyLayer'
+            for i in range(layer_idx)
+        )
+
+        inp_sz = ensure_aligned(layer.input_size * data_type_sz, align)
+        out_sz = ensure_aligned(layer.output_size * data_type_sz, align)
+        int_extra = ensure_aligned(layer.internal_alloc_required, align)
+
+        if align > 0 and layer.internal_alloc_required > 0:
+            int_extra += 3 # +3 cubre peor caso de padding entre slices internos (swap_alloc_slice3)
+
+        if layer.inplace_output: # capas inplace no requieren memoria salvo la primera
+            if is_first_real: # primer capa real es inplace, requiere copiar la salida
+                return ensure_aligned(out_sz + int_extra, align)
+            return 0
+            #return ensure_aligned(max(inp_sz, out_sz) + int_extra, align)
+        else:
+            # el slot más grande entre input y (output+temp)
+            return ensure_aligned(max(inp_sz, out_sz + int_extra), align)
+
     def get_buffer_layer_max_size(self, align=0):
         """
-        Calculates the required buffer size for all layers by finding the maximum
-        layer size considering memory alignment. The input size of the first layer
-        is excluded as it's pre-allocated.
+        Returns ALLOC_BUFFER_SZ — maximum working size across all layers.
+        """
+        if not self.embedia_layers:
+            return 0
+        return max(
+            self._get_layer_working_size(i, align)
+            for i in range(len(self.embedia_layers))
+        )
+
+
+    def _get_layer_working_size(self, layer_idx, align=0):
+        """
+        Calculates the total pool size required for a specific layer.
+        Pool = slot_A + slot_B, both must fit simultaneously in ALLOC_BUFFER_SZ.
+
+        Args:
+            layer_idx : index of the layer
+            align     : alignment in bytes (0 = no alignment)
+
+        Returns:
+            int: total pool size in bytes (0 for DummyLayers)
+        """
+
+        def ensure_aligned(size, align):
+            if align > 0:
+                size = ((size + align - 1) // align) * align
+            return size
+
+        layer = self.embedia_layers[layer_idx]
+
+        if layer.__class__.__name__ == 'DummyLayer':
+            return 0
+
+        if self.options.data_type == ModelDataType.QUANT8:
+            data_type_sz = 16 // 8
+        else:
+            data_type_sz = self.options.data_type.size // 8
+
+        is_first_real = all(
+            self.embedia_layers[i].__class__.__name__ == 'DummyLayer'
+            for i in range(layer_idx)
+        )
+
+        out_sz = ensure_aligned(layer.output_size * data_type_sz, align)
+
+        # +3 cubre peor caso de padding entre slices internos (swap_alloc_slice3)
+        int_extra = ensure_aligned(layer.internal_alloc_required, align)
+        if align > 0 and layer.internal_alloc_required > 0:
+            int_extra += 3
+
+        # primera capa real — input externo, pool = output + temp
+        if is_first_real:
+            return ensure_aligned(out_sz + int_extra, align)
+
+        inp_sz = ensure_aligned(layer.input_size * data_type_sz, align)
+
+        if layer.inplace_output:
+            # inplace — un buffer efectivo, tamaño = max(inp, out) + temp
+            return ensure_aligned(max(inp_sz, out_sz) + int_extra, align)
+        else:
+            # doble buffer:
+            #   slot A (izq) = inp_sz
+            #   slot B (der) = out_sz + int_extra  (swap_alloc_slice)
+            #   pool = A + B
+            return ensure_aligned(inp_sz + out_sz + int_extra, align)
+
+    def get_buffer_layer_max_size(self, align=0):
+        """
+        Returns the value for ALLOC_BUFFER_SZ — the total static pool size
+        required to run inference for any layer in the model.
+
+        This is the only externally used method for buffer size calculation.
+
+        Args:
+            align: alignment in bytes (0 = no alignment)
+
+        Returns:
+            int: maximum pool size needed across all layers
         """
         if not self.embedia_layers:
             return 0
 
-        # Calculate for all layers and get the maximum
-        return max( self.get_buffer_layer_size(i, align) for i in range(len(self.embedia_layers)) )
-
-    def get_buffer_layer_size(self, layer_idx, align=0):
-        """
-        Calculates the required buffer size for a specific layer considering alignment.
-        Args:
-            layer_idx: Index of the layer to calculate
-            align: Alignment requirement (0 means no alignment)
-        Returns:
-            int: The calculated size for this specific layer
-        """
-
-        def ensure_aligned(size, align):
-            """Helper to align size to specified boundary"""
-            return ((size + align - 1) // align) * align if align > 0 else size
-
-        data_type_sz = self.options.data_type.size // 8
-        layer = self.embedia_layers[layer_idx]
-
-        # First layer only needs output buffer (input is pre-allocated)
-        if layer_idx == 0:
-            return ensure_aligned(layer.output_size * data_type_sz, align)
-
-        # Other layers
-        inp_sz = ensure_aligned(layer.input_size * data_type_sz, align)
-        out_sz = ensure_aligned(layer.output_size * data_type_sz, align)
-
-        return max(inp_sz, out_sz) if layer.inplace_output else (inp_sz + out_sz)
-
+        return max(
+            self._get_layer_working_size(i, align)
+            for i in range(len(self.embedia_layers))
+        )
 
     def get_layers_info(self):
         """

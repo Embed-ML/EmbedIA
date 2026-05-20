@@ -42,7 +42,7 @@ class SpectrogramBase(object):
     - For compatibility with SciPy: Use `padding=False` to match `scipy.signal.stft` behavior.
     """
     def __init__(self, frame_length, overlap_length=0, n_channels=1, window_type='hann',
-                 input_length=22100, input_sr=22100, padding=False, convert_to_db=False):
+                 input_length=22100, input_sr=22100, padding=False, convert_to_db=False, top_db=80.0):
 
         # Initialize all attributes to None to prevent inconsistent state
         # before parameters are validated and processed in `set_params`.
@@ -50,6 +50,8 @@ class SpectrogramBase(object):
         self._class = type(self)
         # Aliases for potential metaprogramming or naming consistency
         self._class.name = self._class._name = self._class.name_ = 'stft'
+
+        self.EPS = 1e-8  # Small constant for numerical stability (e.g., log scaling)
 
         # Frame and window parameters
         self.frame_length   = None  # Analysis window length in samples
@@ -71,6 +73,7 @@ class SpectrogramBase(object):
         self.spectrum       = None  # Last computed spectrogram (used in derived classes)
         self.padding        = None  # Whether to zero-pad to include final partial frame
         self.convert_to_db  = None  # Convert spectrogram to db (amplitude_to_db)
+        self.top_db         = None  # Maximum decibel value for amplitude scaling (like librosa)
 
         # === Centralized parameter setup ===
         # All parameters are validated and assigned here to ensure consistency
@@ -83,7 +86,8 @@ class SpectrogramBase(object):
             input_len=input_length,
             input_sr=input_sr,
             padding=padding,
-            convert_to_db=convert_to_db
+            convert_to_db=convert_to_db,
+            top_db = top_db
         )
 
 
@@ -93,7 +97,7 @@ class SpectrogramBase(object):
         pass
 
     def set_params(self, frame_len=None, overlap_len=None, n_channels=None, window_type=None,
-                   input_len=None, input_sr=None, padding=None, spec=None, convert_to_db=None):
+                   input_len=None, input_sr=None, padding=None, spec=None, convert_to_db=None, top_db=None):
         '''
         Updates STFT parameters and computes derived properties (e.g., n_blocks).
         Validates critical constraints (e.g., n_frames > n_overlap).
@@ -136,7 +140,7 @@ class SpectrogramBase(object):
             self.input_sr = input_sr
         if window_type is not None:
             self.window_type = window_type
-            self.window = get_window(window_type, self.frame_length, fftbins=False)
+            self.window = get_window(window_type, self.frame_length, fftbins=False).astype(np.float32)
 
         if spec is not None:
             self.spectrum = spec
@@ -166,6 +170,9 @@ class SpectrogramBase(object):
 
         if not convert_to_db is None:
             self.convert_to_db = convert_to_db
+
+        if not top_db is None:
+            self.top_db = top_db
 
         # Compute n_blocks
         if not self.frame_length is None and not self.input_length is None and not self.overlap_length is None:
@@ -268,7 +275,9 @@ class SpectrogramBase(object):
         '''
 
         # Ensure signal is at least 2D (channels × samples)
-        if len(signal.shape) == 1:
+        if len(signal.shape) == 1 or (len(signal.shape) == 2 and signal.shape[0] == 1):
+            if len(signal.shape) == 2:
+                signal = signal[0]
             signal = np.atleast_2d(signal)
             channels = None # 1D input & 2D output
             signal = signal-signal.mean()
@@ -314,8 +323,11 @@ class SpectrogramBase(object):
                 frame_spec = self.compute_spectrum(frame * self.window)
 
                 if self.convert_to_db:
-                    frame_spec = 20 * np.log10(frame_spec + 1e-12)  # Avoid log(0)
-
+                    frame_spec = 20 * np.log10(np.maximum(frame_spec, self.EPS))
+                    if self.top_db is not None:
+                        peak = np.max(frame_spec)
+                        frame_spec = np.maximum(frame_spec, peak - self.top_db)
+                
                 channel_spec.append(frame_spec)
 
             spectrograms[ch] = np.array(channel_spec)

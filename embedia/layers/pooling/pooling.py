@@ -26,9 +26,9 @@ class Pooling(NeuralNetLayer):
     "d_layer".
 
     Layer wrapper required properties:
-        - strides => (height, width)
-        - pool_size => (height, width)
-        - dimensions => 2 because the pooling
+        - strides => 2D=(height, width), 1D=length
+        - pool_size =>  2D=(height, width), 1D=length
+        - dimensions => the pooling dimensions 1D=1, 2D=2, 3D=3
         - function_name => function name for pooling layers ex: "avg_pooling2d_layer"
     """
 
@@ -37,37 +37,60 @@ class Pooling(NeuralNetLayer):
 
     def calculate_ACOPS(self):
         """
-        Calculates non-MACC operations for Pooling layers:
-        - Comparison operations (MaxPooling)
-        - Arithmetic operations (AveragePooling)
-        - Memory access operations
+        ACOPs => Arithmetic and Comparison Operations
+        Calculates ACOPS (non-MACC) operations for Pooling layers (1D, 2D, 3D),
+        including Max, Average, and Global pooling.
+
+        Accounts for pool size, stride, and padding to compute:
+          - Comparison operations (MaxPool): (pool_volume - 1) per output element
+          - Arithmetic operations (AvgPool): pool_volume additions + 1 division per output
+          - Memory operations: input reads (pool_volume per output) + output writes
 
         Returns
         -------
         int
-            Total count of non-MACC operations (ACOPS)
+            Total ACOPS operations (pooling_ops + memory_ops)
         """
-        total_output_elements = self.output_size
 
-        pool_type = self._wrapper.function_name # Pooling-specific operations
+        pool_type = self._wrapper.function_name.lower()
+        total_output_elements = self.output_size  # already precomputed in wrapper
 
-        if pool_type == 'max':
-            # MaxPool: (kernel_size - 1) comparisons per output element
-            kernel_area = self._wrapper.pool_size[0] * self._wrapper.pool_size[1]
-            pool_ops = total_output_elements * (kernel_area - 1)
-        elif pool_type == 'average':
-            # AveragePool: kernel_size additions + 1 division per output element
-            kernel_area = self._wrapper.kernel_size[0] * self._wrapper.kernel_size[1]
-            pool_ops = total_output_elements * (kernel_area + 1)
+        # --- 1. Determinar pool_volume ---
+        if self._wrapper.is_global:
+            # Global pooling cubre toda la dimensión espacial
+            input_shape = self.input_shape[1:]  # excluir batch
+            dims = self._wrapper.dimensions
+            # input_shape = (W,), (H, W, C), (D, H, W, C), etc.
+            if dims == 1:
+                pool_volume = input_shape[0]
+            elif dims == 2:
+                pool_volume = input_shape[0] * input_shape[1]
+            elif dims == 3:
+                pool_volume = input_shape[0] * input_shape[1] * input_shape[2]
+            else:
+                raise ValueError("Unsupported pooling dimensions for global pooling")
         else:
-            pool_ops = 0
+            # Pool normal: usar pool_size
+            pool_size = self._wrapper.pool_size
+            pool_volume = 1
+            for k in pool_size:
+                pool_volume *= k
 
-        # Memory operations (1 read per input element + 1 write per output element)
-        # For pooling, we count full input reads (conservative estimate)
-        input_elements = self.input_shape[0] * self.input_shape[1] * self.input_shape[2]
-        memory_ops = input_elements + total_output_elements
+        # --- 2. Pooling-specific operations ---
+        if 'max' in pool_type:
+            pooling_ops = total_output_elements * (pool_volume - 1)
+        elif 'avg' in pool_type or 'average' in pool_type:
+            pooling_ops = total_output_elements * (pool_volume + 1)  # sumas + división
+        else:
+            pooling_ops = 0  # fallback
 
-        return pool_ops + memory_ops
+        # --- 3. Memory operations ---
+        total_input_reads = total_output_elements * pool_volume
+        total_output_writes = total_output_elements
+        memory_ops = total_input_reads + total_output_writes
+
+        return pooling_ops + memory_ops
+
 
     @property
     def pool_name(self):
@@ -131,9 +154,13 @@ class Pooling(NeuralNetLayer):
 
         name = self.name
         pool_name = self.pool_name
-        strides = self._wrapper.strides[0]
-        pool_size = self._wrapper.pool_size[0]
         dim = self._wrapper.dimensions
-        text = f'''static const pooling{dim}d_layer_t {name}_data = {{ {pool_size}, {strides} }};
+        if not self._wrapper.is_global:
+            strides = self._wrapper.strides[0]
+            pool_size = self._wrapper.pool_size[0]
+            text = f'''static const pooling{dim}d_layer_t {name}_data = {{ {pool_size}, {strides} }};
 {pool_name}({name}_data, {input_name}, &{output_name});'''
+        else:
+            text = f'''{pool_name}({input_name}, &{output_name});'''
+
         return text

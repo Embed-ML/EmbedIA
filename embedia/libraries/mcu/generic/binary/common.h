@@ -57,28 +57,66 @@ using half_float::half;
  */
 typedef half compute_t;
 
+/**
+ * @struct data3d_t
+ * @brief 3D data container for volumetric or multi-channel 2D data
+ * @details Typically used for RGB images, feature maps, or multi-channel signals
+ *
+ * - channels: Number of channels/features (e.g., 3 for RGB, 64 for feature maps)
+ * - width: Horizontal dimension (e.g., image width, time steps)
+ * - height: Vertical dimension (e.g., image height, frequency bins)
+ * - data: Flattened array in [channels, height, width] order
+ */
+typedef struct {
+    uint16_t channels;  /**< Number of channels/features */
+    uint16_t width;     /**< Horizontal dimension (width/time steps) */
+    uint16_t height;    /**< Vertical dimension (height/frequency bins) */
+    float * data;       /**< Flattened data array in CHW order */
+} data3d_t;
 
-typedef struct{
-    uint16_t channels;
-    uint16_t width;
-    uint16_t height;
-    compute_t * data;
-}data3d_t;
+/**
+ * @struct data2d_t
+ * @brief 2D data structure with multiple semantic interpretations
+ * @details Dual-purpose container for different data types:
+ *
+ * - For images: use width and height
+ * - For 1D signals: use width (time steps) and channels (features)
+ *
+ * @note height and channels share the same memory location
+ */
+typedef struct {
+    uint16_t width;     /**< Primary dimension (width/time steps/length) */
+    union {
+        uint16_t height;    /**< For images: vertical dimension */
+        uint16_t channels;  /**< For signals: number of channels/features */
+    };
+    float * data;       /**< Flattened data array */
+} data2d_t;
 
-typedef struct{
-    uint16_t width;
-    uint16_t height;
-    compute_t * data;
-}data2d_t;
+/**
+ * @struct data1d_t
+ * @brief 1D data container for vectors and sequential data
+ * @details Used for flattened arrays, feature vectors, or time series
+ *
+ * - length: Total number of elements in the vector
+ * - data: Contiguous array of floating-point values
+ */
+typedef struct {
+    uint32_t length;    /**< Total number of elements in the vector */
+    float * data;       /**< Contiguous array of values */
+} data1d_t;
 
-typedef struct{
-    uint32_t length;
-    compute_t * data;
-}data1d_t;
-
-typedef struct{
-    uint16_t h;
-    uint16_t w;
+/**
+ * @struct size2d_t
+ * @brief 2D size specification for kernels, strides, and pooling operations
+ * @details Commonly used for convolutional layer parameters
+ *
+ * - h: Vertical dimension (height/kernel rows)
+ * - w: Horizontal dimension (width/kernel columns)
+ */
+typedef struct {
+    uint16_t h;         /**< Vertical dimension (height/rows) */
+    uint16_t w;         /**< Horizontal dimension (width/columns) */
 } size2d_t;
 
 

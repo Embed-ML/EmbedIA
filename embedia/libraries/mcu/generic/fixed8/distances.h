@@ -14,105 +14,99 @@
 
 #include "common.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*********************************** Distance Functions for vectors ******************************************/
 
-/*
- * euclidean_distance()
- *  Calculates the Euclidean distance between two data vectors.
- * Parameters:
- *  x      => first data vector of type fixed
- *  y      => second data vector of type fixed
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the Euclidean distance between vectors x and y
+/**
+ * @defgroup distances Distance functions (fixed-point)
+ *
+ * @brief Collection of distance metrics for fixed-point vectors.
+ *
+ * @note Precision model:
+ * - For fixed8 (Q4.4):
+ *     All functions return results in dfixed (Q8.8) to preserve precision.
+ *     This avoids early quantization and improves ranking stability (e.g. in KNN).
+ *
+ * - For higher precision types (fixed16, fixed32):
+ *     The same API is used, but dfixed has sufficient precision to represent
+ *     the result without effective loss, so values behave as native fixed.
+ *
+ * @note Conversion:
+ * - Use DFX2FX_RND_SAT() only at the final stage (output, logging, etc).
+ * - Do NOT assume returned values are in fixed scale when using fixed8.
  */
-fixed euclidean_distance(fixed *x, fixed *y, int length);
 
-/*
- * manhattan_distance()
- *  Calculates the Manhattan (L1) distance between two data vectors.
- * Parameters:
- *  x      => first data vector of type fixed
- *  y      => second data vector of type fixed
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the Manhattan distance between vectors x and y
+/**
+ * @brief Calculates Euclidean (L2) distance between two vectors.
+ * @param x First vector.
+ * @param y Second vector.
+ * @param length Vector length.
+ * @return Euclidean distance in dfixed (Q8.8 for fixed8).
+ * @note Uses dfixed_sqrt. More expensive due to sqrt.
  */
-fixed manhattan_distance(fixed *x, fixed *y, int length);
+dfixed euclidean_distance(fixed *x, fixed *y, int length);
 
-/*
- * chebyshev_distance()
- *  Calculates the Chebyshev (L∞) distance between two data vectors.
- *  This is the maximum absolute difference between any pair of elements.
- * Parameters:
- *  x      => first data vector of type fixed
- *  y      => second data vector of type fixed
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the Chebyshev distance between vectors x and y
+/**
+ * @brief Calculates squared Euclidean distance (optimized).
+ * @return sum((x[i] - y[i])^2) in dfixed.
+ * @note Recommended for KNN: avoids sqrt, faster and preserves ordering.
  */
-fixed chebyshev_distance(fixed *x, fixed *y, int length);
+dfixed euclidean_sq_distance(fixed *x, fixed *y, int length);
 
-/*
- * minkowski_distance()
- *  Calculates the Minkowski distance between two data vectors.
- *  This is a generalization of Euclidean and Manhattan distances.
- * Parameters:
- *  x      => first data vector of type fixed
- *  y      => second data vector of type fixed
- *  length => length of the vectors (both must have the same length)
- *  p      => the order of the Minkowski distance (p >= 1)
- *             p=1: Manhattan distance
- *             p=2: Euclidean distance
- *             p→∞: Chebyshev distance
- * Returns:
- *  result - value of the Minkowski distance between vectors x and y
+/**
+ * @brief Fast approximate Euclidean distance.
+ * @return Approximate L2 distance in dfixed.
+ * @note Very fast, low precision. Uses magnitude approximation.
  */
-fixed minkowski_distance(fixed *x, fixed *y, int length, fixed p);
+dfixed euclidean_fast_distance(fixed *x, fixed *y, int length);
 
-/*
- * cosine_distance()
- *  Calculates the cosine distance between two data vectors.
- *  This measures the angle between two vectors regardless of magnitude.
- * Parameters:
- *  x      => first data vector of type fixed
- *  y      => second data vector of type fixed
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the cosine distance between vectors x and y (range 0-2)
- *           0: identical direction, 1: orthogonal, 2: opposite direction
+/**
+ * @brief Calculates Manhattan (L1) distance.
+ * @return sum(|x[i] - y[i]|) in dfixed.
  */
-fixed cosine_distance(fixed *x, fixed *y, int length);
+dfixed manhattan_distance(fixed *x, fixed *y, int length);
 
-/*
- * braycurtis_distance()
- *  Calculates the Bray-Curtis dissimilarity between two data vectors.
- *  This distance is commonly used in ecology to measure the dissimilarity
- *  between two samples based on their abundance or composition.
- * Parameters:
- *  x      => first data vector of type float
- *  y      => second data vector of type float
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the Bray-Curtis dissimilarity between vectors x and y
+/**
+ * @brief Calculates Chebyshev (L∞) distance.
+ * @return max(|x[i] - y[i]|) in dfixed scale.
+ * @note Internally computed in fixed but promoted to dfixed.
  */
-fixed braycurtis_distance(fixed *x, fixed *y, int length);
+dfixed chebyshev_distance(fixed *x, fixed *y, int length);
 
-/*
- * canberra_distance()
- *  Calculates the Canberra distance between two data vectors.
- *  This distance is sensitive to small changes when the values are close to zero
- *  and is often used in data analysis and clustering.
- * Parameters:
- *  x      => first data vector of type float
- *  y      => second data vector of type float
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the Canberra distance between vectors x and y
+/**
+ * @brief Calculates Minkowski distance.
+ * @param p Order parameter (p >= 1).
+ * @return (sum(|x[i] - y[i]|^p))^(1/p) in dfixed.
+ * @warning Computationally expensive (pow/log/exp).
  */
-fixed canberra_distance(fixed *x, fixed *y, int length);
+dfixed minkowski_distance(fixed *x, fixed *y, int length, fixed p);
 
+/**
+ * @brief Calculates cosine distance.
+ * @return 1 - (x·y)/(||x|| ||y||), range [0,2], in dfixed.
+ * @note Fully computed in dfixed for improved precision in fixed8.
+ */
+dfixed cosine_distance(fixed *x, fixed *y, int length);
+
+/**
+ * @brief Calculates Bray-Curtis dissimilarity.
+ * @return sum(|x[i]-y[i]|) / sum(|x[i]+y[i]|), range [0,1], in dfixed.
+ * @note Uses dfixed accumulation and division.
+ */
+dfixed braycurtis_distance(fixed *x, fixed *y, int length);
+
+/**
+ * @brief Calculates Canberra distance.
+ * @return sum(|x[i]-y[i]| / (|x[i]|+|y[i]|)) in dfixed.
+ * @note Skips terms with zero denominator.
+ */
+dfixed canberra_distance(fixed *x, fixed *y, int length);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

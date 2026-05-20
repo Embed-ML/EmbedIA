@@ -12,11 +12,7 @@
  * GitHub: https://github.com/Embed-ML/EmbedIA
  */
 
-#include <stdint.h>
-
-
-
-/**
+ /**
  * @file fixed.h
  * @brief 16-bit fixed-point arithmetic library.
  *
@@ -24,6 +20,9 @@
  * fixed-point arithmetic operations with controlled precision.
  * Uses 16 bits total, with configurable integer and fractional bit sizes.
  */
+
+#include <stdint.h>
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -164,6 +163,9 @@ typedef int32_t dfixed;
  */
 #define INT_TO_FIXED(I) ((fixed)(I) << FIX_FRC_SZ)
 
+// aliases
+#define INT2FX(I) INT_TO_FIXED(I)
+
 /**
  * @brief Shortcut for FLOAT_TO_FIXED.
  * @param F Floating-point value.
@@ -195,6 +197,12 @@ typedef int32_t dfixed;
 
 /** @brief Minimum value in dfixed */
 #define DFIX_MIN (-DFIX_MAX)
+
+/** @brief Value 1.0 in dfixed format */
+#define DFIX_ONE ((dfixed)FIX_ONE << FIX_FRC_SZ)
+
+/** @brief Value 0.5 in dfixed format */
+#define DFIX_HALF (DFIX_ONE >> 1)
 
 /** @} */
 
@@ -265,22 +273,31 @@ typedef int32_t dfixed;
 #define FIXED_TO_DFIXED(A)      \
     ((dfixed)(A) << FIX_FRC_SZ)
 
+/** @brief Shortcut for FIXED_TO_DFIXED. */
+#define FX2DFX(A) FIXED_TO_DFIXED(A)
+
 /** @brief Converts dfixed to fixed (reduces precision). */
 #define DFIXED_TO_FIXED(A)      \
     ((dfixed)(A) >> FIX_FRC_SZ)
+
+/** @brief Shortcut for DFIXED_TO_FIXED. */
+#define DFX2FX(A) DFIXED_TO_FIXED(A)
 
 /** @brief Converts integer to dfixed. */
 #define INT_TO_DFIXED(A) \
     ((dfixed)(A) << 2*FIX_FRC_SZ)
 
-/** @brief Multiplies two dfixed values (without scale adjustment). */
+// aliases
+#define INT2DFX(A) INT_TO_DFIXED(A)
+
+/** @brief Multiplies two fixed values promoted to dfixed. */
 #define DFIXED_MUL(A,B)            \
     ((dfixed)(((dfixed)(A) * (dfixed)(B)) ))
 
 /**
  * @brief Division with result in dfixed (higher precision).
- * @param A Dividend.
- * @param B Divisor.
+ * @param A fixed dividend.
+ * @param B fixed divisor.
  * @return Quotient in dfixed.
  */
 #define DFIXED_DIV(A,B) \
@@ -288,12 +305,37 @@ typedef int32_t dfixed;
 
 /**
  * @brief Division between two dfixed values, result in dfixed.
- * @param A Dividend.
- * @param B Divisor.
+ * @param A dfixed dividend.
+ * @param B dfixed divisor.
  * @return Quotient in dfixed.
  */
 #define DFIXED_DDIV(A,B) \
     ((((dfixed)(A) << FIX_FRC_SZ) + ((dfixed)(B) >> 1)) / (dfixed)(B))
+
+/**
+ * @brief Division of fixed by integer with rounding.
+ */
+#define FIXED_DIV_INT(A, B) ((A) >= 0 ? ((A) + ((B) >> 1)) / (B) : ((A) - ((B) >> 1)) / (B))
+
+/**
+ * @brief Division of dfixed by integer with rounding.
+ */
+#define DFIXED_DDIV_INT(A, B) FIXED_DIV_INT(A, B)
+
+/** @brief Extended addition of two dfixed values.
+ * @param A dfixed operand.
+ * @param B dfixed operand.
+ * @return result in dfixed.
+ */
+#define DFIXED_ADD(A,B) ((dfixed)(A) + (dfixed)(B))
+
+/** @brief Extended subtraction of two dfixed values.
+ * @param A dfixed operand.
+ * @param B dfixed operand.
+ * @return result in dfixed.
+ */
+#define DFIXED_SUB(A,B) ((dfixed)(A) - (dfixed)(B))
+
 
 /** @brief Scale used in dfixed for floating-point conversion. */
 #define DFIXED_SCALE ((dfixed)(1 << FIX_DFRC_SZ))
@@ -303,6 +345,38 @@ typedef int32_t dfixed;
 
 /** @brief Converts float to dfixed. */
 #define FL2DFX(x) ((dfixed)(x * (float)DFIXED_SCALE))
+
+
+#define DFX2FX_SAT(x) \
+    ((fixed)( \
+        (x) < DFIX_MIN ? FIX_MIN : \
+        (x) > DFIX_MAX ? FIX_MAX : \
+        DFX2FX(x) \
+    ))
+
+/** @brief Converts dfixed to double. */
+#define DFX2DB(x) (((double)x) / (double)DFIXED_SCALE)
+
+/** @brief Converts double to dfixed. */
+#define DB2DFX(x) ((dfixed)(x * (double)DFIXED_SCALE))
+
+/** @brief clamping macro for fixed-point values. */
+#define CLAMP(X,MIN,MAX) ((X)<(MIN)?(MIN):((X)>(MAX)?(MAX):(X)))
+
+/** @brief Clamping macro for dfixed to fixed conversion. */
+#define CLAMP_DFX_TO_FX(X, MIN, MAX) ((X<FX2DFX(MIN))?MIN:((X>FX2DFX(MAX))?MAX:DFX2FX(X)))
+
+/** @brief Saturation macro for dfixed to fixed conversion. */
+#define SATURATE(X) CLAMP_DFX_TO_FX(X, FIX_MIN, FIX_MAX)
+
+/** @brief Absolute value for dfixed. */
+#define DFIXED_ABS(A) ((A) < 0 ? -(A) : (A))
+
+/** @brief Minimum between two dfixed values. */
+#define DFIXED_MIN(a,b) ((a) < (b) ? (a) : (b))
+
+/** @brief Maximum between two dfixed values. */
+#define DFIXED_MAX(a,b) ((a) > (b) ? (a) : (b))
 
 /** @} */
 

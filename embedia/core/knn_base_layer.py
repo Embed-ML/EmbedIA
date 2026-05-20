@@ -1,4 +1,4 @@
-from embedia.core.layer import Layer
+from embedia.core.layer import Layer, EmbediaFile
 from embedia.model_generator.project_options import ModelDataType
 from math import log2
 
@@ -46,7 +46,10 @@ class KnnBaseLayer(Layer):
         retorna una lista de tuplas indicando los nombres de los archivos donde se encuentra la definicion de
         tipos de datos (.h) y la implementación de las funciones (.c) requeridos por la capa/elemento
         '''
-        return super().required_files + [('knn.h', 'knn.c'), ('distances.h', 'distances.c')]
+        return super().required_files + [
+            (EmbediaFile('knn.h'), EmbediaFile('knn.c')), 
+            (EmbediaFile('distances.h'), EmbediaFile('distances.c'))
+        ]
 
 
     def calculate_params(self):

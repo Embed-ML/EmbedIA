@@ -1,4 +1,7 @@
 from embedia.core.neural_net_layer import NeuralNetLayer
+from embedia.core.layer import EmbediaFile
+from embedia.model_generator.project_options import ModelDataType
+from embedia.core.type_converters import UnsignedFixedTypeConverter
 
 
 class SpectrogramBaseLayer(NeuralNetLayer):
@@ -38,7 +41,7 @@ class SpectrogramBaseLayer(NeuralNetLayer):
         retorna una lista de tuplas indicando los nombres de los archivos donde se encuentra la definicion de
         tipos de datos (.h) y la implementación de las funciones (.c) requeridos por la capa/elemento
         '''
-        return super().required_files + [('signals.h', 'signals.c')]
+        return super().required_files + [(EmbediaFile('signals.h'), EmbediaFile('signals.c'))]
 
 
     def get_input_shape(self):
@@ -107,6 +110,26 @@ class SpectrogramBaseLayer(NeuralNetLayer):
 
         # return mem_size
         return 0
+    @property
+    def internal_alloc_required(self) -> int:
+        if len(self.output_shape) == 3:
+            ch_out, h_out, w_out = self.output_shape
+        else:
+            ch_out = 1
+            h_out, w_out = self.output_shape
+
+        if self.options.data_type == ModelDataType.QUANT8:
+            data_size = 16
+        else:
+            data_size = self.options.data_type.size
+
+        size_out = ch_out * h_out * w_out * (data_size // 8)
+
+        # data_re y data_im son siempre int32_t independiente del tipo fixed
+        # porque la FFT opera internamente con mayor precisión. Para float tambien es 4 bytes
+        size_fft_buffers = 2 * self.wrapper.frame_length * 4  # sizeof(int32_t) = 4
+
+        return size_out + size_fft_buffers
 
     @property
     def function_implementation(self):
@@ -147,15 +170,39 @@ class SpectrogramBaseLayer(NeuralNetLayer):
 
 # #endif
 #     '''
-        (data_type, data_converter) = self.model.get_type_converter()
+        cb = self.c_builder
 
-        win_data = self.wrapper.window[:self.wrapper.window.shape[0]//2]
-        data_converter.fit(win_data)
-        window = data_converter.transform_to_str(win_data)
+        top_db_limit = self.wrapper.top_db
+        win_data = self.wrapper.window[:self.wrapper.window.shape[0] // 2]
+        win_type = 'window_t'
+        if self.options.data_type in [ModelDataType.FIXED8, ModelDataType.FIXED16, ModelDataType.QUANT8]:
+            # Special converter for Q0.8 data format, for fixed point data types
+            win_converter = UnsignedFixedTypeConverter(0, 8)
+            win_shift = 8
+        elif self.options.data_type == ModelDataType.FIXED32:
+            win_converter = UnsignedFixedTypeConverter(0, 16)
+            win_shift = 16
+        else:
+            (_, win_converter) = self.model.get_type_converter()
+            win_shift = 0
+
+        win_converter.fit(win_data)
+        cvt_window = win_converter.transform(win_data)
+        window = cb.to_array(cvt_window)
+
+        if self.wrapper.convert_to_db:
+            if self.options.data_type == ModelDataType.QUANT8:
+                (_,db_converter) = self.model.get_type_converter(ModelDataType.FIXED16)
+            else:
+                (_,db_converter) = self.model.get_type_converter()
+            top_db = db_converter.fit_transform(top_db_limit)
+        else:
+            top_db = 0
+
 
         text = f'''
 spectrogram_layer_t init_stft_data(void){{
-    static const {data_type} window[] = {{{window}}};
+    static const {win_type} window[] = {{{window}}};
 
     spectrogram_layer_t layer_spec;
     layer_spec.n_channels = {self.wrapper.n_channels};
@@ -165,10 +212,12 @@ spectrogram_layer_t init_stft_data(void){{
     layer_spec.overlap_length = {self.wrapper.overlap_length};
     layer_spec.hop_length = {self.wrapper.hop_length};
     layer_spec.window = window;
+    layer_spec.window_shift = {win_shift};
     layer_spec.n_fft_table = {int(self.wrapper.frame_length / 2)};    
     layer_spec.n_frames= {self.wrapper.n_frames};
     layer_spec.spec_size = {self.wrapper.shape[0] * self.wrapper.shape[1]};
     layer_spec.convert_to_db = {1 if self.wrapper.convert_to_db else 0};
+    layer_spec.top_db = {top_db};
 
     return layer_spec;
 }}

@@ -11,140 +11,249 @@ class SvmClassifier(SvmBaseLayer):
 
     def calculate_params(self):
         """
-        Calculates trainable and non-trainable parameters of the SVM model.
-
-        Returns:
-            tuple: (#trainable params, #non-trainable params)
+        Calculates trainable and non-trainable parameters.
+        Now supports sparse representation.
         """
-        # Get model dimensions through wrapper properties
-        n_SV = sum(self._wrapper.n_support)
-        n_features = self._wrapper.n_features
-        n_pairs = len(self._wrapper.coefficients[1])  # Number of intercepts
 
-        # Trainable parameters
+        n_SV = self._wrapper.n_support_vectors
+        n_features = self._wrapper.n_features
+        n_pairs = self._wrapper.n_classes * (self._wrapper.n_classes - 1) // 2
+
+        # Sparse view
+        sparse_pairs = self.convert_coefficients_sparse(self.wrapper.coefficients)
+
+        n_nonzero = sum(len(p) for p in sparse_pairs)
+
         trainable = (
-                (n_SV * n_features) +  # Support vectors
-                (n_pairs * n_SV) +  # Dual coefficients
-                n_pairs  # Intercepts
+                (n_SV * n_features) +  # support vectors
+                n_nonzero +  # sparse coefficients
+                n_pairs  # intercepts
         )
 
-        # Non-trainable parameters (kernel config)
-        non_trainable = 4  # kernel type + 3 float params
+        non_trainable = 4  # kernel config
 
         return (trainable, non_trainable)
 
     def calculate_MAC(self):
         """
-        Calculates multiplication-accumulation (MAC) operations per prediction.
-
-        Returns:
-            int: Total MAC operations
+        Calculates MAC operations per inference.
+        Uses sparse coefficients.
         """
-        # Get model dimensions
-        n_SV = sum(self._wrapper.n_support)
+
+        n_SV = self._wrapper.n_support_vectors
         n_features = self._wrapper.n_features
-        n_pairs = len(self._wrapper.coefficients[1])
+        n_pairs = self._wrapper.n_classes * (self._wrapper.n_classes - 1) // 2
 
-        # Kernel-specific calculations
-        kernel_type, gamma, coef0, degree = self._wrapper.kernel
+        kernel_type = self._wrapper.kernel_type
+        #gamma, coef0, degree = self._wrapper.kernel_params
 
-        # Base MACs for dot product
-        mac_per_kernel = n_features
+        # ===== Kernel cost =====
 
-        # Additional MACs based on kernel type
-        if kernel_type == 'poly':
-            mac_per_kernel += 2  # gamma*term + coef0, then pow()
+        if kernel_type == 'linear':
+            mac_per_kernel = n_features
+
+        elif kernel_type == 'poly':
+            mac_per_kernel = n_features + 2  # gamma*x + coef0 + pow
+
         elif kernel_type == 'rbf':
-            mac_per_kernel += 2 * n_features  # diff^2 and gamma*sum
-        elif kernel_type == 'sigmoid':
-            mac_per_kernel += 2  # gamma*term + coef0
+            mac_per_kernel = 2 * n_features + 1  # diff^2 + sum + exp
 
-        # Total operations
+        elif kernel_type == 'sigmoid':
+            mac_per_kernel = n_features + 2
+
+        else:
+            mac_per_kernel = n_features
+
         kernel_macs = n_SV * mac_per_kernel
-        decision_macs = n_pairs * n_SV  # Coefficient multiplications
+
+        # ===== Decision cost (sparse) =====
+
+
+        sparse_pairs = self.convert_coefficients_sparse(self.wrapper.coefficients)
+
+        decision_macs = sum(len(p) for p in sparse_pairs)
 
         return kernel_macs + decision_macs
 
     def calculate_memory(self):
         """
-        Calculates memory required to store the SVM model.
-
-        Returns:
-            int: Memory size in bytes
+        Calculates model memory footprint (bytes).
+        Sparse-aware.
         """
-        # Get model dimensions
-        n_SV = sum(self._wrapper.n_support)
+
+        n_SV = self._wrapper.n_support_vectors
         n_features = self._wrapper.n_features
-        n_pairs = len(self._wrapper.coefficients[1])
+        n_pairs = self._wrapper.n_classes * (self._wrapper.n_classes - 1) // 2
 
-        # Data type size (float32)
-        dtype_size = 4
+        sparse_pairs = self.convert_coefficients_sparse(self._wrapper.coefficients)
 
-        # Memory components
-        components = [
-            (n_SV * n_features),  # Support vectors
-            (n_pairs * n_SV),  # Dual coefficients
-            n_pairs,  # Intercepts
-            3,  # gamma, coef0, degree (float32)
-            1  # kernel type (uint8)
-        ]
+        n_nonzero = sum(len(p) for p in sparse_pairs)
 
-        return sum(c * dtype_size if i < 3 else c for i, c in enumerate(components))
+        # Sizes
+        float_size = 4
+        index_size = 2  # uint16
 
+        # ===== Components =====
+
+        mem_vectors = n_SV * n_features * float_size
+
+        # sparse: (idx + coef)
+        mem_coefs = n_nonzero * (index_size + float_size)
+
+        mem_intercepts = n_pairs * float_size
+
+        mem_kernel = (
+                1 +  # uint8 kernel type
+                3 * float_size  # gamma, coef0, degree
+        )
+
+        return mem_vectors + mem_coefs + mem_intercepts + mem_kernel
 
     @property
     def function_implementation(self):
+        """
+        Generate C code for SVM model initialization (OvO strategy).
+        """
+        import numpy as np
+        from embedia.wrappers.svm_base import SVMStrategy
 
-        # TO DO: Support quantization data
-        coder = self.c_builder
-
-        struct_type = self.struct_data_type
-        (data_type, data_converter) = self.model.get_type_converter()
+        # ─────────────────────────────────────────────────────────────────
+        # Model data
+        # ─────────────────────────────────────────────────────────────────
+        vectors = self.wrapper.support_vectors
+        intercepts = self.wrapper.intercepts
+        n_classes = self.wrapper.n_classes
+        n_SV = self.wrapper.n_support_vectors
+        n_features = self.wrapper.n_features
+        n_pairs = n_classes * (n_classes - 1) // 2
         name = self.name
-        coefficients, intercepts = self._wrapper.coefficients
-        coef_shp = coefficients.shape
-        vectors = self._wrapper.support_vectors
-        n_classes = len(self._wrapper.classes)
-        n_SV = len(self._wrapper.support)
-        n_features = self._wrapper.n_features
-        (conv_coefs, qp_coefs) = self.convert_to_embedia_data(data_converter, coefficients)
-        (conv_icepts, qp_icepts) = self.convert_to_embedia_data(data_converter, intercepts)
-        (conv_vectors, qp_vectors) = self.convert_to_embedia_data(data_converter, vectors)
-        kernels ={
-            'linear': 'SVM_KERNEL_LINEAR',
-            'poly': 'SVM_KERNEL_LINEAR',
-            'rbf': 'SVM_KERNEL_RBF',
-            'sigmoid': 'SVM_KERNEL_SIGMOID'
-        }
-        (kernel_type,  gamma, intercept, degree) = self._wrapper.kernel
-        kernel_type = kernels[kernel_type.lower()]
-        init_svm_layer = f'''
-{struct_type} init_{name}_data(void){{
-        static {data_type} icepts[] = {{ {coder.to_array(conv_icepts)} }};
-        static uint16_t offsets_cls[] = {'{' + ', '.join(map(str, self._wrapper.offsets_classes)) + '}'};
-        static {data_type} vectors[{coef_shp[1]} * {self._wrapper.n_features}] = {{'''
-        for vector in conv_vectors:
-            init_svm_layer += f'    ' + coder.to_array(vector) + ',\n'
-        init_svm_layer += f'''        }};
-        static {data_type} coefs[{coef_shp[0]}*{coef_shp[1]}] = {{ '''
-        for row in conv_coefs:
-            init_svm_layer += f'    ' + coder.to_array(row) + ',\n'
-        init_svm_layer += f'''        }};
+        struct_type = self.struct_data_type
 
-        svm_classifier_layer_t layer = {{
-                {n_classes},
-                {n_features},
-                {n_SV},
-                {{ {kernel_type}, {gamma}, {intercept}, {degree} }},
-                offsets_cls,
-                vectors,
-                coefs,
-                icepts
-        }};
-            return layer;
-        }}
-        '''
-        return init_svm_layer
-    
+        kernel_type = self.wrapper.kernel_type
+        gamma, intercept_k, degree = self.wrapper.kernel_params
+
+        is_mixed_type = (self.options.data_type == ModelDataType.QUANT8)
+        use_comments = (self.options.data_type != ModelDataType.FLOAT)
+
+        # ─────────────────────────────────────────────────────────────────
+        # Kernel type mapping
+        # ─────────────────────────────────────────────────────────────────
+        kernel_type_c = {
+            'linear': 'SVM_KERNEL_LINEAR',
+            'poly': 'SVM_KERNEL_POLY',
+            'rbf': 'SVM_KERNEL_RBF',
+            'sigmoid': 'SVM_KERNEL_SIGMOID',
+        }.get(kernel_type.lower(), 'SVM_KERNEL_LINEAR')
+
+        # ─────────────────────────────────────────────────────────────────
+        # Type converters
+        # ─────────────────────────────────────────────────────────────────
+        (data_type, vectors_converter) = self.model.get_type_converter()
+        (_, coefs_converter) = self.model.get_type_converter()
+
+        conv_vectors = vectors_converter.fit_transform(vectors)
+
+        if is_mixed_type:
+            (icepts_type, icepts_converter) = self.model.get_type_converter(ModelDataType.FIXED16)
+            (_, kernel_converter) = self.model.get_type_converter(ModelDataType.FIXED16)
+            qp_vectors = f'{{ {vectors_converter.export_params(mode="q15").scale_q}, {vectors_converter.export_params(mode="q15").zero_point} }}'
+            qp_coefs = f'{{ {coefs_converter.export_params(mode="q15").scale_q}, {coefs_converter.export_params(mode="q15").zero_point} }}'
+        else:
+            (icepts_type, icepts_converter) = self.model.get_type_converter()
+            (_, kernel_converter) = self.model.get_type_converter()
+            qp_vectors = ''
+            qp_coefs = ''
+
+        gamma_c = kernel_converter.transform(gamma)
+        intercept_kc = icepts_converter.transform(intercept_k)
+        conv_icepts = icepts_converter.fit_transform(intercepts)
+
+        # ─────────────────────────────────────────────────────────────────
+        # Sparse OvO pairs
+        # ─────────────────────────────────────────────────────────────────
+        sparse_pairs = self.convert_coefficients_sparse(
+            self.wrapper.coefficients, threshold=1e-6, sort=True
+        )
+        for pair in sparse_pairs:
+            for i in range(len(pair)):
+                pair[i] = (pair[i][0], coefs_converter.transform(pair[i][1]))
+
+        # ─────────────────────────────────────────────────────────────────
+        # C code generation
+        # ─────────────────────────────────────────────────────────────────
+        cb = self.c_builder
+        cb.add()
+
+        with cb.bgn(f'{struct_type} init_{name}_data(void)'):
+
+            # Intercepts
+            cb.add_array(
+                f'static EMBEDIA_MODEL_STORAGE {icepts_type}',
+                f'{name}_icepts',
+                conv_icepts.flatten().tolist(),
+                comments=[cb.to_array(intercepts.flatten(), fmt='.6f')] if use_comments else None,
+                header_comment=f'[{len(conv_icepts.flatten())}]'
+            )
+            cb.add()
+
+            # Support vectors
+            flat_vectors = []
+            row_comments_v = [] if use_comments else None
+
+            for i, vec in enumerate(conv_vectors):
+                flat_vectors.extend(vec.tolist())
+                if use_comments:
+                    row_comments_v.append(f'SV{i:<3d} | {cb.to_array(vectors[i], fmt=".6f")}')
+
+            cb.add_array(
+                f'static EMBEDIA_MODEL_STORAGE {data_type}',
+                f'{name}_vectors',
+                flat_vectors,
+                cols=n_features,
+                comments=row_comments_v,
+                header_comment=f'[{n_SV} x {n_features}]'
+            )
+            cb.add()
+
+            # Sparse coefficient pairs
+            pair_struct_entries = []
+
+            for pair_idx, sparse_entries in enumerate(sparse_pairs):
+                pair_name = f'{name}_pair_{pair_idx}_data'
+
+                cb.add(f'static EMBEDIA_MODEL_STORAGE svm_coef_sparse_t {pair_name}[] = {{')
+                for sv_idx, coef in sparse_entries:
+                    cb.add(f'    {{ {sv_idx}, {coef} }},')
+                cb.add('};')
+                cb.add()
+
+                pair_struct_entries.append(f'{{ {len(sparse_entries)}, {pair_name} }}')
+
+            cb.add(f'static EMBEDIA_MODEL_STORAGE svm_pair_sparse_t {name}_pairs[] = {{')
+            for entry in pair_struct_entries:
+                cb.add(f'    {entry},')
+            cb.add('};')
+            cb.add()
+
+            cb.add_struct(
+                f'static EMBEDIA_MODEL_STORAGE {struct_type}',
+                f'{name}_layer',
+                [
+                    f'{n_classes}, {n_features}, {n_SV}, {n_pairs}',
+                    f'{{ {kernel_type_c}, {gamma_c}, {intercept_kc}, {degree} }}',
+                    f'{name}_vectors',
+                    f'{name}_pairs',
+                    f'{name}_icepts',
+                    f'{qp_vectors}',
+                    f'{qp_coefs}'
+                ]
+            )
+
+            cb.add()
+            cb.add(f'return {name}_layer;')
+
+        return cb.get_code()
+
     def invoke(self, input_name, output_name):
-        return f'''svm_classifier_layer(&{self.name}_data, &{input_name}, &{output_name});'''
+        kernel_type = self._wrapper.kernel_type.lower()
+        return f'''svm_{kernel_type}_classifier_layer(&{self.name}_data, &{input_name}, &{output_name});'''

@@ -12,215 +12,213 @@
 
 #include "distances.h"
 #include <math.h>
+#include "distances.h"
+#include <math.h>
 
-/*
- * euclidean_distance()
- *  Calculates the Euclidean distance between two data vectors.
- * Parameters:
- *  x      => first data vector of type float
- *  y      => second data vector of type float
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the Euclidean distance between vectors x and y
- */
-fixed euclidean_distance(fixed *x, fixed *y, int length) {
-    dfixed distance = 0, diff;
-    int i;
 
-    for (i = 0; i < length; i++) {
-        diff = y[i] - x[i];
-        distance += DFIXED_MUL(diff, diff);
-    }
-    if (distance > (FIX_MAX*FIX_MAX)){
-        return FIX_MAX;
+
+static inline dfixed dfixed_sqrt(dfixed x) {
+    if (x <= 0) return 0;
+
+    dfixed guess = x;
+    dfixed prev;
+
+    // Ajuste inicial opcional (mejora convergencia)
+    if (x > (DFIX_ONE << 2)) {
+        guess = x >> 1;
     }
 
-    return fixed_sqrt(DFIXED_TO_FIXED(distance));
+    // Iteraciones Newton
+    for (int i = 0; i < 6; i++) {
+        prev = guess;
+
+        // guess = (guess + x / guess) / 2
+        dfixed div = DFIXED_DDIV(x, guess);
+        guess = (guess + div) >> 1;
+
+        if (guess == prev) break;
+    }
+
+    return guess;
 }
 
-/*
- * manhattan_distance()
- *  Calculates the Manhattan (L1) distance between two data vectors.
- * Parameters:
- *  x      => first data vector of type float
- *  y      => second data vector of type float
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the Manhattan distance between vectors x and y
+/**
+ * @brief Euclidean distance (mejorada).
+ * @note Mantiene compatibilidad pero evita pérdida de precisión.
  */
-fixed manhattan_distance(fixed *x, fixed *y, int length) {
-    fixed distance = 0.0f;
-    int i;
+dfixed euclidean_distance(fixed *x, fixed *y, int length) {
+    dfixed acc = 0;
 
-    for (i = 0; i < length; i++) {
-        distance += FIXED_ABS((y[i] - x[i]));
+    for (int i = 0; i < length; i++) {
+        dfixed d = (dfixed)y[i] - x[i];
+        acc += d * d;
     }
-    return distance;
+
+    return dfixed_sqrt(acc);
 }
 
-/*
- * chebyshev_distance()
- *  Calculates the Chebyshev (L∞) distance between two data vectors.
- *  This is the maximum absolute difference between any pair of elements.
- * Parameters:
- *  x      => first data vector of type float
- *  y      => second data vector of type float
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the Chebyshev distance between vectors x and y
+/**
+ * @brief Euclidean distance squared (rápida, recomendada para KNN).
+ * @note Evita sqrt → mucho más eficiente.
  */
-fixed chebyshev_distance(fixed *x, fixed *y, int length) {
-    fixed max_diff = FIX_ZERO, diff;
-    int i;
+dfixed euclidean_sq_distance(fixed *x, fixed *y, int length) {
+    dfixed acc = 0;
 
-    for (i = 0; i < length; i++) {
-        diff = FIXED_ABS(y[i] - x[i]);
+    for (int i = 0; i < length; i++) {
+        dfixed d = (dfixed)y[i] - x[i];
+        acc += d * d;
+    }
+
+    return acc;
+}
+
+/**
+ * @brief Manhattan distance (ligera mejora de consistencia).
+ */
+dfixed manhattan_distance(fixed *x, fixed *y, int length) {
+    dfixed acc = 0;
+
+    for (int i = 0; i < length; i++) {
+        dfixed d = (dfixed)y[i] - x[i];
+        acc += DFIXED_ABS(d);
+    }
+
+    return acc;
+}
+
+/**
+ * @brief Chebyshev distance (sin cambios relevantes).
+ */
+dfixed chebyshev_distance(fixed *x, fixed *y, int length) {
+    fixed max_diff = FIX_ZERO;
+
+    for (int i = 0; i < length; i++) {
+        fixed diff = FIXED_ABS(y[i] - x[i]);
         if (diff > max_diff) {
             max_diff = diff;
         }
     }
+
     return max_diff;
 }
 
-/*
- * minkowski_distance()
- *  Calculates the Minkowski distance between two data vectors.
- *  This is a generalization of Euclidean and Manhattan distances.
- * Parameters:
- *  x      => first data vector of type float
- *  y      => second data vector of type float
- *  length => length of the vectors (both must have the same length)
- *  p      => the order of the Minkowski distance (p >= 1)
- *             p=1: Manhattan distance
- *             p=2: Euclidean distance
- *             p→∞: Chebyshev distance
- * Returns:
- *  result - value of the Minkowski distance between vectors x and y
+/**
+ * @brief Minkowski distance (sin cambios estructurales).
  */
-fixed minkowski_distance(fixed *x, fixed *y, int length, fixed p) {
-    dfixed distance = FIX_ZERO, diff;
-    int i;
+dfixed minkowski_distance(fixed *x, fixed *y, int length, fixed p) {
+    dfixed acc = FIX_ZERO;
 
-    for (i = 0; i < length; i++) {
-        diff = FIXED_ABS(y[i] - x[i]);
-        distance += fixed_pow(diff, p);
+    for (int i = 0; i < length; i++) {
+        fixed diff = FIXED_ABS(y[i] - x[i]);
+        acc += fixed_pow(diff, p);
     }
-    return fixed_pow(distance, FIXED_DIV(FIX_ONE, p));
+
+    return fixed_pow(acc, FIXED_DIV(FIX_ONE, p));
 }
 
-/*
- * cosine_distance()
- *  Calculates the cosine distance between two data vectors.
- *  This measures the angle between two vectors regardless of magnitude.
- * Parameters:
- *  x      => first data vector of type float
- *  y      => second data vector of type float
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the cosine distance between vectors x and y (range 0-2)
- *           0: identical direction, 1: orthogonal, 2: opposite direction
+/**
+ * @brief Cosine distance (mejoras menores de consistencia).
  */
-fixed cosine_distance(fixed *x, fixed *y, int length) {
-    dfixed dot_product = FIX_ZERO;
-    dfixed norm_x = FIX_ZERO;
-    dfixed norm_y = FIX_ZERO;
-    dfixed xx, yy;
-    int i;
+dfixed cosine_distance(fixed *x, fixed *y, int length) {
+    dfixed dot = 0;
+    dfixed norm_x = 0;
+    dfixed norm_y = 0;
 
-    for (i = 0; i < length; i++) {
-        xx = FIXED_TO_DFIXED(x[i]);
-        yy = FIXED_TO_DFIXED(y[i]);
-        dot_product += DFIXED_MUL(xx, yy);
-        norm_x += DFIXED_MUL(xx, xx);
-        norm_y += DFIXED_MUL(yy, yy);
+    for (int i = 0; i < length; i++) {
+        dfixed xi = x[i];
+        dfixed yi = y[i];
+
+        dot    += xi * yi;   // Q8.8
+        norm_x += xi * xi;   // Q8.8
+        norm_y += yi * yi;   // Q8.8
     }
 
-    // Evitar división por cero
-    if (norm_x == FIX_ZERO || norm_y == FIX_ZERO) {
-        return FIX_ONE;
+    if (norm_x == 0 || norm_y == 0) {
+        return FIXED_TO_DFIXED(FIX_ONE);  // distancia = 1
     }
 
-    // Se convierte la norma al mismo formato y se ajusta la escala
-    fixed sqrt_norm_x = fixed_sqrt(DFIXED_TO_FIXED(norm_x));
-    fixed sqrt_norm_y = fixed_sqrt(DFIXED_TO_FIXED(norm_y));
+    dfixed sqrt_x = dfixed_sqrt(norm_x); // Q8.8 → Q8.8
+    dfixed sqrt_y = dfixed_sqrt(norm_y); // Q8.8 → Q8.8
 
-    // Evitar división por cero después de la raíz cuadrada
-    if (sqrt_norm_x == FIX_ZERO || sqrt_norm_y == FIX_ZERO) {
-        return FIX_ONE;
+    if (sqrt_x == 0 || sqrt_y == 0) {
+        return FIXED_TO_DFIXED(FIX_ONE);
     }
 
-    // Usar DFIXED_DIV para mayor precisión en la división
-    dfixed denominator = FIXED_TO_DFIXED(FIXED_MUL(sqrt_norm_x, sqrt_norm_y));
+    // denom = sqrt_x * sqrt_y  → Q8.8 * Q8.8 = Q16.16
+    int32_t denom = (int32_t)sqrt_x * (int32_t)sqrt_y;
 
-    if (denominator == FIX_ZERO) {
-        return FIX_ONE;
-    }
+    // dot está en Q8.8 → lo llevamos a Q16.16 para dividir correctamente
+    int32_t dot_q16 = ((int32_t)dot) << FIX_FRC_SZ;
 
-    fixed similarity = DFIXED_TO_FIXED(DFIXED_DIV(dot_product, denominator));
+    // similitud en Q8.8
+    dfixed sim = (dfixed)((dot_q16 << FIX_FRC_SZ) / denom);
 
-    // Clamping para evitar valores fuera de rango debido a errores numéricos
-    if (similarity > FIX_ONE) similarity = FIX_ONE;
-    if (similarity < -FIX_ONE) similarity = -FIX_ONE;
+    // clamp en Q8.8
+    dfixed one = FIXED_TO_DFIXED(FIX_ONE);
 
-    return FIX_ONE - similarity;
+    if (sim > one) sim = one;
+    if (sim < -one) sim = -one;
+
+    // distancia = 1 - cos
+    return one - sim;
 }
 
+dfixed braycurtis_distance(fixed *x, fixed *y, int length) {
+    dfixed sum_diff = 0;
+    dfixed sum_total = 0;
 
-/*
- * braycurtis_distance()
- *  Calculates the Bray-Curtis dissimilarity between two data vectors.
- *  This distance is commonly used in ecology to measure the dissimilarity
- *  between two samples based on their abundance or composition.
- * Parameters:
- *  x      => first data vector of type float
- *  y      => second data vector of type float
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the Bray-Curtis dissimilarity between vectors x and y
- */
-fixed braycurtis_distance(fixed *x, fixed *y, int length) {
-    fixed sum_diff = 0;
-    fixed sum_total = 0;
-    int i;
+    for (int i = 0; i < length; i++) {
+        dfixed xi = x[i];
+        dfixed yi = y[i];
 
-    for (i = 0; i < length; i++) {
-        sum_diff += FIXED_ABS(x[i] - y[i]); // Suma de diferencias absolutas
-        sum_total += FIXED_ABS(x[i] + y[i]); // Suma de valores absolutos
+        sum_diff  += DFIXED_ABS(xi - yi);
+        sum_total += DFIXED_ABS(xi + yi);
     }
 
-    // Evitar división por cero
-    if (sum_total == 0) {
-        return 0;
-    }
+    if (sum_total == 0) return 0;
 
-    // Calcular la disimilitud: sum_diff / sum_total
-    return FIXED_DIV(sum_diff, sum_total);
+    return DFIXED_DDIV(sum_diff, sum_total);
 }
 
-
-/*
- * canberra_distance()
- *  Calculates the Canberra distance between two data vectors.
- *  This distance is sensitive to small changes when the values are close to zero
- *  and is often used in data analysis and clustering.
- * Parameters:
- *  x      => first data vector of type float
- *  y      => second data vector of type float
- *  length => length of the vectors (both must have the same length)
- * Returns:
- *  result - value of the Canberra distance between vectors x and y
+/**
+ * @brief Canberra distance (mejoras menores de robustez).
  */
-fixed canberra_distance(fixed *x, fixed *y, int length) {
-    fixed denom, distance = 0;
-    int i;
+dfixed canberra_distance(fixed *x, fixed *y, int length) {
+    dfixed acc = 0;
 
-    for (i = 0; i < length; i++) {
-        denom = FIXED_ABS(x[i]) + FIXED_ABS(y[i]); // Denominador
+    for (int i = 0; i < length; i++) {
+        dfixed xi = x[i];
+        dfixed yi = y[i];
+
+        dfixed denom = DFIXED_ABS(xi) + DFIXED_ABS(yi);
+
         if (denom != 0) {
-            fixed diff = FIXED_ABS(x[i] - y[i]); // Diferencia absoluta
-            distance += DFIXED_DIV(diff, denom);  // Sumar la fracción
+            dfixed diff = DFIXED_ABS(xi - yi);
+            acc += (diff << FIX_FRC_SZ) / denom;
         }
     }
 
-    return distance;
+    return acc;
+}
+
+/**
+ * @brief Fast Euclidean approximation using magnitude (muy rápida).
+ * @note Basada en fixed_magnitude: evita sqrt y multiplicaciones costosas.
+ */
+dfixed euclidean_fast_distance(fixed *x, fixed *y, int length) {
+    dfixed acc = 0;
+
+    for (int i = 0; i < length; i++) {
+        dfixed d = (dfixed)y[i] - x[i];
+        dfixed abs_d = DFIXED_ABS(d);
+
+        // adaptar magnitude a dfixed
+        dfixed max = acc > abs_d ? acc : abs_d;
+        dfixed min = acc > abs_d ? abs_d : acc;
+
+        // approx: max + 0.375 * min
+        acc = max + ((min >> 2) + (min >> 3));
+    }
+
+    return acc;
 }

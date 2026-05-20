@@ -23,8 +23,7 @@ class STFT(SpectrogramBase):
         '''
 		super().__init__(n_fft, overlap_length, n_channels, window_type, input_length, input_fs, padding, convert_to_db)
 
-
 	def compute_spectrum(self, frame):
-		"""Calculate spectrum for a frame (must implement subclass)"""
+		frame = frame.astype(np.float32)
 		spectrum = np.fft.fft(frame)
 		return np.abs(spectrum[:len(spectrum) // 2])

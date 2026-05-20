@@ -18,7 +18,7 @@ class Activation(NeuralNetLayer):
 
         # saves output into output of previous layer
         self._inplace_output = True
-
+        self._is_dummy = wrapper.function_name == 'linear'
         # # layer can be a Keras layer with activation or an Activation layer
         # if not isinstance(wrapper.target, KerasActivation):
         #     # rename with keras layer partial name
@@ -94,11 +94,7 @@ class Activation(NeuralNetLayer):
         """
         output_size = self.output_size # number of elements number
 
-        if self.is_data_quantized:
-            qparams = f'&{output_name}.qparam'
-        else:
-            qparams = ''
         act_fncs = ActivationFunctions(self._model, self._wrapper)
 
-        return act_fncs.invoke(f'{output_name}.data', output_size, qparams)
+        return act_fncs.invoke(f'{output_name}.data', output_size)
 

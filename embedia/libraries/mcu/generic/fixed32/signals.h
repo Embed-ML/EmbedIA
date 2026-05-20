@@ -41,6 +41,7 @@
  *
  * - convert_to_db: if non-zero, output is converted to decibel scale.
  */
+typedef uint16_t window_t;
 
 typedef struct {
     // Input parameters
@@ -52,7 +53,8 @@ typedef struct {
     uint16_t frame_length;
     uint16_t overlap_length;
     uint16_t hop_length;
-    const fixed *window;
+    const window_t *window;
+    uint16_t window_shift;
 
     // FFT & spectrogram config
     uint16_t n_fft_table;
@@ -64,6 +66,7 @@ typedef struct {
 
     // Post-processing
     uint16_t convert_to_db;
+    fixed top_db;
 
 } spectrogram_layer_t;
 
