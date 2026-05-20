@@ -14,3 +14,16 @@ mini_speech_commands.zip
 *.ps1
 .venv/
 __pycache__/
+CHANGELOG-v*.md
+embedia/estructura_archivos.txt
+embedia/libraries/mcu/esp32/fixed16/_old/neural_net.c
+/embedia/libraries/mcu/generic/float/_old/
+/embedia/libraries/mcu/generic/float/_playground/
+/embedia/libraries/mcu/generic/quant8/_old/
+/embedia/libraries/mcu/generic/quant8/_playground/
+/embedia/libraries/mcu/generic/fixed16/_old/
+/embedia/libraries/mcu/generic/fixed8/_old/
+/embedia/libraries/mcu/generic/fixed32/_old/
+/embedia/libraries/mcu/generic/fixed32/_playground/
+/migracion_desde_dev.txt.txt
+/export examples/outputs/
