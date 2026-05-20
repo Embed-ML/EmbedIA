@@ -120,8 +120,8 @@
 
 * first refactoring of the EmbedIA model was carried out to support other models besides Tensorflow & bugs fixed
 * Support for properties of convolutional layer tensors was added to TensorFlow for quant8 data type
-* se agreg├│ soportes para propiedades de capas convolucionales Tensorflow para tipo de datos fixed8
-* se agreg├│ soportes para propiedades de capas convolucionales Tensorflow para tipo de datos fixed16
+* Added support for convolutional layer properties in TensorFlow for fixed8 data type
+* Added support for convolutional layer properties in TensorFlow for fixed16 data type
 * Added support for Tensorflow convolutional layer properties for float data type
 * added support for DepthwiseConv2D for asymmetric kernel, strides and padding (float data type only)
 * added support for SeparableConv2D for asymmetric kernel, strides and padding (float data type only)
@@ -220,6 +220,6 @@
 * includes embedia
 * Initial version of the exporter
 
-## Cambios no lanzados (HEAD)
+## Unreleased changes (HEAD)
 
 * Update changelog for v0.97.0 release
