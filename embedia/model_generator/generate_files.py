@@ -439,9 +439,9 @@ def generate_embedia_main(embedia_model, src_folder, dst_embedia_folder, model_n
             coder.append('prediction = model_predict_class(input, &results);')
             with coder.bgn('if (prediction == sample_data_ids[i][0]) {'):
                 coder.append('ok++;')
-                coder.printf('       |  %2d |  %2d  \\n', 'sample_data_ids[i][0]', 'prediction')
+                coder.printf('      |  %2d |  %2d  \\n', 'sample_data_ids[i][0]', 'prediction')
             with coder.bgn('else {'):
-                coder.printf('   X   |  %2d |  %2d  \\n', 'sample_data_ids[i][0]', 'prediction')
+                coder.printf('   X  |  %2d |  %2d  \\n', 'sample_data_ids[i][0]', 'prediction')
         coder.printf('\\n%d correct out of %d (Accuracy: %.2f%%)\\n', 'ok', 'TEST_SAMPLES', '(100.0 * ok)/TEST_SAMPLES')
 
     main_code = coder.get_code()
@@ -461,7 +461,7 @@ def generate_embedia_main(embedia_model, src_folder, dst_embedia_folder, model_n
     return (h, c)
 
 
-def generate_embedia_debug(src_dbg_folder, dst_folder, options, strategy):
+def generate_embedia_debug(src_dbg_folder, dst_folder, options, strategy, ext_h='.h', ext_c='.c'):
     # add debug mode macro to header file
 
     if options.data_type == ModelDataType.FULL_QUANT8:
@@ -469,21 +469,21 @@ def generate_embedia_debug(src_dbg_folder, dst_folder, options, strategy):
     else:
         debug_filename = 'embedia_debug'
 
-    content = file_management.read_from_file(os.path.join(src_dbg_folder, f'{debug_filename}.h'))
+    content = file_management.read_from_file(os.path.join(src_dbg_folder, f'{debug_filename}{ext_h}'))
     # add include
     content = content.format(EMBEDIA_DEBUG='#define EMBEDIA_DEBUG %d\n' % options.debug_mode)
-    file_management.save_to_file(os.path.join(dst_folder, f'{debug_filename}.h'), ''.join(content))
+    file_management.save_to_file(os.path.join(dst_folder, f'{debug_filename}{ext_h}'), ''.join(content))
     
     # Use strategy to get debug file names
     def_header, impl_file = strategy.get_debug_files(debug_filename)
     
     # copy additional debug file
     file_management.copy(os.path.join(src_dbg_folder, def_header),
-                os.path.join(dst_folder, 'embedia_debug_def.h'))
+                os.path.join(dst_folder, f'embedia_debug_def{ext_h}'))
     
     # copy implementation file with correct extension
     file_management.copy(os.path.join(src_dbg_folder, f'{debug_filename}.c'),
-                os.path.join(dst_folder, impl_file))
+                os.path.join(dst_folder, f'{impl_file[:-2]}{ext_c}'))
 
 
 def data_to_array_str(data, macro_converter=None, clip=120):

@@ -128,7 +128,7 @@ class ProjectGenerator:
 
         # copy debug file
         if options.debug_mode != DebugMode.DISCARD:
-            generate_embedia_debug(self._src_dbg_folder, self._dst_embedia_folder, options, self._strategy)
+            generate_embedia_debug(self._src_dbg_folder, self._dst_embedia_folder, options, self._strategy, h_ext, c_ext)
 
         # create main file with an example
         if ProjectFiles.MAIN in options.files:
@@ -373,6 +373,6 @@ class ProjectGenerator:
         model_info += 'Total params (KiB)...: %.3f\n' % (total_size / 1024.0)
         model_info += 'Total MACs operations: %.0f\n' % total_MACs
         model_info += 'Total AC operations..: %.0f\n' % total_ACOPs
-        model_info += 'Peak RAM (bytes)......: %d%s\n' % (alloc_buffer_sz, peak_detail)
+        model_info += 'Peak RAM (bytes).....: %d%s\n' % (alloc_buffer_sz, peak_detail)
 
         return model_info

@@ -24,7 +24,7 @@ options.embedia_folder = '../embedia/'
 
 
 # options.project_type = ProjectType.ARDUINO
-options.project_type = ProjectType.C
+options.project_type = ProjectType.CPP
 # options.project_type = ProjectType.CODEBLOCK
 # options.project_type = ProjectType.CPP
 
@@ -33,8 +33,8 @@ options.data_type = ModelDataType.FLOAT
 # options.data_type = ModelDataType.FIXED16
 # options.data_type = ModelDataType.FIXED8
 
-options.debug_mode = DebugMode.DISCARD
-# options.debug_mode = DebugMode.DISABLED
+# options.debug_mode = DebugMode.DISCARD
+options.debug_mode = DebugMode.DISABLED
 # options.debug_mode = DebugMode.HEADERS
 # options.debug_mode = DebugMode.DATA
 
